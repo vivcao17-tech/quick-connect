@@ -205,6 +205,12 @@ function Home() {
             </button>
             <span className="text-sm text-muted-foreground">30 seconds, no account</span>
           </div>
+          <Link
+            to="/remote"
+            className="mt-6 self-start text-sm text-muted-foreground underline underline-offset-4"
+          >
+            Or send it to someone who isn't here
+          </Link>
         </section>
       )}
 
