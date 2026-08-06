@@ -540,12 +540,13 @@ export const postThreadMessage = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!sq) throw new Error("Unknown question");
 
-    const { data: me } = await supabaseAdmin
+    const { data: mine } = await supabaseAdmin
       .from("session_participants")
       .select("id")
       .eq("session_id", sq.session_id)
       .eq("guest_token", data.guestToken)
-      .maybeSingle();
+      .limit(1);
+    const me = mine?.[0];
     if (!me) throw new Error("Not your conversation");
 
     const { error } = await supabaseAdmin.from("thread_messages").insert({
