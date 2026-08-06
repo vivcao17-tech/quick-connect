@@ -439,7 +439,9 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       .select("id, role, display_name, guest_token")
       .eq("session_id", sq.session_id);
 
-    const me = (participants ?? []).find((p) => p.guest_token === data.guestToken);
+    const me = (participants ?? []).find(
+      (p) => p.role === "recipient" && p.guest_token === data.guestToken,
+    );
     const sender = (participants ?? []).find((p) => p.role === "sender");
     if (!me) throw new Error("Not your link");
 
