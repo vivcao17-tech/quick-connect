@@ -1,63 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-export type OptionKey = "a" | "b" | "c";
-export type Chip = { id: string; optionKey: OptionKey; text: string };
-export type PlayQuestion = {
-  sessionQuestionId: string;
-  questionId: string;
-  text: string;
-  options: { key: OptionKey; label: string }[];
-  chips: Chip[];
-};
+import { shortToken, snapshotOf, toPlay } from "@/lib/remote-shared";
+import type { Chip, OptionKey, PlayQuestion, Snapshot } from "@/lib/remote-shared";
 
-type Snapshot = {
-  text: string;
-  options: { key: OptionKey; label: string }[];
-  chips: Chip[];
-};
-
-function shortToken() {
-  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
-  let out = "";
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-  for (const byte of bytes) out += alphabet[byte % alphabet.length];
-  return out;
-}
-
-function snapshotOf(row: {
-  id: string;
-  text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string | null;
-  chips: { id: string; option_key: string; text: string }[];
-}): Snapshot {
-  return {
-    text: row.text,
-    options: [
-      { key: "a", label: row.option_a },
-      { key: "b", label: row.option_b },
-      ...(row.option_c ? [{ key: "c" as const, label: row.option_c }] : []),
-    ],
-    chips: row.chips.map((chip) => ({
-      id: chip.id,
-      optionKey: chip.option_key as OptionKey,
-      text: chip.text,
-    })),
-  };
-}
-
-function toPlay(sq: { id: string; question_id: string; snapshot: unknown }): PlayQuestion {
-  const snap = sq.snapshot as Snapshot;
-  return {
-    sessionQuestionId: sq.id,
-    questionId: sq.question_id,
-    text: snap.text,
-    options: snap.options,
-    chips: snap.chips ?? [],
-  };
-}
+export type { Chip, OptionKey, PlayQuestion };
 
 const guest = z.string().uuid();
 
