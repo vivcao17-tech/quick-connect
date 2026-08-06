@@ -286,7 +286,7 @@ export const startInvite = createServerFn({ method: "POST" })
 
     const { data: inviter } = await supabaseAdmin
       .from("session_participants")
-      .select("display_name")
+      .select("display_name, guest_token")
       .eq("id", invite.inviter_participant_id ?? "")
       .maybeSingle();
 
