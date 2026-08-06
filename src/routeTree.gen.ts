@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as ITokenRouteImport } from './routes/i.$token'
+import { Route as SentSessionIdRouteImport } from './routes/sent.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const ITokenRoute = ITokenRouteImport.update({
   path: '/i/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SentSessionIdRoute = SentSessionIdRouteImport.update({
+  id: '/sent/$sessionId',
+  path: '/sent/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/remote': typeof RemoteRoute
   '/i/$token': typeof ITokenRoute
+  '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/remote': typeof RemoteRoute
   '/i/$token': typeof ITokenRoute
+  '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/remote': typeof RemoteRoute
   '/i/$token': typeof ITokenRoute
+  '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/remote' | '/i/$token'
+  fullPaths: '/' | '/remote' | '/i/$token' | '/sent/$sessionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/remote' | '/i/$token'
-  id: '__root__' | '/' | '/remote' | '/i/$token'
+  to: '/' | '/remote' | '/i/$token' | '/sent/$sessionId'
+  id: '__root__' | '/' | '/remote' | '/i/$token' | '/sent/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   RemoteRoute: typeof RemoteRoute
   ITokenRoute: typeof ITokenRoute
+  SentSessionIdRoute: typeof SentSessionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ITokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sent/$sessionId': {
+      id: '/sent/$sessionId'
+      path: '/sent/$sessionId'
+      fullPath: '/sent/$sessionId'
+      preLoaderRoute: typeof SentSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   RemoteRoute: RemoteRoute,
   ITokenRoute: ITokenRoute,
+  SentSessionIdRoute: SentSessionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
