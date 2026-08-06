@@ -341,7 +341,7 @@ export const startInvite = createServerFn({ method: "POST" })
         session_id: child.id,
         display_name: inviter?.display_name ?? "A friend",
         role: "sender",
-        guest_token: null,
+        guest_token: inviter?.guest_token ?? null,
       })
       .select("id")
       .single();
