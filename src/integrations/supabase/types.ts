@@ -137,6 +137,7 @@ export type Database = {
           opened_at: string | null
           personal_note: string | null
           recipient_label: string | null
+          recipient_participant_id: string | null
           session_id: string
           token: string
         }
@@ -149,6 +150,7 @@ export type Database = {
           opened_at?: string | null
           personal_note?: string | null
           recipient_label?: string | null
+          recipient_participant_id?: string | null
           session_id: string
           token: string
         }
@@ -161,6 +163,7 @@ export type Database = {
           opened_at?: string | null
           personal_note?: string | null
           recipient_label?: string | null
+          recipient_participant_id?: string | null
           session_id?: string
           token?: string
         }
@@ -175,6 +178,13 @@ export type Database = {
           {
             foreignKeyName: "invites_inviter_participant_id_fkey"
             columns: ["inviter_participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invites_recipient_participant_id_fkey"
+            columns: ["recipient_participant_id"]
             isOneToOne: false
             referencedRelation: "session_participants"
             referencedColumns: ["id"]
@@ -289,6 +299,7 @@ export type Database = {
           id: string
           joined_at: string
           profile_id: string | null
+          role: string
           session_id: string
         }
         Insert: {
@@ -297,6 +308,7 @@ export type Database = {
           id?: string
           joined_at?: string
           profile_id?: string | null
+          role?: string
           session_id: string
         }
         Update: {
@@ -305,6 +317,7 @@ export type Database = {
           id?: string
           joined_at?: string
           profile_id?: string | null
+          role?: string
           session_id?: string
         }
         Relationships: [
@@ -331,6 +344,7 @@ export type Database = {
           question_id: string
           revealed_at: string | null
           session_id: string
+          snapshot: Json | null
         }
         Insert: {
           id?: string
@@ -338,6 +352,7 @@ export type Database = {
           question_id: string
           revealed_at?: string | null
           session_id: string
+          snapshot?: Json | null
         }
         Update: {
           id?: string
@@ -345,6 +360,7 @@ export type Database = {
           question_id?: string
           revealed_at?: string | null
           session_id?: string
+          snapshot?: Json | null
         }
         Relationships: [
           {
