@@ -931,9 +931,6 @@ export const getSenderResults = createServerFn({ method: "POST" })
             threadCount: (childMessages ?? []).filter((m) => m.session_question_id === cq.id).length,
           };
         });
-        row.pending = (childQs ?? [])
-          .filter((cq) => !pick(cq.id, senderParticipant?.id))
-          .map(toPlay);
         row.differences = row.answers.filter((a) => a.differs).length;
         if ((childAnswers ?? []).some((a) => a.participant_id === recipientParticipant?.id)) {
           row.answered = true;
