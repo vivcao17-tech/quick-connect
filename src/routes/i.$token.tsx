@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
-import { answerAsRecipient, getInvite, startInvite } from "@/lib/remote.functions";
+import { answerAsRecipient, getInvite, getPairSummary, startInvite } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 
 export const Route = createFileRoute("/i/$token")({
@@ -32,7 +32,10 @@ type Reveal = {
   sender: { optionKey: OptionKey; reason: string } | null;
   mine: { optionKey: OptionKey; reason: string } | null;
   revealed: boolean;
+  tally: { optionKey: OptionKey; votes: number }[];
 };
+
+type Summary = Awaited<ReturnType<typeof getPairSummary>>;
 
 function InvitePage() {
   const { token } = Route.useParams();
@@ -43,17 +46,21 @@ function InvitePage() {
     recipientLabel: string;
     questionCount: number;
   } | null>(null);
-  const [stage, setStage] = useState<"landing" | "play" | "done">("landing");
+  const [stage, setStage] = useState<"landing" | "play" | "summary" | "detail">("landing");
+  const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<PlayQuestion[]>([]);
   const [index, setIndex] = useState(0);
   const [reason, setReason] = useState("");
   const [reveal, setReveal] = useState<Reveal | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [focused, setFocused] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = useServerFn(getInvite);
   const start = useServerFn(startInvite);
   const answer = useServerFn(answerAsRecipient);
+  const loadSummary = useServerFn(getPairSummary);
 
   useEffect(() => {
     setGuestToken(getGuestToken());
@@ -70,6 +77,7 @@ function InvitePage() {
     try {
       const result = await start({ data: { token, guestToken } });
       setQuestions(result.questions);
+      setSessionId(result.childSessionId);
       setIndex(0);
       setStage("play");
     } catch {
@@ -101,15 +109,37 @@ function InvitePage() {
     }
   }
 
+  async function openSummary() {
+    setReason("");
+    setReveal(null);
+    setStage("summary");
+    if (!sessionId || !guestToken) return;
+    const result = await loadSummary({ data: { guestToken, sessionId } });
+    setSummary(result);
+  }
+
   function next() {
     setReason("");
     setReveal(null);
     if (index + 1 < questions.length) setIndex(index + 1);
-    else setStage("done");
+    else void openSummary();
   }
 
   const labelOf = (key: OptionKey | undefined | null) =>
     current?.options.find((option) => option.key === key)?.label ?? "";
+
+  const distribution = useMemo(() => {
+    if (!reveal || !current) return null;
+    const sum = reveal.tally.reduce((acc, row) => acc + row.votes, 0) || 1;
+    const rows = current.options.map((option) => {
+      const votes = reveal.tally.find((row) => row.optionKey === option.key)?.votes ?? 0;
+      return { ...option, votes, share: Math.round((votes / sum) * 100) };
+    });
+    const top = [...rows].sort((a, b) => b.votes - a.votes)[0];
+    return { rows, withMost: top?.key === reveal.mine?.optionKey };
+  }, [reveal, current]);
+
+  const focusedQuestion = summary?.questions.find((q) => q.sessionQuestionId === focused);
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -123,13 +153,15 @@ function InvitePage() {
                 <br />
                 <em className="italic text-primary">has already answered.</em>
               </h1>
-              {intro.note && (
-                <p className="mt-8 text-2xl leading-snug italic">"{intro.note}"</p>
-              )}
+              {intro.note && <p className="mt-8 text-2xl leading-snug italic">"{intro.note}"</p>}
               <p className="mt-8 text-muted-foreground">
-                {intro.questionCount} questions · 30 seconds · no signup
+                3 questions · 30 seconds · no signup
               </p>
-              <button onClick={begin} disabled={busy} className="btn-ink mt-8 self-start hover:opacity-90">
+              <button
+                onClick={begin}
+                disabled={busy}
+                className="btn-ink mt-8 self-start hover:opacity-90"
+              >
                 Start
               </button>
             </>
@@ -177,32 +209,62 @@ function InvitePage() {
             </>
           )}
 
-          {reveal && (
+          {reveal && distribution && (
             <div className="mt-10">
-              <div className="flex flex-col gap-6">
-                <div>
-                  <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">You</p>
-                  <p className="mt-2 text-2xl">{labelOf(reveal.mine?.optionKey)}</p>
-                  {reveal.mine?.reason && (
-                    <p className="mt-1 text-base italic text-muted-foreground">
-                      "{reveal.mine.reason}"
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
-                    {reveal.senderName}
+              <div>
+                <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">You</p>
+                <p className="mt-2 text-2xl">{labelOf(reveal.mine?.optionKey)}</p>
+                {reveal.mine?.reason && (
+                  <p className="mt-1 text-base italic text-muted-foreground">
+                    "{reveal.mine.reason}"
                   </p>
-                  <p className="mt-2 text-2xl text-primary">{labelOf(reveal.sender?.optionKey)}</p>
-                  {reveal.sender?.reason && (
-                    <p className="mt-1 text-base italic text-muted-foreground">
-                      "{reveal.sender.reason}"
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
 
-              <Thread guestToken={guestToken} sessionQuestionId={current.sessionQuestionId} />
+              <p className="mt-8 text-lg">
+                {distribution.withMost
+                  ? "Here are your results — you're with most people."
+                  : "Here are your results — you're in the minority."}
+              </p>
+              <div className="mt-6 flex flex-col gap-4">
+                {distribution.rows.map((row) => (
+                  <div key={row.key}>
+                    <div className="flex items-baseline justify-between text-base">
+                      <span className={row.key === reveal.mine?.optionKey ? "text-primary" : ""}>
+                        {row.label}
+                      </span>
+                      <span className="text-muted-foreground">{row.share}%</span>
+                    </div>
+                    <div className="mt-2 h-px w-full bg-border">
+                      <div
+                        className="h-px bg-primary"
+                        style={{ width: `${Math.max(row.share, 2)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {reveal.revealed ? (
+                <>
+                  <div className="mt-10">
+                    <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
+                      {reveal.senderName}
+                    </p>
+                    <p className="mt-2 text-2xl text-primary">{labelOf(reveal.sender?.optionKey)}</p>
+                    {reveal.sender?.reason && (
+                      <p className="mt-1 text-base italic text-muted-foreground">
+                        "{reveal.sender.reason}"
+                      </p>
+                    )}
+                  </div>
+                  <Thread guestToken={guestToken} sessionQuestionId={current.sessionQuestionId} />
+                </>
+              ) : (
+                <p className="mt-10 text-lg text-muted-foreground italic">
+                  Waiting for {reveal.senderName}.
+                </p>
+              )}
 
               <button onClick={next} className="btn-quiet mt-10 hover:bg-secondary">
                 {index + 1 < questions.length ? "Next" : "That's the last one"}
@@ -214,9 +276,84 @@ function InvitePage() {
         </section>
       )}
 
-      {stage === "done" && (
-        <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 text-center">
-          <h1 className="text-4xl">Now go talk to them.</h1>
+      {stage === "summary" && (
+        <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
+          <h1 className="text-4xl leading-tight">Now go talk to them.</h1>
+          <div className="mt-10 flex flex-col gap-3">
+            {(summary?.questions ?? []).map((q) => (
+              <button
+                key={q.sessionQuestionId}
+                onClick={() => {
+                  setFocused(q.sessionQuestionId);
+                  setStage("detail");
+                }}
+                className="card-soft px-6 py-5 text-left"
+              >
+                <p className="text-lg">{q.text}</p>
+                <p className="mt-3 text-base">
+                  <span className="text-muted-foreground">You: </span>
+                  {q.myLabel || "—"}
+                </p>
+                <p className="mt-1 text-base">
+                  <span className="text-muted-foreground">{summary?.otherName}: </span>
+                  <span className={q.differs ? "text-primary" : ""}>
+                    {q.revealed ? q.theirLabel || "—" : `Waiting for ${summary?.otherName}`}
+                  </span>
+                </p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {q.threadCount === 0
+                    ? "Nothing said yet"
+                    : `${q.threadCount} ${q.threadCount === 1 ? "line" : "lines"} between you`}
+                </p>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {stage === "detail" && focusedQuestion && (
+        <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
+          <button
+            onClick={() => void openSummary()}
+            className="text-sm text-muted-foreground underline underline-offset-4"
+          >
+            All questions
+          </button>
+          <h1 className="mt-6 text-3xl leading-tight">{focusedQuestion.text}</h1>
+
+          <div className="mt-8">
+            <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">You</p>
+            <p className="mt-2 text-2xl">{focusedQuestion.myLabel || "—"}</p>
+            {focusedQuestion.myReason && (
+              <p className="mt-1 text-base italic text-muted-foreground">
+                "{focusedQuestion.myReason}"
+              </p>
+            )}
+          </div>
+
+          {focusedQuestion.revealed ? (
+            <>
+              <div className="mt-8">
+                <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
+                  {summary?.otherName}
+                </p>
+                <p className="mt-2 text-2xl text-primary">{focusedQuestion.theirLabel || "—"}</p>
+                {focusedQuestion.theirReason && (
+                  <p className="mt-1 text-base italic text-muted-foreground">
+                    "{focusedQuestion.theirReason}"
+                  </p>
+                )}
+              </div>
+              <Thread
+                guestToken={guestToken}
+                sessionQuestionId={focusedQuestion.sessionQuestionId}
+              />
+            </>
+          ) : (
+            <p className="mt-8 text-lg text-muted-foreground italic">
+              Waiting for {summary?.otherName}.
+            </p>
+          )}
         </section>
       )}
     </main>
