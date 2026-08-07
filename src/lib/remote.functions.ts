@@ -497,6 +497,11 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
         .is("completed_at", null);
     }
 
+    // Global distribution for this question across everyone who has ever answered it.
+    const { data: tally } = await supabaseAdmin.rpc("question_tally", {
+      _question_id: sq.question_id,
+    });
+
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
       session_id: sq.session_id,
@@ -507,13 +512,181 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
     return {
       revealed,
       senderName: sender?.display_name ?? "They",
-      sender: senderAnswer
-        ? { optionKey: senderAnswer.option_key as OptionKey, reason: senderAnswer.reason_text ?? "" }
-        : null,
+      // Only ever sent once the question is revealed — otherwise it leaks their answer.
+      sender:
+        revealed && senderAnswer
+          ? {
+              optionKey: senderAnswer.option_key as OptionKey,
+              reason: senderAnswer.reason_text ?? "",
+            }
+          : null,
       mine: mine
         ? { optionKey: mine.option_key as OptionKey, reason: mine.reason_text ?? "" }
         : null,
+      tally: (tally ?? []).map((row) => ({
+        optionKey: row.option_key as OptionKey,
+        votes: Number(row.votes),
+      })),
       finished: done,
+    };
+  });
+
+/** Any participant (sender or recipient) answering inside a pair session. */
+export const answerInPair = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        guestToken: guest,
+        sessionQuestionId: z.string().uuid(),
+        optionKey: z.enum(["a", "b", "c"]),
+        reasonText: z.string().max(240).optional(),
+        reasonChipId: z.string().uuid().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: sq } = await supabaseAdmin
+      .from("session_questions")
+      .select("id, session_id, question_id, revealed_at")
+      .eq("id", data.sessionQuestionId)
+      .maybeSingle();
+    if (!sq) throw new Error("Unknown question");
+
+    const { data: participants } = await supabaseAdmin
+      .from("session_participants")
+      .select("id, role, display_name, guest_token")
+      .eq("session_id", sq.session_id);
+    const me = (participants ?? []).find((p) => p.guest_token === data.guestToken);
+    if (!me) throw new Error("Not your conversation");
+    const other = (participants ?? []).find((p) => p.id !== me.id);
+
+    const { error } = await supabaseAdmin.from("answers").insert({
+      session_question_id: sq.id,
+      participant_id: me.id,
+      question_id: sq.question_id,
+      option_key: data.optionKey,
+      reason_text: data.reasonText ?? null,
+      reason_chip_id: data.reasonChipId ?? null,
+      visibility: "session",
+    });
+    if (error) throw error;
+
+    const { data: rows } = await supabaseAdmin
+      .from("answers")
+      .select("participant_id, option_key, reason_text, created_at")
+      .eq("session_question_id", sq.id)
+      .order("created_at", { ascending: true });
+
+    const answeredBy = new Set((rows ?? []).map((r) => r.participant_id));
+    let revealed = sq.revealed_at !== null;
+    if (!revealed && answeredBy.size >= (participants ?? []).length) {
+      await supabaseAdmin
+        .from("session_questions")
+        .update({ revealed_at: new Date().toISOString() })
+        .eq("id", sq.id);
+      revealed = true;
+    }
+
+    const latest = (participantId: string | undefined) =>
+      participantId
+        ? [...(rows ?? [])].reverse().find((r) => r.participant_id === participantId)
+        : undefined;
+    const mine = latest(me.id);
+    const theirs = latest(other?.id);
+
+    const { data: tally } = await supabaseAdmin.rpc("question_tally", {
+      _question_id: sq.question_id,
+    });
+
+    await supabaseAdmin.from("events").insert({
+      guest_token: data.guestToken,
+      session_id: sq.session_id,
+      name: revealed ? "question_revealed" : "answer_submitted",
+      props: { question_id: sq.question_id },
+    });
+
+    return {
+      revealed,
+      otherName: other?.display_name ?? "them",
+      other:
+        revealed && theirs
+          ? { optionKey: theirs.option_key as OptionKey, reason: theirs.reason_text ?? "" }
+          : null,
+      mine: mine
+        ? { optionKey: mine.option_key as OptionKey, reason: mine.reason_text ?? "" }
+        : null,
+      tally: (tally ?? []).map((row) => ({
+        optionKey: row.option_key as OptionKey,
+        votes: Number(row.votes),
+      })),
+    };
+  });
+
+/** Every question in a pair session with both sides' answers and thread counts. */
+export const getPairSummary = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ guestToken: guest, sessionId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: participants } = await supabaseAdmin
+      .from("session_participants")
+      .select("id, role, display_name, guest_token")
+      .eq("session_id", data.sessionId);
+    const me = (participants ?? []).find((p) => p.guest_token === data.guestToken);
+    if (!me) throw new Error("Not your conversation");
+    const other = (participants ?? []).find((p) => p.id !== me.id);
+
+    const { data: sqs } = await supabaseAdmin
+      .from("session_questions")
+      .select("id, order_index, revealed_at, snapshot")
+      .eq("session_id", data.sessionId)
+      .order("order_index");
+
+    const ids = (sqs ?? []).map((q) => q.id);
+    const { data: rows } = await supabaseAdmin
+      .from("answers")
+      .select("session_question_id, participant_id, option_key, reason_text, created_at")
+      .in("session_question_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
+      .order("created_at");
+    const { data: messages } = await supabaseAdmin
+      .from("thread_messages")
+      .select("session_question_id")
+      .in("session_question_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+
+    const label = (snap: Snapshot, key: string | undefined) =>
+      snap.options.find((o) => o.key === key)?.label ?? "";
+
+    return {
+      otherName: other?.display_name ?? "them",
+      questions: (sqs ?? []).map((q) => {
+        const snap = q.snapshot as Snapshot;
+        const pick = (participantId: string | undefined) =>
+          participantId
+            ? [...(rows ?? [])]
+                .reverse()
+                .find((r) => r.session_question_id === q.id && r.participant_id === participantId)
+            : undefined;
+        const mine = pick(me.id);
+        const theirs = q.revealed_at ? pick(other?.id) : undefined;
+        return {
+          sessionQuestionId: q.id,
+          index: q.order_index,
+          text: snap.text,
+          revealed: Boolean(q.revealed_at),
+          myLabel: label(snap, mine?.option_key),
+          myReason: mine?.reason_text ?? "",
+          theirLabel: label(snap, theirs?.option_key),
+          theirReason: theirs?.reason_text ?? "",
+          differs: Boolean(
+            mine?.option_key && theirs?.option_key && mine.option_key !== theirs.option_key,
+          ),
+          threadCount: (messages ?? []).filter((m) => m.session_question_id === q.id).length,
+        };
+      }),
     };
   });
 
