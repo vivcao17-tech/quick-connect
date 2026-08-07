@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
-import { getSenderResults } from "@/lib/remote.functions";
+import { answerInPair, getSenderResults } from "@/lib/remote.functions";
+import type { OptionKey } from "@/lib/remote-shared";
 
 export const Route = createFileRoute("/sent/$sessionId")({
   component: SentPage,
@@ -34,22 +35,41 @@ function SentPage() {
   const [results, setResults] = useState<Results | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const load = useServerFn(getSenderResults);
+  const answer = useServerFn(answerInPair);
+
+  const refresh = useCallback(
+    (token: string) =>
+      load({ data: { guestToken: token, sessionId } })
+        .then(setResults)
+        .catch(() => setError("These aren't your results.")),
+    [load, sessionId],
+  );
 
   useEffect(() => {
     const token = getGuestToken();
     setGuestToken(token);
-    load({ data: { guestToken: token, sessionId } })
-      .then(setResults)
-      .catch(() => setError("These aren't your results."));
-  }, [sessionId, load]);
+    void refresh(token);
+  }, [refresh]);
 
   async function copy(token: string, note: string) {
     const message = `${note ? `${note}\n\n` : ""}3 questions · 30 seconds · no signup\n${window.location.origin}/i/${token}`;
     await navigator.clipboard.writeText(message);
     setCopied(token);
     window.setTimeout(() => setCopied(""), 2500);
+  }
+
+  async function answerPending(sessionQuestionId: string, optionKey: OptionKey) {
+    if (busy || !guestToken) return;
+    setBusy(true);
+    try {
+      await answer({ data: { guestToken, sessionQuestionId, optionKey } });
+      await refresh(guestToken);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -74,7 +94,7 @@ function SentPage() {
               <div key={recipient.token} className="card-soft px-6 py-6">
                 <p className="text-2xl">{recipient.label}</p>
 
-                {!recipient.answered && (
+                {!recipient.answered && recipient.pending.length === 0 && (
                   <div className="mt-4">
                     <p className="text-muted-foreground">
                       {recipient.stale ? "Send it to someone else?" : "Their link is out there."}
@@ -88,44 +108,68 @@ function SentPage() {
                   </div>
                 )}
 
-                {recipient.answered && (
+                {recipient.pending.length > 0 && (
+                  <div className="mt-6 flex flex-col gap-8">
+                    <p className="text-muted-foreground">Your turn on these.</p>
+                    {recipient.pending.map((question) => (
+                      <div key={question.sessionQuestionId}>
+                        <p className="text-lg">{question.text}</p>
+                        <div className="mt-3 flex flex-col gap-2">
+                          {question.options.map((option) => (
+                            <button
+                              key={option.key}
+                              disabled={busy}
+                              onClick={() =>
+                                void answerPending(question.sessionQuestionId, option.key)
+                              }
+                              className="card-soft px-5 py-4 text-left text-base hover:border-primary disabled:opacity-50"
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {recipient.answers.length > 0 && (
                   <div className="mt-6 flex flex-col gap-8">
                     {[...recipient.answers]
                       .sort((a, b) => Number(b.differs) - Number(a.differs))
-                      .map((item) => {
-                        const mine = results.questions.find((q) => q.index === item.index);
-                        return (
-                          <div key={`${recipient.token}-${item.index}`}>
-                            <p className="text-lg">{item.text}</p>
-                            <p className="mt-3 text-base">
-                              <span className="text-muted-foreground">You: </span>
-                              {mine?.options.find((o) => o.key === mine.myOption)?.label ?? "—"}
+                      .map((item) => (
+                        <div key={`${recipient.token}-${item.index}`}>
+                          <p className="text-lg">{item.text}</p>
+                          <p className="mt-3 text-base">
+                            <span className="text-muted-foreground">You: </span>
+                            {item.myLabel || "—"}
+                          </p>
+                          {item.myReason && (
+                            <p className="text-base italic text-muted-foreground">
+                              "{item.myReason}"
                             </p>
-                            {mine?.myReason && (
-                              <p className="text-base italic text-muted-foreground">
-                                "{mine.myReason}"
-                              </p>
-                            )}
-                            <p className="mt-2 text-base">
-                              <span className="text-muted-foreground">{recipient.label}: </span>
-                              <span className={item.differs ? "text-primary" : ""}>
-                                {item.theirLabel || "—"}
-                              </span>
+                          )}
+                          <p className="mt-2 text-base">
+                            <span className="text-muted-foreground">{recipient.label}: </span>
+                            <span className={item.differs ? "text-primary" : ""}>
+                              {item.sessionQuestionId
+                                ? item.theirLabel || "—"
+                                : `Waiting for ${recipient.label}`}
+                            </span>
+                          </p>
+                          {item.theirReason && (
+                            <p className="text-base italic text-muted-foreground">
+                              "{item.theirReason}"
                             </p>
-                            {item.theirReason && (
-                              <p className="text-base italic text-muted-foreground">
-                                "{item.theirReason}"
-                              </p>
-                            )}
-                            {item.sessionQuestionId && guestToken && (
-                              <Thread
-                                guestToken={guestToken}
-                                sessionQuestionId={item.sessionQuestionId}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
+                          )}
+                          {item.sessionQuestionId && guestToken && (
+                            <Thread
+                              guestToken={guestToken}
+                              sessionQuestionId={item.sessionQuestionId}
+                            />
+                          )}
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>
