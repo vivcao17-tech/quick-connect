@@ -868,7 +868,7 @@ export const getSenderResults = createServerFn({ method: "POST" })
           Date.now() - new Date(invite.created_at).getTime() > 7 * 24 * 60 * 60 * 1000,
         createdAt: invite.created_at,
         answers: [] as AnswerRow[],
-        pending: [] as PlayQuestion[],
+        childSessionId: invite.child_session_id as string | null,
         differences: 0,
       };
 
