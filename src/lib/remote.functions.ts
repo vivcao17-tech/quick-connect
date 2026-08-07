@@ -311,7 +311,6 @@ export const startInvite = createServerFn({ method: "POST" })
       };
     }
 
-    // Freeze the sender's questions and answers into a private pair session.
     const { data: parentQs } = await supabaseAdmin
       .from("session_questions")
       .select("id, question_id, order_index, snapshot")
@@ -319,14 +318,31 @@ export const startInvite = createServerFn({ method: "POST" })
       .order("order_index");
     if (!parentQs || parentQs.length === 0) throw new Error("Nothing to answer here");
 
-    const { data: senderAnswers } = await supabaseAdmin
-      .from("answers")
-      .select("session_question_id, option_key, reason_text, created_at")
+    const { drawQuestions, historyOf } = await import("@/lib/question-pool.server");
+
+    // The sender's topics are the ones behind the questions they chose.
+    const { data: senderQuestionRows } = await supabaseAdmin
+      .from("questions")
+      .select("topic_id")
       .in(
-        "session_question_id",
-        parentQs.map((q) => q.id),
-      )
-      .order("created_at", { ascending: true });
+        "id",
+        parentQs.map((q) => q.question_id),
+      );
+    const senderTopics = [
+      ...new Set(
+        (senderQuestionRows ?? []).map((q) => q.topic_id).filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const senderHistory = inviter?.guest_token ? await historyOf(supabaseAdmin, [inviter.guest_token]) : null;
+    const recipientHistory = await historyOf(supabaseAdmin, [data.guestToken]);
+
+    const drawn = await drawQuestions(supabaseAdmin, {
+      topicIdsA: [...senderTopics, ...(senderHistory?.topicIds ?? [])],
+      topicIdsB: recipientHistory.topicIds,
+      guestTokens: [data.guestToken, ...(inviter?.guest_token ? [inviter.guest_token] : [])],
+      count: 3,
+    });
+    if (drawn.length === 0) throw new Error("Nothing to answer here");
 
     const { data: child, error: cError } = await supabaseAdmin
       .from("sessions")
@@ -335,7 +351,7 @@ export const startInvite = createServerFn({ method: "POST" })
       .single();
     if (cError) throw cError;
 
-    const { data: senderParticipant } = await supabaseAdmin
+    await supabaseAdmin
       .from("session_participants")
       .insert({
         session_id: child.id,
@@ -361,10 +377,10 @@ export const startInvite = createServerFn({ method: "POST" })
     const { data: childQs, error: cqError } = await supabaseAdmin
       .from("session_questions")
       .insert(
-        parentQs.map((q) => ({
+        drawn.map((q, index) => ({
           session_id: child.id,
-          question_id: q.question_id,
-          order_index: q.order_index,
+          question_id: q.questionId,
+          order_index: index,
           snapshot: q.snapshot as never,
         })),
       )
@@ -372,24 +388,6 @@ export const startInvite = createServerFn({ method: "POST" })
     if (cqError) throw cqError;
 
     const ordered = (childQs ?? []).sort((a, b) => a.order_index - b.order_index);
-    const carried = ordered.flatMap((cq) => {
-      const parent = parentQs.find((p) => p.order_index === cq.order_index);
-      const senderAnswer = [...(senderAnswers ?? [])]
-        .reverse()
-        .find((a) => a.session_question_id === parent?.id);
-      if (!senderAnswer || !senderParticipant) return [];
-      return [
-        {
-          session_question_id: cq.id,
-          participant_id: senderParticipant.id,
-          question_id: cq.question_id,
-          option_key: senderAnswer.option_key,
-          reason_text: senderAnswer.reason_text,
-          visibility: "session",
-        },
-      ];
-    });
-    if (carried.length > 0) await supabaseAdmin.from("answers").insert(carried);
 
     await supabaseAdmin
       .from("invites")
