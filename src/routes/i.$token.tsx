@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
+import { PairSummary } from "@/components/PairSummary";
 import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
-import { answerAsRecipient, getInvite, getPairSummary, startInvite } from "@/lib/remote.functions";
+import { answerAsRecipient, getInvite, startInvite } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 
 export const Route = createFileRoute("/i/$token")({
@@ -35,8 +36,6 @@ type Reveal = {
   tally: { optionKey: OptionKey; votes: number }[];
 };
 
-type Summary = Awaited<ReturnType<typeof getPairSummary>>;
-
 function InvitePage() {
   const { token } = Route.useParams();
   const [guestToken, setGuestToken] = useState("");
@@ -46,21 +45,19 @@ function InvitePage() {
     recipientLabel: string;
     questionCount: number;
   } | null>(null);
-  const [stage, setStage] = useState<"landing" | "play" | "summary" | "detail">("landing");
+  const [stage, setStage] = useState<"landing" | "play" | "summary">("landing");
   const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<PlayQuestion[]>([]);
   const [index, setIndex] = useState(0);
   const [reason, setReason] = useState("");
   const [reveal, setReveal] = useState<Reveal | null>(null);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [focused, setFocused] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = useServerFn(getInvite);
   const start = useServerFn(startInvite);
   const answer = useServerFn(answerAsRecipient);
-  const loadSummary = useServerFn(getPairSummary);
+
 
   useEffect(() => {
     setGuestToken(getGuestToken());
@@ -109,14 +106,12 @@ function InvitePage() {
     }
   }
 
-  async function openSummary() {
+  function openSummary() {
     setReason("");
     setReveal(null);
     setStage("summary");
-    if (!sessionId || !guestToken) return;
-    const result = await loadSummary({ data: { guestToken, sessionId } });
-    setSummary(result);
   }
+
 
   function next() {
     setReason("");
@@ -139,7 +134,7 @@ function InvitePage() {
     return { rows, withMost: top?.key === reveal.mine?.optionKey };
   }, [reveal, current]);
 
-  const focusedQuestion = summary?.questions.find((q) => q.sessionQuestionId === focused);
+  
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -279,83 +274,18 @@ function InvitePage() {
       {stage === "summary" && (
         <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
           <h1 className="text-4xl leading-tight">Now go talk to them.</h1>
-          <div className="mt-10 flex flex-col gap-3">
-            {(summary?.questions ?? []).map((q) => (
-              <button
-                key={q.sessionQuestionId}
-                onClick={() => {
-                  setFocused(q.sessionQuestionId);
-                  setStage("detail");
-                }}
-                className="card-soft px-6 py-5 text-left"
-              >
-                <p className="text-lg">{q.text}</p>
-                <p className="mt-3 text-base">
-                  <span className="text-muted-foreground">You: </span>
-                  {q.myLabel || "—"}
-                </p>
-                <p className="mt-1 text-base">
-                  <span className="text-muted-foreground">{summary?.otherName}: </span>
-                  <span className={q.differs ? "text-primary" : ""}>
-                    {q.revealed ? q.theirLabel || "—" : `Waiting for ${summary?.otherName}`}
-                  </span>
-                </p>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {q.threadCount === 0
-                    ? "Nothing said yet"
-                    : `${q.threadCount} ${q.threadCount === 1 ? "line" : "lines"} between you`}
-                </p>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {stage === "detail" && focusedQuestion && (
-        <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-          <button
-            onClick={() => void openSummary()}
-            className="text-sm text-muted-foreground underline underline-offset-4"
-          >
-            All questions
-          </button>
-          <h1 className="mt-6 text-3xl leading-tight">{focusedQuestion.text}</h1>
-
-          <div className="mt-8">
-            <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">You</p>
-            <p className="mt-2 text-2xl">{focusedQuestion.myLabel || "—"}</p>
-            {focusedQuestion.myReason && (
-              <p className="mt-1 text-base italic text-muted-foreground">
-                "{focusedQuestion.myReason}"
-              </p>
+          <div className="mt-10">
+            {guestToken && sessionId && (
+              <PairSummary
+                guestToken={guestToken}
+                sessionId={sessionId}
+                title="All three questions"
+              />
             )}
           </div>
-
-          {focusedQuestion.revealed ? (
-            <>
-              <div className="mt-8">
-                <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
-                  {summary?.otherName}
-                </p>
-                <p className="mt-2 text-2xl text-primary">{focusedQuestion.theirLabel || "—"}</p>
-                {focusedQuestion.theirReason && (
-                  <p className="mt-1 text-base italic text-muted-foreground">
-                    "{focusedQuestion.theirReason}"
-                  </p>
-                )}
-              </div>
-              <Thread
-                guestToken={guestToken}
-                sessionQuestionId={focusedQuestion.sessionQuestionId}
-              />
-            </>
-          ) : (
-            <p className="mt-8 text-lg text-muted-foreground italic">
-              Waiting for {summary?.otherName}.
-            </p>
-          )}
         </section>
       )}
+
     </main>
   );
 }

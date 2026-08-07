@@ -2,10 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
-import { Thread } from "@/components/Thread";
+import { PairSummary } from "@/components/PairSummary";
 import { getGuestToken } from "@/lib/guest";
-import { answerInPair, getSenderResults } from "@/lib/remote.functions";
-import type { OptionKey } from "@/lib/remote-shared";
+import { getSenderResults } from "@/lib/remote.functions";
 
 export const Route = createFileRoute("/sent/$sessionId")({
   component: SentPage,
@@ -35,10 +34,9 @@ function SentPage() {
   const [results, setResults] = useState<Results | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [openToken, setOpenToken] = useState("");
 
   const load = useServerFn(getSenderResults);
-  const answer = useServerFn(answerInPair);
 
   const refresh = useCallback(
     (token: string) =>
@@ -61,15 +59,28 @@ function SentPage() {
     window.setTimeout(() => setCopied(""), 2500);
   }
 
-  async function answerPending(sessionQuestionId: string, optionKey: OptionKey) {
-    if (busy || !guestToken) return;
-    setBusy(true);
-    try {
-      await answer({ data: { guestToken, sessionQuestionId, optionKey } });
-      await refresh(guestToken);
-    } finally {
-      setBusy(false);
-    }
+  const open = results?.recipients.find((r) => r.token === openToken);
+
+  if (open && open.childSessionId && guestToken) {
+    return (
+      <main className="paper min-h-screen bg-background">
+        <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
+          <button
+            onClick={() => setOpenToken("")}
+            className="text-sm text-muted-foreground underline underline-offset-4"
+          >
+            Everyone
+          </button>
+          <div className="mt-8">
+            <PairSummary
+              guestToken={guestToken}
+              sessionId={open.childSessionId}
+              title={`You and ${open.label}`}
+            />
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -89,12 +100,19 @@ function SentPage() {
         )}
 
         {results && (
-          <div className="mt-12 flex flex-col gap-10">
+          <div className="mt-12 flex flex-col gap-6">
             {results.recipients.map((recipient) => (
               <div key={recipient.token} className="card-soft px-6 py-6">
                 <p className="text-2xl">{recipient.label}</p>
 
-                {!recipient.answered && recipient.pending.length === 0 && (
+                {recipient.childSessionId ? (
+                  <button
+                    onClick={() => setOpenToken(recipient.token)}
+                    className="btn-quiet mt-4 hover:bg-secondary"
+                  >
+                    See all three
+                  </button>
+                ) : (
                   <div className="mt-4">
                     <p className="text-muted-foreground">
                       {recipient.stale ? "Send it to someone else?" : "Their link is out there."}
@@ -105,71 +123,6 @@ function SentPage() {
                     >
                       {copied === recipient.token ? "Copied" : "Copy message + link"}
                     </button>
-                  </div>
-                )}
-
-                {recipient.pending.length > 0 && (
-                  <div className="mt-6 flex flex-col gap-8">
-                    <p className="text-muted-foreground">Your turn on these.</p>
-                    {recipient.pending.map((question) => (
-                      <div key={question.sessionQuestionId}>
-                        <p className="text-lg">{question.text}</p>
-                        <div className="mt-3 flex flex-col gap-2">
-                          {question.options.map((option) => (
-                            <button
-                              key={option.key}
-                              disabled={busy}
-                              onClick={() =>
-                                void answerPending(question.sessionQuestionId, option.key)
-                              }
-                              className="card-soft px-5 py-4 text-left text-base hover:border-primary disabled:opacity-50"
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {recipient.answers.length > 0 && (
-                  <div className="mt-6 flex flex-col gap-8">
-                    {[...recipient.answers]
-                      .sort((a, b) => Number(b.differs) - Number(a.differs))
-                      .map((item) => (
-                        <div key={`${recipient.token}-${item.index}`}>
-                          <p className="text-lg">{item.text}</p>
-                          <p className="mt-3 text-base">
-                            <span className="text-muted-foreground">You: </span>
-                            {item.myLabel || "—"}
-                          </p>
-                          {item.myReason && (
-                            <p className="text-base italic text-muted-foreground">
-                              "{item.myReason}"
-                            </p>
-                          )}
-                          <p className="mt-2 text-base">
-                            <span className="text-muted-foreground">{recipient.label}: </span>
-                            <span className={item.differs ? "text-primary" : ""}>
-                              {item.sessionQuestionId
-                                ? item.theirLabel || "—"
-                                : `Waiting for ${recipient.label}`}
-                            </span>
-                          </p>
-                          {item.theirReason && (
-                            <p className="text-base italic text-muted-foreground">
-                              "{item.theirReason}"
-                            </p>
-                          )}
-                          {item.sessionQuestionId && guestToken && (
-                            <Thread
-                              guestToken={guestToken}
-                              sessionQuestionId={item.sessionQuestionId}
-                            />
-                          )}
-                        </div>
-                      ))}
                   </div>
                 )}
               </div>
