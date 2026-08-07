@@ -539,98 +539,8 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
     };
   });
 
-/** Any participant (sender or recipient) answering inside a pair session. */
-export const answerInPair = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        guestToken: guest,
-        sessionQuestionId: z.string().uuid(),
-        optionKey: z.enum(["a", "b", "c"]),
-        reasonText: z.string().max(240).optional(),
-        reasonChipId: z.string().uuid().optional(),
-      })
-      .parse(input),
-  )
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: sq } = await supabaseAdmin
-      .from("session_questions")
-      .select("id, session_id, question_id, revealed_at")
-      .eq("id", data.sessionQuestionId)
-      .maybeSingle();
-    if (!sq) throw new Error("Unknown question");
-
-    const { data: participants } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, role, display_name, guest_token")
-      .eq("session_id", sq.session_id);
-    const me = (participants ?? []).find((p) => p.guest_token === data.guestToken);
-    if (!me) throw new Error("Not your conversation");
-    const other = (participants ?? []).find((p) => p.id !== me.id);
-
-    const { error } = await supabaseAdmin.from("answers").insert({
-      session_question_id: sq.id,
-      participant_id: me.id,
-      question_id: sq.question_id,
-      option_key: data.optionKey,
-      reason_text: data.reasonText ?? null,
-      reason_chip_id: data.reasonChipId ?? null,
-      visibility: "session",
-    });
-    if (error) throw error;
-
-    const { data: rows } = await supabaseAdmin
-      .from("answers")
-      .select("participant_id, option_key, reason_text, created_at")
-      .eq("session_question_id", sq.id)
-      .order("created_at", { ascending: true });
-
-    const answeredBy = new Set((rows ?? []).map((r) => r.participant_id));
-    let revealed = sq.revealed_at !== null;
-    if (!revealed && answeredBy.size >= (participants ?? []).length) {
-      await supabaseAdmin
-        .from("session_questions")
-        .update({ revealed_at: new Date().toISOString() })
-        .eq("id", sq.id);
-      revealed = true;
-    }
-
-    const latest = (participantId: string | undefined) =>
-      participantId
-        ? [...(rows ?? [])].reverse().find((r) => r.participant_id === participantId)
-        : undefined;
-    const mine = latest(me.id);
-    const theirs = latest(other?.id);
-
-    const { data: tally } = await supabaseAdmin.rpc("question_tally", {
-      _question_id: sq.question_id,
-    });
-
-    await supabaseAdmin.from("events").insert({
-      guest_token: data.guestToken,
-      session_id: sq.session_id,
-      name: revealed ? "question_revealed" : "answer_submitted",
-      props: { question_id: sq.question_id },
-    });
-
-    return {
-      revealed,
-      otherName: other?.display_name ?? "them",
-      other:
-        revealed && theirs
-          ? { optionKey: theirs.option_key as OptionKey, reason: theirs.reason_text ?? "" }
-          : null,
-      mine: mine
-        ? { optionKey: mine.option_key as OptionKey, reason: mine.reason_text ?? "" }
-        : null,
-      tally: (tally ?? []).map((row) => ({
-        optionKey: row.option_key as OptionKey,
-        votes: Number(row.votes),
-      })),
-    };
-  });
+/* The sender answers before any link exists, so nobody answers inside a pair session
+   except the recipient — answerInPair was removed on purpose. */
 
 /** Every question in a pair session with both sides' answers and thread counts. */
 export const getPairSummary = createServerFn({ method: "POST" })
@@ -853,7 +763,7 @@ export const getSenderResults = createServerFn({ method: "POST" })
       stale: boolean;
       createdAt: string;
       answers: AnswerRow[];
-      pending: PlayQuestion[];
+      childSessionId: string | null;
       differences: number;
     }[];
 
