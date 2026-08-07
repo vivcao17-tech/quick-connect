@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
+import { PairSummary } from "@/components/PairSummary";
 import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
-import { answerAsRecipient, getInvite, getPairSummary, startInvite } from "@/lib/remote.functions";
+import { answerAsRecipient, getInvite, startInvite } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 
 export const Route = createFileRoute("/i/$token")({
@@ -35,8 +36,6 @@ type Reveal = {
   tally: { optionKey: OptionKey; votes: number }[];
 };
 
-type Summary = Awaited<ReturnType<typeof getPairSummary>>;
-
 function InvitePage() {
   const { token } = Route.useParams();
   const [guestToken, setGuestToken] = useState("");
@@ -46,21 +45,19 @@ function InvitePage() {
     recipientLabel: string;
     questionCount: number;
   } | null>(null);
-  const [stage, setStage] = useState<"landing" | "play" | "summary" | "detail">("landing");
+  const [stage, setStage] = useState<"landing" | "play" | "summary">("landing");
   const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<PlayQuestion[]>([]);
   const [index, setIndex] = useState(0);
   const [reason, setReason] = useState("");
   const [reveal, setReveal] = useState<Reveal | null>(null);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [focused, setFocused] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = useServerFn(getInvite);
   const start = useServerFn(startInvite);
   const answer = useServerFn(answerAsRecipient);
-  const loadSummary = useServerFn(getPairSummary);
+
 
   useEffect(() => {
     setGuestToken(getGuestToken());
@@ -109,14 +106,12 @@ function InvitePage() {
     }
   }
 
-  async function openSummary() {
+  function openSummary() {
     setReason("");
     setReveal(null);
     setStage("summary");
-    if (!sessionId || !guestToken) return;
-    const result = await loadSummary({ data: { guestToken, sessionId } });
-    setSummary(result);
   }
+
 
   function next() {
     setReason("");
@@ -139,7 +134,7 @@ function InvitePage() {
     return { rows, withMost: top?.key === reveal.mine?.optionKey };
   }, [reveal, current]);
 
-  const focusedQuestion = summary?.questions.find((q) => q.sessionQuestionId === focused);
+  
 
   return (
     <main className="paper min-h-screen bg-background">
