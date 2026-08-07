@@ -279,83 +279,18 @@ function InvitePage() {
       {stage === "summary" && (
         <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
           <h1 className="text-4xl leading-tight">Now go talk to them.</h1>
-          <div className="mt-10 flex flex-col gap-3">
-            {(summary?.questions ?? []).map((q) => (
-              <button
-                key={q.sessionQuestionId}
-                onClick={() => {
-                  setFocused(q.sessionQuestionId);
-                  setStage("detail");
-                }}
-                className="card-soft px-6 py-5 text-left"
-              >
-                <p className="text-lg">{q.text}</p>
-                <p className="mt-3 text-base">
-                  <span className="text-muted-foreground">You: </span>
-                  {q.myLabel || "—"}
-                </p>
-                <p className="mt-1 text-base">
-                  <span className="text-muted-foreground">{summary?.otherName}: </span>
-                  <span className={q.differs ? "text-primary" : ""}>
-                    {q.revealed ? q.theirLabel || "—" : `Waiting for ${summary?.otherName}`}
-                  </span>
-                </p>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {q.threadCount === 0
-                    ? "Nothing said yet"
-                    : `${q.threadCount} ${q.threadCount === 1 ? "line" : "lines"} between you`}
-                </p>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {stage === "detail" && focusedQuestion && (
-        <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-          <button
-            onClick={() => void openSummary()}
-            className="text-sm text-muted-foreground underline underline-offset-4"
-          >
-            All questions
-          </button>
-          <h1 className="mt-6 text-3xl leading-tight">{focusedQuestion.text}</h1>
-
-          <div className="mt-8">
-            <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">You</p>
-            <p className="mt-2 text-2xl">{focusedQuestion.myLabel || "—"}</p>
-            {focusedQuestion.myReason && (
-              <p className="mt-1 text-base italic text-muted-foreground">
-                "{focusedQuestion.myReason}"
-              </p>
+          <div className="mt-10">
+            {guestToken && sessionId && (
+              <PairSummary
+                guestToken={guestToken}
+                sessionId={sessionId}
+                title="All three questions"
+              />
             )}
           </div>
-
-          {focusedQuestion.revealed ? (
-            <>
-              <div className="mt-8">
-                <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
-                  {summary?.otherName}
-                </p>
-                <p className="mt-2 text-2xl text-primary">{focusedQuestion.theirLabel || "—"}</p>
-                {focusedQuestion.theirReason && (
-                  <p className="mt-1 text-base italic text-muted-foreground">
-                    "{focusedQuestion.theirReason}"
-                  </p>
-                )}
-              </div>
-              <Thread
-                guestToken={guestToken}
-                sessionQuestionId={focusedQuestion.sessionQuestionId}
-              />
-            </>
-          ) : (
-            <p className="mt-8 text-lg text-muted-foreground italic">
-              Waiting for {summary?.otherName}.
-            </p>
-          )}
         </section>
       )}
+
     </main>
   );
 }
