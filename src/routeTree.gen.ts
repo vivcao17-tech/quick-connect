@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as ITokenRouteImport } from './routes/i.$token'
+import { Route as RoomSessionIdRouteImport } from './routes/room.$sessionId'
 import { Route as SentSessionIdRouteImport } from './routes/sent.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const ITokenRoute = ITokenRouteImport.update({
   path: '/i/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoomSessionIdRoute = RoomSessionIdRouteImport.update({
+  id: '/room/$sessionId',
+  path: '/room/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SentSessionIdRoute = SentSessionIdRouteImport.update({
   id: '/sent/$sessionId',
   path: '/sent/$sessionId',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/remote': typeof RemoteRoute
   '/i/$token': typeof ITokenRoute
+  '/room/$sessionId': typeof RoomSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/remote': typeof RemoteRoute
   '/i/$token': typeof ITokenRoute
+  '/room/$sessionId': typeof RoomSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,29 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/remote': typeof RemoteRoute
   '/i/$token': typeof ITokenRoute
+  '/room/$sessionId': typeof RoomSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/remote' | '/i/$token' | '/sent/$sessionId'
+  fullPaths:
+    '/' | '/remote' | '/i/$token' | '/room/$sessionId' | '/sent/$sessionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/remote' | '/i/$token' | '/sent/$sessionId'
-  id: '__root__' | '/' | '/remote' | '/i/$token' | '/sent/$sessionId'
+  to: '/' | '/remote' | '/i/$token' | '/room/$sessionId' | '/sent/$sessionId'
+  id:
+    | '__root__'
+    | '/'
+    | '/remote'
+    | '/i/$token'
+    | '/room/$sessionId'
+    | '/sent/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   RemoteRoute: typeof RemoteRoute
   ITokenRoute: typeof ITokenRoute
+  RoomSessionIdRoute: typeof RoomSessionIdRoute
   SentSessionIdRoute: typeof SentSessionIdRoute
 }
 
@@ -92,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ITokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/room/$sessionId': {
+      id: '/room/$sessionId'
+      path: '/room/$sessionId'
+      fullPath: '/room/$sessionId'
+      preLoaderRoute: typeof RoomSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sent/$sessionId': {
       id: '/sent/$sessionId'
       path: '/sent/$sessionId'
@@ -106,18 +130,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   RemoteRoute: RemoteRoute,
   ITokenRoute: ITokenRoute,
+  RoomSessionIdRoute: RoomSessionIdRoute,
   SentSessionIdRoute: SentSessionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
