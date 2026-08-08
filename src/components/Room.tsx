@@ -1,6 +1,8 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import QRCode from "qrcode";
+
 import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
 import {
@@ -56,6 +58,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [bigPrompt, setBigPrompt] = useState("");
   const [email, setEmail] = useState("");
   const [saved, setSaved] = useState(false);
+  const [qr, setQr] = useState("");
   const pending = useRef(false);
 
   useEffect(() => setGuestToken(getGuestToken()), []);
@@ -103,6 +106,18 @@ export function Room({ sessionId }: { sessionId: string }) {
     };
   }, [guestToken, sessionId, refresh]);
 
+  const joinUrl =
+    state?.roomCode && typeof window !== "undefined"
+      ? `${window.location.origin}/join/${state.roomCode}`
+      : "";
+
+  useEffect(() => {
+    if (!joinUrl) return;
+    void QRCode.toDataURL(joinUrl, { margin: 1, width: 320, color: { dark: "#221c17", light: "#0000" } })
+      .then(setQr)
+      .catch(() => setQr(""));
+  }, [joinUrl]);
+
   const other = state?.others[0];
   const current = state?.questions[state.currentIndex];
   const total = state?.questions.length ?? 0;
@@ -144,6 +159,8 @@ export function Room({ sessionId }: { sessionId: string }) {
             <h1 className="mt-6 text-5xl leading-tight">
               {other ? `${other.name} is here.` : "Waiting for someone to join."}
             </h1>
+            <p className="mt-8 text-7xl tracking-[0.2em]">{state.roomCode}</p>
+            {qr && <img src={qr} alt={`QR code to join room ${state.roomCode}`} className="mt-6 h-48 w-48" />}
             <p className="mt-6 text-lg text-muted-foreground">
               They scan the code on your screen. Nothing to download.
             </p>
