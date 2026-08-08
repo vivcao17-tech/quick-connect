@@ -292,6 +292,52 @@ export type Database = {
           },
         ]
       }
+      session_participant_topics: {
+        Row: {
+          created_at: string
+          id: string
+          participant_id: string
+          session_id: string
+          topic_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participant_id: string
+          session_id: string
+          topic_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participant_id?: string
+          session_id?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_participant_topics_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_participant_topics_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_participant_topics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_participants: {
         Row: {
           display_name: string | null
@@ -330,6 +376,52 @@ export type Database = {
           },
           {
             foreignKeyName: "session_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_question_votes: {
+        Row: {
+          created_at: string
+          id: string
+          participant_id: string
+          question_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participant_id: string
+          question_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participant_id?: string
+          question_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_question_votes_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_question_votes_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_question_votes_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"

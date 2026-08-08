@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
+import { createRoom } from "@/lib/irl.functions";
 import { startSession, submitAnswer, logEvent } from "@/lib/play.functions";
 
 export const Route = createFileRoute("/")({
@@ -55,6 +56,7 @@ const SCATTER = [
 ];
 
 function Home() {
+  const [hostName, setHostName] = useState("");
   const [stage, setStage] = useState<"landing" | "topics" | "play" | "done">("landing");
   const [topics, setTopics] = useState<Topic[]>([]);
   const [guestToken, setGuestToken] = useState("");
@@ -72,6 +74,20 @@ function Home() {
   const start = useServerFn(startSession);
   const answer = useServerFn(submitAnswer);
   const track = useServerFn(logEvent);
+  const openRoom = useServerFn(createRoom);
+  const navigate = useNavigate();
+
+  async function startRoom() {
+    if (busy || !guestToken) return;
+    setBusy(true);
+    try {
+      const room = await openRoom({ data: { guestToken, displayName: hostName.trim() || "You" } });
+      await navigate({ to: "/room/$sessionId", params: { sessionId: room.sessionId } });
+    } catch {
+      setError("Couldn't open a room. Try again.");
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     setGuestToken(getGuestToken());
@@ -204,6 +220,20 @@ function Home() {
               Your turn
             </button>
             <span className="text-sm text-muted-foreground">30 seconds, no account</span>
+          </div>
+          <div className="mt-10 border-t border-border pt-8">
+            <p className="text-lg">Someone's sitting across from you?</p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <input
+                value={hostName}
+                onChange={(event) => setHostName(event.target.value)}
+                placeholder="Your name"
+                className="rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
+              />
+              <button onClick={startRoom} disabled={busy} className="btn-ink disabled:opacity-30">
+                Start a session
+              </button>
+            </div>
           </div>
           <Link
             to="/remote"
