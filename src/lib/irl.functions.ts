@@ -364,13 +364,20 @@ export const voteQuestions = createServerFn({ method: "POST" })
       .in("id", chosen);
     const bank = (rows as QuestionRow[] | null) ?? [];
 
+    // A second round appends after the questions already played.
+    const { count: existing } = await supabaseAdmin
+      .from("session_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", data.sessionId);
+    const offset = existing ?? 0;
+
     await supabaseAdmin.from("session_questions").insert(
       chosen.map((id, index) => {
         const q = bank.find((row) => row.id === id)!;
         return {
           session_id: data.sessionId,
           question_id: id,
-          order_index: index,
+          order_index: offset + index,
           snapshot: snapshotRow(q) as never,
         };
       }),
@@ -378,9 +385,10 @@ export const voteQuestions = createServerFn({ method: "POST" })
 
     await supabaseAdmin
       .from("sessions")
-      .update({ status: "answering", current_index: 0 })
+      .update({ status: "answering", current_index: offset })
       .eq("id", data.sessionId)
       .eq("status", "question_select");
+
 
     return { advanced: true };
   });
