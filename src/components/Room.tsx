@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import QRCode from "qrcode";
 
+import { Thread } from "@/components/Thread";
+
 import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
 import {
@@ -55,7 +57,6 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [busy, setBusy] = useState(false);
   const [topicDraft, setTopicDraft] = useState<string[]>([]);
   const [questionDraft, setQuestionDraft] = useState<string[]>([]);
-  const [bigPrompt, setBigPrompt] = useState("");
   const [email, setEmail] = useState("");
   const [saved, setSaved] = useState(false);
   const [qr, setQr] = useState("");
@@ -320,7 +321,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                   guestToken={guestToken}
                   sessionQuestionId={current.sessionQuestionId}
                   prompts={reveal?.prompts ?? []}
-                  onPrompt={(prompt) =>
+                  onPrompt={(prompt: string) =>
                     void track({
                       data: {
                         guestToken,
@@ -335,7 +336,6 @@ export function Room({ sessionId }: { sessionId: string }) {
 
                 <button
                   onClick={() => {
-                    setBigPrompt("");
                     void run(() => advance({ data: { guestToken, sessionId, action: "next" } }));
                   }}
                   className="btn-quiet mt-16"
@@ -348,7 +348,6 @@ export function Room({ sessionId }: { sessionId: string }) {
             <div className="mt-14 flex items-center gap-6 text-sm text-muted-foreground">
               <button
                 onClick={() => {
-                  setBigPrompt("");
                   void run(() => advance({ data: { guestToken, sessionId, action: "skip" } }));
                 }}
                 className="underline underline-offset-4"
