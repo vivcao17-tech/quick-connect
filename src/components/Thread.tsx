@@ -16,9 +16,13 @@ type Message = { id: string; kind: string; body: string; mine: boolean; who: str
 export function Thread({
   guestToken,
   sessionQuestionId,
+  prompts,
+  onPrompt,
 }: {
   guestToken: string;
   sessionQuestionId: string;
+  prompts?: string[];
+  onPrompt?: (prompt: string) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
@@ -28,11 +32,22 @@ export function Thread({
   const load = useServerFn(getThread);
   const post = useServerFn(postThreadMessage);
 
+  // Poll so the other person's messages appear without a manual refresh.
   useEffect(() => {
     if (!guestToken || !sessionQuestionId) return;
-    void load({ data: { guestToken, sessionQuestionId } }).then((result) =>
-      setMessages(result.messages as Message[]),
-    );
+    let alive = true;
+    const pull = () =>
+      void load({ data: { guestToken, sessionQuestionId } })
+        .then((result) => {
+          if (alive) setMessages(result.messages as Message[]);
+        })
+        .catch(() => undefined);
+    pull();
+    const timer = window.setInterval(pull, 2000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
   }, [guestToken, sessionQuestionId, load]);
 
   async function send(kind: "reaction" | "text" | "quick_ask" | "starter", body: string) {
@@ -48,6 +63,7 @@ export function Thread({
       setBusy(false);
     }
   }
+
 
   function useStarter(starter: string) {
     setDraft(starter);
