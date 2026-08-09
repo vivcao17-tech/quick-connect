@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import QRCode from "qrcode";
 
+import { Thread } from "@/components/Thread";
+
 import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
 import {
@@ -55,10 +57,10 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [busy, setBusy] = useState(false);
   const [topicDraft, setTopicDraft] = useState<string[]>([]);
   const [questionDraft, setQuestionDraft] = useState<string[]>([]);
-  const [bigPrompt, setBigPrompt] = useState("");
   const [email, setEmail] = useState("");
   const [saved, setSaved] = useState(false);
   const [qr, setQr] = useState("");
+  const [openSq, setOpenSq] = useState("");
   const pending = useRef(false);
 
   useEffect(() => setGuestToken(getGuestToken()), []);
@@ -121,6 +123,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const other = state?.others[0];
   const current = state?.questions[state.currentIndex];
   const total = state?.questions.length ?? 0;
+  const openQuestion = state?.questions.find((q) => q.sessionQuestionId === openSq);
 
   const reveal = useMemo(() => {
     if (!current?.revealed) return null;
@@ -316,35 +319,25 @@ export function Room({ sessionId }: { sessionId: string }) {
                   </p>
                 </div>
 
-                {bigPrompt ? (
-                  <p className="mt-10 text-4xl leading-tight">{bigPrompt}</p>
-                ) : (
-                  <div className="mt-8 flex flex-wrap gap-3">
-                    {(reveal?.prompts ?? []).map((prompt) => (
-                      <button
-                        key={prompt}
-                        onClick={() => {
-                          setBigPrompt(prompt);
-                          void track({
-                            data: {
-                              guestToken,
-                              sessionId,
-                              name: "prompt_tapped",
-                              props: { prompt, question_id: current.questionId },
-                            },
-                          });
-                        }}
-                        className="rounded-full border border-border px-5 py-2 text-base text-muted-foreground"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <Thread
+                  guestToken={guestToken}
+                  sessionQuestionId={current.sessionQuestionId}
+                  prompts={reveal?.prompts ?? []}
+                  onPrompt={(prompt: string) =>
+                    void track({
+                      data: {
+                        guestToken,
+                        sessionId,
+                        name: "prompt_tapped",
+                        props: { prompt, question_id: current.questionId },
+                      },
+                    })
+                  }
+                />
+
 
                 <button
                   onClick={() => {
-                    setBigPrompt("");
                     void run(() => advance({ data: { guestToken, sessionId, action: "next" } }));
                   }}
                   className="btn-quiet mt-16"
@@ -357,7 +350,6 @@ export function Room({ sessionId }: { sessionId: string }) {
             <div className="mt-14 flex items-center gap-6 text-sm text-muted-foreground">
               <button
                 onClick={() => {
-                  setBigPrompt("");
                   void run(() => advance({ data: { guestToken, sessionId, action: "skip" } }));
                 }}
                 className="underline underline-offset-4"
@@ -380,12 +372,54 @@ export function Room({ sessionId }: { sessionId: string }) {
           </div>
         )}
 
-        {state.status === "ended" && (
+        {state.status === "ended" && openQuestion && (
+          <div>
+            <button
+              onClick={() => setOpenSq("")}
+              className="text-sm text-muted-foreground underline underline-offset-4"
+            >
+              All questions
+            </button>
+            <h2 className="mt-6 text-3xl leading-tight">{openQuestion.text}</h2>
+            <div className="card-soft mt-6 px-6 py-6">
+              {openQuestion.picks.map((p) => (
+                <p key={p.name + String(p.isMe)} className="text-lg">
+                  <span className="text-muted-foreground">{p.isMe ? "You" : p.name}: </span>
+                  {p.label}
+                </p>
+              ))}
+            </div>
+            <Thread guestToken={guestToken} sessionQuestionId={openQuestion.sessionQuestionId} />
+          </div>
+        )}
+
+        {state.status === "ended" && !openQuestion && (
           <div>
             <h2 className="text-4xl leading-tight">
               {total} question{total === 1 ? "" : "s"} today — you went different ways on{" "}
               {state.differing}.
             </h2>
+
+            <div className="mt-10 flex flex-col gap-3">
+              {state.questions
+                .filter((q) => q.revealed)
+                .map((q) => (
+                  <button
+                    key={q.sessionQuestionId}
+                    onClick={() => setOpenSq(q.sessionQuestionId)}
+                    className="card-soft px-6 py-5 text-left"
+                  >
+                    <p className="text-lg">{q.text}</p>
+                    {q.picks.map((p) => (
+                      <p key={p.name + String(p.isMe)} className="mt-1 text-base">
+                        <span className="text-muted-foreground">{p.isMe ? "You" : p.name}: </span>
+                        {p.label}
+                      </p>
+                    ))}
+                  </button>
+                ))}
+            </div>
+
 
             <div className="mt-12">
               {saved ? (
