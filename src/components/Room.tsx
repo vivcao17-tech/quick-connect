@@ -370,12 +370,54 @@ export function Room({ sessionId }: { sessionId: string }) {
           </div>
         )}
 
-        {state.status === "ended" && (
+        {state.status === "ended" && openQuestion && (
+          <div>
+            <button
+              onClick={() => setOpenSq("")}
+              className="text-sm text-muted-foreground underline underline-offset-4"
+            >
+              All questions
+            </button>
+            <h2 className="mt-6 text-3xl leading-tight">{openQuestion.text}</h2>
+            <div className="card-soft mt-6 px-6 py-6">
+              {openQuestion.picks.map((p) => (
+                <p key={p.name + String(p.isMe)} className="text-lg">
+                  <span className="text-muted-foreground">{p.isMe ? "You" : p.name}: </span>
+                  {p.label}
+                </p>
+              ))}
+            </div>
+            <Thread guestToken={guestToken} sessionQuestionId={openQuestion.sessionQuestionId} />
+          </div>
+        )}
+
+        {state.status === "ended" && !openQuestion && (
           <div>
             <h2 className="text-4xl leading-tight">
               {total} question{total === 1 ? "" : "s"} today — you went different ways on{" "}
               {state.differing}.
             </h2>
+
+            <div className="mt-10 flex flex-col gap-3">
+              {state.questions
+                .filter((q) => q.revealed)
+                .map((q) => (
+                  <button
+                    key={q.sessionQuestionId}
+                    onClick={() => setOpenSq(q.sessionQuestionId)}
+                    className="card-soft px-6 py-5 text-left"
+                  >
+                    <p className="text-lg">{q.text}</p>
+                    {q.picks.map((p) => (
+                      <p key={p.name + String(p.isMe)} className="mt-1 text-base">
+                        <span className="text-muted-foreground">{p.isMe ? "You" : p.name}: </span>
+                        {p.label}
+                      </p>
+                    ))}
+                  </button>
+                ))}
+            </div>
+
 
             <div className="mt-12">
               {saved ? (
