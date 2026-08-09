@@ -316,31 +316,22 @@ export function Room({ sessionId }: { sessionId: string }) {
                   </p>
                 </div>
 
-                {bigPrompt ? (
-                  <p className="mt-10 text-4xl leading-tight">{bigPrompt}</p>
-                ) : (
-                  <div className="mt-8 flex flex-wrap gap-3">
-                    {(reveal?.prompts ?? []).map((prompt) => (
-                      <button
-                        key={prompt}
-                        onClick={() => {
-                          setBigPrompt(prompt);
-                          void track({
-                            data: {
-                              guestToken,
-                              sessionId,
-                              name: "prompt_tapped",
-                              props: { prompt, question_id: current.questionId },
-                            },
-                          });
-                        }}
-                        className="rounded-full border border-border px-5 py-2 text-base text-muted-foreground"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <Thread
+                  guestToken={guestToken}
+                  sessionQuestionId={current.sessionQuestionId}
+                  prompts={reveal?.prompts ?? []}
+                  onPrompt={(prompt) =>
+                    void track({
+                      data: {
+                        guestToken,
+                        sessionId,
+                        name: "prompt_tapped",
+                        props: { prompt, question_id: current.questionId },
+                      },
+                    })
+                  }
+                />
+
 
                 <button
                   onClick={() => {
