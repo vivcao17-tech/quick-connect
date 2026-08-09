@@ -87,6 +87,26 @@ export function Thread({
         </div>
       )}
 
+      {prompts && prompts.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {prompts.map((prompt) => (
+            <button
+              key={prompt}
+              disabled={busy}
+              onClick={() => {
+                onPrompt?.(prompt);
+                void send("quick_ask", prompt);
+              }}
+              className="rounded-full border border-border px-5 py-2 text-base hover:border-primary disabled:opacity-40"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
+
+
+
       <div className="flex flex-wrap gap-2">
         {REACTIONS.map((reaction) => (
           <button
