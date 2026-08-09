@@ -37,12 +37,15 @@ function JoinPage() {
   useEffect(() => setGuestToken(getGuestToken()), []);
 
   async function go() {
-    if (busy || !name.trim() || !guestToken) return;
+    if (busy || !name.trim()) return;
+    // Joining is always a guest action — no sign-in, even for Google users.
+    const token = guestToken || getGuestToken();
+    if (!guestToken) setGuestToken(token);
     setBusy(true);
     setError("");
     try {
       const result = await join({
-        data: { guestToken, displayName: name.trim(), roomCode: code.toUpperCase() },
+        data: { guestToken: token, displayName: name.trim(), roomCode: code.toUpperCase() },
       });
       await navigate({ to: "/room/$sessionId", params: { sessionId: result.sessionId } });
     } catch {
