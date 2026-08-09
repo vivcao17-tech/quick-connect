@@ -60,6 +60,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [email, setEmail] = useState("");
   const [saved, setSaved] = useState(false);
   const [qr, setQr] = useState("");
+  const [openSq, setOpenSq] = useState("");
   const pending = useRef(false);
 
   useEffect(() => setGuestToken(getGuestToken()), []);
@@ -122,6 +123,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const other = state?.others[0];
   const current = state?.questions[state.currentIndex];
   const total = state?.questions.length ?? 0;
+  const openQuestion = state?.questions.find((q) => q.sessionQuestionId === openSq);
 
   const reveal = useMemo(() => {
     if (!current?.revealed) return null;
