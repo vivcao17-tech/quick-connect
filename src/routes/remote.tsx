@@ -54,7 +54,7 @@ const SCATTER = [
 ];
 
 function RemotePage() {
-  const [stage, setStage] = useState<"topics" | "pick" | "play" | "send" | "sent">("topics");
+  const [stage, setStage] = useState<"topics" | "pick" | "play">("topics");
   const [topics, setTopics] = useState<Topic[]>([]);
   const [guestToken, setGuestToken] = useState("");
   const [name, setName] = useState("");
@@ -68,16 +68,14 @@ function RemotePage() {
   const [reason, setReason] = useState("");
   const [picked, setPicked] = useState<OptionKey | null>(null);
   const [tally, setTally] = useState<{ optionKey: OptionKey; votes: number }[] | null>(null);
-  const [recipients, setRecipients] = useState<Recipient[]>([{ label: "", note: "" }]);
-  const [links, setLinks] = useState<{ token: string; label: string; note: string }[]>([]);
-  const [copied, setCopied] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const navigate = useNavigate();
   const loadQuestions = useServerFn(listTopicQuestions);
   const createSession = useServerFn(createRemoteSession);
   const answer = useServerFn(answerAsSender);
-  const send = useServerFn(createInvites);
+
 
   useEffect(() => {
     setGuestToken(getGuestToken());
