@@ -40,7 +40,7 @@ export const Route = createFileRoute("/remote")({
 
 type Topic = { id: string; slug: string; label: string };
 type Candidate = { id: string; text: string; options: { key: OptionKey; label: string }[] };
-type Recipient = { label: string; note: string };
+
 
 const SCATTER = [
   { top: 4, left: 6, size: 2.9, rotate: -7 },
