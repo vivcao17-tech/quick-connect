@@ -180,44 +180,10 @@ function RemotePage() {
       setIndex(index + 1);
       return;
     }
-    setStage("send");
+    void navigate({ to: "/send/$sessionId", params: { sessionId } });
   }
 
-  async function sendIt() {
-    const clean = recipients.filter((r) => r.label.trim());
-    if (clean.length === 0) return;
-    setBusy(true);
-    setError("");
-    try {
-      const result = await send({
-        data: {
-          guestToken,
-          sessionId,
-          recipients: clean.map((r) => ({ label: r.label.trim(), note: r.note.trim() })),
-        },
-      });
-      setLinks(result.invites);
-      const stored = JSON.parse(window.localStorage.getItem("beside.sent") ?? "[]");
-      window.localStorage.setItem(
-        "beside.sent",
-        JSON.stringify([{ sessionId, at: Date.now() }, ...stored].slice(0, 20)),
-      );
-      setStage("sent");
-    } catch {
-      setError("That didn't go through. Try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
-  async function copy(token: string, label: string, note: string) {
-    const origin = window.location.origin;
-    const message = `${note ? `${note}\n\n` : ""}3 questions · 30 seconds · no signup\n${origin}/i/${token}`;
-    await navigator.clipboard.writeText(message);
-    setCopied(token);
-    window.setTimeout(() => setCopied(""), 2500);
-    void label;
-  }
 
   const totals = useMemo(() => {
     if (!tally || !current) return null;
