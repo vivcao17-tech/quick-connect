@@ -14,6 +14,7 @@ import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as RoomSessionIdRouteImport } from './routes/room.$sessionId'
+import { Route as SendSessionIdRouteImport } from './routes/send.$sessionId'
 import { Route as SentSessionIdRouteImport } from './routes/sent.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const RoomSessionIdRoute = RoomSessionIdRouteImport.update({
   path: '/room/$sessionId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SendSessionIdRoute = SendSessionIdRouteImport.update({
+  id: '/send/$sessionId',
+  path: '/send/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SentSessionIdRoute = SentSessionIdRouteImport.update({
   id: '/sent/$sessionId',
   path: '/sent/$sessionId',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
+  '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
+  '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
+  '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
+    | '/send/$sessionId'
     | '/sent/$sessionId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
+    | '/send/$sessionId'
     | '/sent/$sessionId'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
+    | '/send/$sessionId'
     | '/sent/$sessionId'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +117,7 @@ export interface RootRouteChildren {
   ITokenRoute: typeof ITokenRoute
   JoinCodeRoute: typeof JoinCodeRoute
   RoomSessionIdRoute: typeof RoomSessionIdRoute
+  SendSessionIdRoute: typeof SendSessionIdRoute
   SentSessionIdRoute: typeof SentSessionIdRoute
 }
 
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/send/$sessionId': {
+      id: '/send/$sessionId'
+      path: '/send/$sessionId'
+      fullPath: '/send/$sessionId'
+      preLoaderRoute: typeof SendSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sent/$sessionId': {
       id: '/sent/$sessionId'
       path: '/sent/$sessionId'
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   ITokenRoute: ITokenRoute,
   JoinCodeRoute: JoinCodeRoute,
   RoomSessionIdRoute: RoomSessionIdRoute,
+  SendSessionIdRoute: SendSessionIdRoute,
   SentSessionIdRoute: SentSessionIdRoute,
 }
 export const routeTree = rootRouteImport
