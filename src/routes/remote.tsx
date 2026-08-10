@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
@@ -6,11 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
 import {
   answerAsSender,
-  createInvites,
   createRemoteSession,
   listTopicQuestions,
 } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
+
 
 export const Route = createFileRoute("/remote")({
   component: RemotePage,
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/remote")({
 
 type Topic = { id: string; slug: string; label: string };
 type Candidate = { id: string; text: string; options: { key: OptionKey; label: string }[] };
-type Recipient = { label: string; note: string };
+
 
 const SCATTER = [
   { top: 4, left: 6, size: 2.9, rotate: -7 },
@@ -54,7 +54,7 @@ const SCATTER = [
 ];
 
 function RemotePage() {
-  const [stage, setStage] = useState<"topics" | "pick" | "play" | "send" | "sent">("topics");
+  const [stage, setStage] = useState<"topics" | "pick" | "play">("topics");
   const [topics, setTopics] = useState<Topic[]>([]);
   const [guestToken, setGuestToken] = useState("");
   const [name, setName] = useState("");
@@ -68,16 +68,14 @@ function RemotePage() {
   const [reason, setReason] = useState("");
   const [picked, setPicked] = useState<OptionKey | null>(null);
   const [tally, setTally] = useState<{ optionKey: OptionKey; votes: number }[] | null>(null);
-  const [recipients, setRecipients] = useState<Recipient[]>([{ label: "", note: "" }]);
-  const [links, setLinks] = useState<{ token: string; label: string; note: string }[]>([]);
-  const [copied, setCopied] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const navigate = useNavigate();
   const loadQuestions = useServerFn(listTopicQuestions);
   const createSession = useServerFn(createRemoteSession);
   const answer = useServerFn(answerAsSender);
-  const send = useServerFn(createInvites);
+
 
   useEffect(() => {
     setGuestToken(getGuestToken());
@@ -180,44 +178,10 @@ function RemotePage() {
       setIndex(index + 1);
       return;
     }
-    setStage("send");
+    void navigate({ to: "/send/$sessionId", params: { sessionId } });
   }
 
-  async function sendIt() {
-    const clean = recipients.filter((r) => r.label.trim());
-    if (clean.length === 0) return;
-    setBusy(true);
-    setError("");
-    try {
-      const result = await send({
-        data: {
-          guestToken,
-          sessionId,
-          recipients: clean.map((r) => ({ label: r.label.trim(), note: r.note.trim() })),
-        },
-      });
-      setLinks(result.invites);
-      const stored = JSON.parse(window.localStorage.getItem("beside.sent") ?? "[]");
-      window.localStorage.setItem(
-        "beside.sent",
-        JSON.stringify([{ sessionId, at: Date.now() }, ...stored].slice(0, 20)),
-      );
-      setStage("sent");
-    } catch {
-      setError("That didn't go through. Try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
-  async function copy(token: string, label: string, note: string) {
-    const origin = window.location.origin;
-    const message = `${note ? `${note}\n\n` : ""}3 questions · 30 seconds · no signup\n${origin}/i/${token}`;
-    await navigator.clipboard.writeText(message);
-    setCopied(token);
-    window.setTimeout(() => setCopied(""), 2500);
-    void label;
-  }
 
   const totals = useMemo(() => {
     if (!tally || !current) return null;
@@ -235,7 +199,12 @@ function RemotePage() {
       {stage === "topics" && (
         <section className="mx-auto min-h-screen max-w-2xl px-6 py-16">
           <h1 className="text-3xl">What's on your mind?</h1>
-          <p className="mt-2 text-muted-foreground">Tap a word.</p>
+          <p className="mt-2 max-w-md text-muted-foreground">
+            Answer three questions first — then send them to someone and find out how differently
+            they'd answer.
+          </p>
+          <p className="mt-4 text-muted-foreground">Tap a word.</p>
+
           <div className="relative mt-10 h-[520px]">
             {topics.map((topic, i) => {
               const spot = SCATTER[i % SCATTER.length]!;
@@ -377,89 +346,7 @@ function RemotePage() {
         </section>
       )}
 
-      {stage === "send" && (
-        <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-          <h1 className="text-4xl leading-tight">Who do you want to send this to?</h1>
-
-          <div className="mt-8 flex flex-col gap-6">
-            {recipients.map((recipient, i) => (
-              <div key={i} className="card-soft px-6 py-5">
-                <input
-                  value={recipient.label}
-                  onChange={(event) =>
-                    setRecipients((prev) =>
-                      prev.map((item, j) =>
-                        j === i ? { ...item, label: event.target.value } : item,
-                      ),
-                    )
-                  }
-                  placeholder="Their name"
-                  className="w-full bg-transparent text-lg outline-none"
-                />
-                <textarea
-                  value={recipient.note}
-                  onChange={(event) =>
-                    setRecipients((prev) =>
-                      prev.map((item, j) =>
-                        j === i ? { ...item, note: event.target.value } : item,
-                      ),
-                    )
-                  }
-                  rows={2}
-                  placeholder="Write them a line — just for them"
-                  className="mt-4 w-full resize-none rounded-2xl border border-border bg-background px-4 py-3 text-base italic outline-none focus:border-primary"
-                />
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setRecipients((prev) => [...prev, { label: "", note: "" }])}
-            className="mt-4 text-sm text-muted-foreground underline underline-offset-4"
-          >
-            Add someone else
-          </button>
-
-          <div className="mt-10">
-            <button onClick={sendIt} disabled={busy} className="btn-ink hover:opacity-90">
-              Make their links
-            </button>
-          </div>
-          {error && <p className="mt-4 text-sm text-primary">{error}</p>}
-        </section>
-      )}
-
-      {stage === "sent" && (
-        <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-          <h1 className="text-4xl leading-tight">Yours to send.</h1>
-          <p className="mt-3 text-muted-foreground">
-            Copy each one into your own messages — nothing goes out from here.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-4">
-            {links.map((invite) => (
-              <div key={invite.token} className="card-soft px-6 py-5">
-                <p className="text-lg">{invite.label}</p>
-                {invite.note && <p className="mt-2 text-base italic text-muted-foreground">"{invite.note}"</p>}
-                <button
-                  onClick={() => copy(invite.token, invite.label, invite.note)}
-                  className="btn-quiet mt-4 hover:bg-secondary"
-                >
-                  {copied === invite.token ? "Copied" : "Copy message + link"}
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <Link
-            to="/sent/$sessionId"
-            params={{ sessionId }}
-            className="mt-10 inline-block text-sm text-muted-foreground underline underline-offset-4"
-          >
-            See what comes back
-          </Link>
-        </section>
-      )}
     </main>
   );
 }
+

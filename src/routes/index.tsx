@@ -206,21 +206,19 @@ function Home() {
             <em className="italic text-primary">Then you talk.</em>
           </h1>
           <p className="mt-6 max-w-sm text-lg leading-relaxed text-muted-foreground">
-            Pick a word that's on your mind. Answer three quick questions. See where you land
-            against everyone else — then put the phone down.
+            Answer three questions first — then send them to someone and find out how differently
+            they'd answer.
           </p>
           <div className="mt-10 flex items-center gap-4">
             <button
               className="btn-ink hover:opacity-90"
-              onClick={() => {
-                setTopicsShownAt(Date.now());
-                setStage("topics");
-              }}
+              onClick={() => void navigate({ to: "/remote" })}
             >
               Your turn
             </button>
             <span className="text-sm text-muted-foreground">30 seconds, no account</span>
           </div>
+
           <div className="mt-10 border-t border-border pt-8">
             <p className="text-lg">Someone's sitting across from you?</p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
