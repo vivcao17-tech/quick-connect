@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
@@ -6,11 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
 import {
   answerAsSender,
-  createInvites,
   createRemoteSession,
   listTopicQuestions,
 } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
+
 
 export const Route = createFileRoute("/remote")({
   component: RemotePage,
