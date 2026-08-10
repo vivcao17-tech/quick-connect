@@ -199,7 +199,12 @@ function RemotePage() {
       {stage === "topics" && (
         <section className="mx-auto min-h-screen max-w-2xl px-6 py-16">
           <h1 className="text-3xl">What's on your mind?</h1>
-          <p className="mt-2 text-muted-foreground">Tap a word.</p>
+          <p className="mt-2 max-w-md text-muted-foreground">
+            Answer three questions first — then send them to someone and find out how differently
+            they'd answer.
+          </p>
+          <p className="mt-4 text-muted-foreground">Tap a word.</p>
+
           <div className="relative mt-10 h-[520px]">
             {topics.map((topic, i) => {
               const spot = SCATTER[i % SCATTER.length]!;
