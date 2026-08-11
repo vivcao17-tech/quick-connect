@@ -65,14 +65,17 @@ export function Thread({
   }
 
 
-  function useStarter(starter: string) {
+  /** Put text in the box so it can be read, edited or deleted before sending. */
+  function fillDraft(starter: string) {
     setDraft(starter);
     window.setTimeout(() => {
+      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       inputRef.current?.focus();
       const end = inputRef.current?.value.length ?? 0;
       inputRef.current?.setSelectionRange(end, end);
     }, 0);
   }
+
 
   return (
     <div className="mt-8 border-t border-border pt-6">
@@ -92,12 +95,11 @@ export function Thread({
           {prompts.map((prompt) => (
             <button
               key={prompt}
-              disabled={busy}
               onClick={() => {
                 onPrompt?.(prompt);
-                void send("quick_ask", prompt);
+                fillDraft(prompt);
               }}
-              className="rounded-full border border-border px-5 py-2 text-base hover:border-primary disabled:opacity-40"
+              className="rounded-full border border-border px-5 py-2 text-base hover:border-primary"
             >
               {prompt}
             </button>
@@ -124,20 +126,20 @@ export function Thread({
         {QUICK_ASKS.map((ask) => (
           <button
             key={ask}
-            disabled={busy}
-            onClick={() => send("quick_ask", ask)}
-            className="rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground disabled:opacity-40"
+            onClick={() => fillDraft(ask)}
+            className="rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
           >
             {ask}
           </button>
         ))}
       </div>
 
+
       <div className="mt-3 flex flex-wrap gap-2">
         {STARTERS.map((starter) => (
           <button
             key={starter}
-            onClick={() => useStarter(starter)}
+            onClick={() => fillDraft(starter)}
             className="text-sm text-muted-foreground italic underline underline-offset-4 hover:text-foreground"
           >
             {starter}___
