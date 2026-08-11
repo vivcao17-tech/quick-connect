@@ -6,6 +6,8 @@ import QRCode from "qrcode";
 import { Thread } from "@/components/Thread";
 
 import { supabase } from "@/integrations/supabase/client";
+import { getRevealPrompts } from "@/lib/ai-prompts.functions";
+import type { RevealPrompts } from "@/lib/ai-prompts.functions";
 import { getGuestToken } from "@/lib/guest";
 import {
   advanceRoom,
