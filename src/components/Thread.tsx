@@ -66,7 +66,7 @@ export function Thread({
 
 
   /** Put text in the box so it can be read, edited or deleted before sending. */
-  function useStarter(starter: string) {
+  function fillDraft(starter: string) {
     setDraft(starter);
     window.setTimeout(() => {
       inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -97,7 +97,7 @@ export function Thread({
               key={prompt}
               onClick={() => {
                 onPrompt?.(prompt);
-                useStarter(prompt);
+                fillDraft(prompt);
               }}
               className="rounded-full border border-border px-5 py-2 text-base hover:border-primary"
             >
@@ -126,7 +126,7 @@ export function Thread({
         {QUICK_ASKS.map((ask) => (
           <button
             key={ask}
-            onClick={() => useStarter(ask)}
+            onClick={() => fillDraft(ask)}
             className="rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
           >
             {ask}
@@ -139,7 +139,7 @@ export function Thread({
         {STARTERS.map((starter) => (
           <button
             key={starter}
-            onClick={() => useStarter(starter)}
+            onClick={() => fillDraft(starter)}
             className="text-sm text-muted-foreground italic underline underline-offset-4 hover:text-foreground"
           >
             {starter}___
