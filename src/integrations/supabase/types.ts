@@ -431,6 +431,7 @@ export type Database = {
       }
       session_questions: {
         Row: {
+          ai_prompts: Json | null
           id: string
           order_index: number
           question_id: string
@@ -439,6 +440,7 @@ export type Database = {
           snapshot: Json | null
         }
         Insert: {
+          ai_prompts?: Json | null
           id?: string
           order_index?: number
           question_id: string
@@ -447,6 +449,7 @@ export type Database = {
           snapshot?: Json | null
         }
         Update: {
+          ai_prompts?: Json | null
           id?: string
           order_index?: number
           question_id?: string
