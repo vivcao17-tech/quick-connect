@@ -146,7 +146,14 @@ export function Room({ sessionId }: { sessionId: string }) {
     return () => {
       alive = false;
     };
-  }, [guestToken, current?.revealed, current?.sessionQuestionId, aiPrompts, fetchPrompts]);
+  }, [
+    guestToken,
+    state?.status,
+    current?.revealed,
+    current?.sessionQuestionId,
+    aiPrompts,
+    fetchPrompts,
+  ]);
 
   const reveal = useMemo(() => {
     if (!current?.revealed) return null;
