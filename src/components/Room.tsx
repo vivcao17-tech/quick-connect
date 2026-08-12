@@ -6,6 +6,8 @@ import QRCode from "qrcode";
 import { Thread } from "@/components/Thread";
 
 import { supabase } from "@/integrations/supabase/client";
+import { getRevealPrompts } from "@/lib/ai-prompts.functions";
+import type { RevealPrompts } from "@/lib/ai-prompts.functions";
 import { getGuestToken } from "@/lib/guest";
 import {
   advanceRoom,
@@ -61,7 +63,9 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [saved, setSaved] = useState(false);
   const [qr, setQr] = useState("");
   const [openSq, setOpenSq] = useState("");
+  const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
   const pending = useRef(false);
+  const fetchPrompts = useServerFn(getRevealPrompts);
 
   useEffect(() => setGuestToken(getGuestToken()), []);
 
@@ -125,12 +129,36 @@ export function Room({ sessionId }: { sessionId: string }) {
   const total = state?.questions.length ?? 0;
   const openQuestion = state?.questions.find((q) => q.sessionQuestionId === openSq);
 
+  // Ask for AI prompts once per revealed question; the reveal itself never waits on this.
+  useEffect(() => {
+    const sqId = current?.revealed ? current.sessionQuestionId : "";
+    if (!guestToken || !sqId || aiPrompts[sqId]) return;
+    let alive = true;
+    void fetchPrompts({ data: { guestToken, sessionQuestionId: sqId } })
+      .then((result) => {
+        if (alive && result.source === "ai" && result.prompts.length > 0) {
+          setAiPrompts((prev) => ({ ...prev, [sqId]: result }));
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [guestToken, current?.revealed, current?.sessionQuestionId, aiPrompts, fetchPrompts]);
+
   const reveal = useMemo(() => {
     if (!current?.revealed) return null;
     const keys = current.picks.map((p) => p.optionKey).filter(Boolean);
     const differs = new Set(keys).size > 1;
-    return { differs, prompts: differs ? DIFFERENT_PROMPTS : SAME_PROMPTS };
-  }, [current]);
+    const ai = aiPrompts[current.sessionQuestionId];
+    return {
+      differs,
+      source: ai ? ("ai" as const) : ("template" as const),
+      observation: ai?.observation ?? "",
+      prompts: ai?.prompts ?? (differs ? DIFFERENT_PROMPTS : SAME_PROMPTS),
+    };
+  }, [current, aiPrompts]);
+
 
   async function run(fn: () => Promise<unknown>) {
     if (busy) return;
@@ -319,6 +347,10 @@ export function Room({ sessionId }: { sessionId: string }) {
                   </p>
                 </div>
 
+                {reveal?.observation && (
+                  <p className="mt-6 text-lg leading-snug">{reveal.observation}</p>
+                )}
+
                 <Thread
                   guestToken={guestToken}
                   sessionQuestionId={current.sessionQuestionId}
@@ -329,11 +361,16 @@ export function Room({ sessionId }: { sessionId: string }) {
                         guestToken,
                         sessionId,
                         name: "prompt_tapped",
-                        props: { prompt, question_id: current.questionId },
+                        props: {
+                          prompt,
+                          question_id: current.questionId,
+                          source: reveal?.source ?? "template",
+                        },
                       },
                     })
                   }
                 />
+
 
 
                 <button

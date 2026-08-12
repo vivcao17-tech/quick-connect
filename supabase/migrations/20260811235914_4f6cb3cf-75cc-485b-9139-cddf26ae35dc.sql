@@ -1,0 +1,1 @@
+ALTER TABLE public.session_questions ADD COLUMN IF NOT EXISTS ai_prompts jsonb;
