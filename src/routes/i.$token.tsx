@@ -7,6 +7,7 @@ import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
 import { answerAsRecipient, getInvite, startInvite } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
+import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 
 export const Route = createFileRoute("/i/$token")({
   component: InvitePage,
