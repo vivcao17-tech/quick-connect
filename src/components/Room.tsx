@@ -347,6 +347,10 @@ export function Room({ sessionId }: { sessionId: string }) {
                   </p>
                 </div>
 
+                {reveal?.observation && (
+                  <p className="mt-6 text-lg leading-snug">{reveal.observation}</p>
+                )}
+
                 <Thread
                   guestToken={guestToken}
                   sessionQuestionId={current.sessionQuestionId}
@@ -357,11 +361,16 @@ export function Room({ sessionId }: { sessionId: string }) {
                         guestToken,
                         sessionId,
                         name: "prompt_tapped",
-                        props: { prompt, question_id: current.questionId },
+                        props: {
+                          prompt,
+                          question_id: current.questionId,
+                          source: reveal?.source ?? "template",
+                        },
                       },
                     })
                   }
                 />
+
 
 
                 <button
