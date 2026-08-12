@@ -73,7 +73,14 @@ export function PairSummary({
         </div>
 
         {question.revealed ? (
-          <Thread guestToken={guestToken} sessionQuestionId={question.sessionQuestionId} />
+          <>
+            {ai.observation && <p className="mt-6 text-lg leading-snug">{ai.observation}</p>}
+            <Thread
+              guestToken={guestToken}
+              sessionQuestionId={question.sessionQuestionId}
+              prompts={ai.prompts}
+            />
+          </>
         ) : (
           <p className="mt-8 text-lg text-muted-foreground italic">Waiting for {otherName}.</p>
         )}
