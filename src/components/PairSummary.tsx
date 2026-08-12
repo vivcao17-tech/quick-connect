@@ -32,6 +32,12 @@ export function PairSummary({
 
   const question = summary?.questions.find((q) => q.sessionQuestionId === focused);
   const otherName = summary?.otherName ?? "them";
+  const ai = useRevealPrompts(
+    guestToken,
+    question?.sessionQuestionId ?? "",
+    Boolean(question?.revealed),
+  );
+
 
   if (question) {
     return (
