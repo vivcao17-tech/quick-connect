@@ -259,7 +259,14 @@ function InvitePage() {
                       </p>
                     )}
                   </div>
-                  <Thread guestToken={guestToken} sessionQuestionId={current.sessionQuestionId} />
+                  {ai.observation && (
+                    <p className="mt-6 text-lg leading-snug">{ai.observation}</p>
+                  )}
+                  <Thread
+                    guestToken={guestToken}
+                    sessionQuestionId={current.sessionQuestionId}
+                    prompts={ai.prompts}
+                  />
                 </>
               ) : (
                 <p className="mt-10 text-lg text-muted-foreground italic">
