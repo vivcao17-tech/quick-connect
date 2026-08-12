@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Thread } from "@/components/Thread";
 import { getPairSummary } from "@/lib/remote.functions";
+import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 
 type Summary = Awaited<ReturnType<typeof getPairSummary>>;
 
