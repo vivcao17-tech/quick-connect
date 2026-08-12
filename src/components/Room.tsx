@@ -131,7 +131,9 @@ export function Room({ sessionId }: { sessionId: string }) {
 
   // Ask for AI prompts once per revealed question; the reveal itself never waits on this.
   useEffect(() => {
-    const sqId = current?.revealed ? current.sessionQuestionId : "";
+    // Only after reveal: before that, one side's answer alone makes the output generic.
+    const revealedNow = state?.status === "revealed" && current?.revealed;
+    const sqId = revealedNow ? current.sessionQuestionId : "";
     if (!guestToken || !sqId || aiPrompts[sqId]) return;
     let alive = true;
     void fetchPrompts({ data: { guestToken, sessionQuestionId: sqId } })
@@ -144,7 +146,14 @@ export function Room({ sessionId }: { sessionId: string }) {
     return () => {
       alive = false;
     };
-  }, [guestToken, current?.revealed, current?.sessionQuestionId, aiPrompts, fetchPrompts]);
+  }, [
+    guestToken,
+    state?.status,
+    current?.revealed,
+    current?.sessionQuestionId,
+    aiPrompts,
+    fetchPrompts,
+  ]);
 
   const reveal = useMemo(() => {
     if (!current?.revealed) return null;

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Thread } from "@/components/Thread";
 import { getPairSummary } from "@/lib/remote.functions";
+import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 
 type Summary = Awaited<ReturnType<typeof getPairSummary>>;
 
@@ -31,6 +32,12 @@ export function PairSummary({
 
   const question = summary?.questions.find((q) => q.sessionQuestionId === focused);
   const otherName = summary?.otherName ?? "them";
+  const ai = useRevealPrompts(
+    guestToken,
+    question?.sessionQuestionId ?? "",
+    Boolean(question?.revealed),
+  );
+
 
   if (question) {
     return (
@@ -66,7 +73,14 @@ export function PairSummary({
         </div>
 
         {question.revealed ? (
-          <Thread guestToken={guestToken} sessionQuestionId={question.sessionQuestionId} />
+          <>
+            {ai.observation && <p className="mt-6 text-lg leading-snug">{ai.observation}</p>}
+            <Thread
+              guestToken={guestToken}
+              sessionQuestionId={question.sessionQuestionId}
+              prompts={ai.prompts}
+            />
+          </>
         ) : (
           <p className="mt-8 text-lg text-muted-foreground italic">Waiting for {otherName}.</p>
         )}

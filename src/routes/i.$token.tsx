@@ -7,6 +7,7 @@ import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
 import { answerAsRecipient, getInvite, startInvite } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
+import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 
 export const Route = createFileRoute("/i/$token")({
   component: InvitePage,
@@ -134,7 +135,12 @@ function InvitePage() {
     return { rows, withMost: top?.key === reveal.mine?.optionKey };
   }, [reveal, current]);
 
-  
+  const ai = useRevealPrompts(
+    guestToken,
+    current?.sessionQuestionId ?? "",
+    Boolean(reveal?.revealed),
+  );
+
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -253,7 +259,14 @@ function InvitePage() {
                       </p>
                     )}
                   </div>
-                  <Thread guestToken={guestToken} sessionQuestionId={current.sessionQuestionId} />
+                  {ai.observation && (
+                    <p className="mt-6 text-lg leading-snug">{ai.observation}</p>
+                  )}
+                  <Thread
+                    guestToken={guestToken}
+                    sessionQuestionId={current.sessionQuestionId}
+                    prompts={ai.prompts}
+                  />
                 </>
               ) : (
                 <p className="mt-10 text-lg text-muted-foreground italic">
