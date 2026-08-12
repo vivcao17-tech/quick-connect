@@ -129,12 +129,36 @@ export function Room({ sessionId }: { sessionId: string }) {
   const total = state?.questions.length ?? 0;
   const openQuestion = state?.questions.find((q) => q.sessionQuestionId === openSq);
 
+  // Ask for AI prompts once per revealed question; the reveal itself never waits on this.
+  useEffect(() => {
+    const sqId = current?.revealed ? current.sessionQuestionId : "";
+    if (!guestToken || !sqId || aiPrompts[sqId]) return;
+    let alive = true;
+    void fetchPrompts({ data: { guestToken, sessionQuestionId: sqId } })
+      .then((result) => {
+        if (alive && result.source === "ai" && result.prompts.length > 0) {
+          setAiPrompts((prev) => ({ ...prev, [sqId]: result }));
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [guestToken, current?.revealed, current?.sessionQuestionId, aiPrompts, fetchPrompts]);
+
   const reveal = useMemo(() => {
     if (!current?.revealed) return null;
     const keys = current.picks.map((p) => p.optionKey).filter(Boolean);
     const differs = new Set(keys).size > 1;
-    return { differs, prompts: differs ? DIFFERENT_PROMPTS : SAME_PROMPTS };
-  }, [current]);
+    const ai = aiPrompts[current.sessionQuestionId];
+    return {
+      differs,
+      source: ai ? ("ai" as const) : ("template" as const),
+      observation: ai?.observation ?? "",
+      prompts: ai?.prompts ?? (differs ? DIFFERENT_PROMPTS : SAME_PROMPTS),
+    };
+  }, [current, aiPrompts]);
+
 
   async function run(fn: () => Promise<unknown>) {
     if (busy) return;
