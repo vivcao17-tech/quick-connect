@@ -63,7 +63,9 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [saved, setSaved] = useState(false);
   const [qr, setQr] = useState("");
   const [openSq, setOpenSq] = useState("");
+  const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
   const pending = useRef(false);
+  const fetchPrompts = useServerFn(getRevealPrompts);
 
   useEffect(() => setGuestToken(getGuestToken()), []);
 
