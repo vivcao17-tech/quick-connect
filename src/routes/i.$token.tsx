@@ -135,7 +135,12 @@ function InvitePage() {
     return { rows, withMost: top?.key === reveal.mine?.optionKey };
   }, [reveal, current]);
 
-  
+  const ai = useRevealPrompts(
+    guestToken,
+    current?.sessionQuestionId ?? "",
+    Boolean(reveal?.revealed),
+  );
+
 
   return (
     <main className="paper min-h-screen bg-background">
