@@ -242,10 +242,28 @@ export const getInvite = createServerFn({ method: "POST" })
       .eq("id", invite.inviter_participant_id ?? "")
       .maybeSingle();
 
-    const { count } = await supabaseAdmin
+    const { data: sqs, count } = await supabaseAdmin
       .from("session_questions")
-      .select("id", { count: "exact", head: true })
+      .select("question_id", { count: "exact" })
       .eq("session_id", invite.session_id);
+
+    // Topic labels give the recipient context without spoiling the questions.
+    let topics: string[] = [];
+    const questionIds = (sqs ?? []).map((row) => row.question_id);
+    if (questionIds.length > 0) {
+      const { data: questions } = await supabaseAdmin
+        .from("questions")
+        .select("topic_id")
+        .in("id", questionIds);
+      const topicIds = [...new Set((questions ?? []).map((q) => q.topic_id).filter(Boolean))];
+      if (topicIds.length > 0) {
+        const { data: topicRows } = await supabaseAdmin
+          .from("topics")
+          .select("label")
+          .in("id", topicIds as string[]);
+        topics = [...new Set((topicRows ?? []).map((t) => t.label))];
+      }
+    }
 
     if (!invite.completed_at) {
       await supabaseAdmin
@@ -260,9 +278,27 @@ export const getInvite = createServerFn({ method: "POST" })
       note: invite.personal_note ?? "",
       recipientLabel: invite.recipient_label ?? "",
       questionCount: count ?? 0,
+      topics,
       completed: Boolean(invite.completed_at),
     };
   });
+
+/** Optional: the recipient can leave an email to hear about replies. Skippable. */
+export const saveRecipientEmail = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({ token: z.string().min(4).max(40), email: z.string().email().max(160) })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("invites")
+      .update({ recipient_email: data.email.trim().toLowerCase() })
+      .eq("token", data.token);
+    return { saved: true };
+  });
+
 
 export const startInvite = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
