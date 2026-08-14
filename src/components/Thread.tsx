@@ -28,6 +28,8 @@ export function Thread({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const lastCount = useRef(0);
 
   const load = useServerFn(getThread);
   const post = useServerFn(postThreadMessage);
@@ -49,6 +51,15 @@ export function Thread({
       window.clearInterval(timer);
     };
   }, [guestToken, sessionQuestionId, load]);
+
+  // Keep the newest message just above the composer, like a chat app.
+  useEffect(() => {
+    if (messages.length > lastCount.current) {
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+    lastCount.current = messages.length;
+  }, [messages]);
+
 
   async function send(kind: "reaction" | "text" | "quick_ask" | "starter", body: string) {
     const clean = body.trim();
