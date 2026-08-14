@@ -77,6 +77,9 @@ export function Thread({
   }
 
 
+  const chip =
+    "rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground";
+
   return (
     <div className="mt-8 border-t border-border pt-6">
       {messages.length > 0 && (
@@ -90,8 +93,10 @@ export function Thread({
         </div>
       )}
 
+      {messages.length === 0 && <p className="mb-4 text-lg">Want to ask why?</p>}
+
       {prompts && prompts.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-3 flex flex-wrap gap-2">
           {prompts.map((prompt) => (
             <button
               key={prompt}
@@ -99,7 +104,7 @@ export function Thread({
                 onPrompt?.(prompt);
                 fillDraft(prompt);
               }}
-              className="rounded-full border border-border px-5 py-2 text-base hover:border-primary"
+              className={chip}
             >
               {prompt}
             </button>
@@ -107,15 +112,13 @@ export function Thread({
         </div>
       )}
 
-
-
       <div className="flex flex-wrap gap-2">
         {REACTIONS.map((reaction) => (
           <button
             key={reaction}
             disabled={busy}
             onClick={() => send("reaction", reaction)}
-            className="rounded-full border border-border px-4 py-2 text-sm hover:border-primary disabled:opacity-40"
+            className={`${chip} disabled:opacity-40`}
           >
             {reaction}
           </button>
@@ -124,28 +127,20 @@ export function Thread({
 
       <div className="mt-3 flex flex-wrap gap-2">
         {QUICK_ASKS.map((ask) => (
-          <button
-            key={ask}
-            onClick={() => fillDraft(ask)}
-            className="rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
-          >
+          <button key={ask} onClick={() => fillDraft(ask)} className={chip}>
             {ask}
           </button>
         ))}
       </div>
 
-
       <div className="mt-3 flex flex-wrap gap-2">
         {STARTERS.map((starter) => (
-          <button
-            key={starter}
-            onClick={() => fillDraft(starter)}
-            className="text-sm text-muted-foreground italic underline underline-offset-4 hover:text-foreground"
-          >
+          <button key={starter} onClick={() => fillDraft(starter)} className={chip}>
             {starter}___
           </button>
         ))}
       </div>
+
 
       <form
         className="mt-4 flex gap-2"
