@@ -309,6 +309,46 @@ function InvitePage() {
       {stage === "summary" && (
         <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
           <h1 className="text-4xl leading-tight">Now go talk to them.</h1>
+
+          {emailState === "ask" && (
+            <div className="card-soft mt-8 px-6 py-5">
+              <p className="text-lg leading-snug">
+                Want to know what {intro?.senderName ?? "they"} says back? Leave your email and
+                we'll tell you when there's a reply.
+              </p>
+              <form
+                className="mt-4 flex gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const clean = email.trim();
+                  if (!clean) return;
+                  setEmailState("done");
+                  void saveEmail({ data: { token, email: clean } }).catch(() => undefined);
+                }}
+              >
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@email.com"
+                  className="w-full rounded-full border border-border bg-background px-5 py-3 text-base outline-none focus:border-primary"
+                />
+                <button type="submit" className="btn-quiet shrink-0 hover:bg-secondary">
+                  Tell me
+                </button>
+              </form>
+              <button
+                onClick={() => setEmailState("skipped")}
+                className="mt-3 text-sm text-muted-foreground underline underline-offset-4"
+              >
+                Not now
+              </button>
+            </div>
+          )}
+          {emailState === "done" && (
+            <p className="mt-8 text-lg text-muted-foreground">We'll let you know.</p>
+          )}
+
           <div className="mt-10">
             {guestToken && sessionId && (
               <PairSummary
@@ -320,6 +360,7 @@ function InvitePage() {
           </div>
         </section>
       )}
+
 
     </main>
   );
