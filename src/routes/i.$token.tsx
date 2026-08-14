@@ -37,6 +37,13 @@ type Reveal = {
   tally: { optionKey: OptionKey; votes: number }[];
 };
 
+/** "work", "work and money", "work, money and love" */
+function formatTopics(topics: string[]) {
+  const list = topics.map((topic) => topic.toLowerCase());
+  if (list.length <= 1) return list[0] ?? "";
+  return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+}
+
 function InvitePage() {
   const { token } = Route.useParams();
   const [guestToken, setGuestToken] = useState("");
