@@ -150,12 +150,22 @@ function InvitePage() {
           {!error && intro && (
             <>
               <h1 className="text-5xl leading-[1.05]">
-                {intro.senderName}
-                <br />
-                <em className="italic text-primary">has already answered.</em>
+                {intro.senderName} answered three questions
+                {intro.topics.length > 0 && (
+                  <>
+                    {" "}
+                    about <em className="italic text-primary">{formatTopics(intro.topics)}</em>
+                  </>
+                )}
+                .
               </h1>
-              {intro.note && <p className="mt-8 text-2xl leading-snug italic">"{intro.note}"</p>}
-              <p className="mt-8 text-muted-foreground">
+              {intro.note && (
+                <p className="card-soft mt-8 px-6 py-5 font-display text-3xl leading-snug italic">
+                  "{intro.note}"
+                </p>
+              )}
+              <p className="mt-8 text-lg">Their answers unlock once you've answered.</p>
+              <p className="mt-2 text-muted-foreground">
                 3 questions · 30 seconds · no signup
               </p>
               <button
@@ -169,6 +179,7 @@ function InvitePage() {
           )}
         </section>
       )}
+
 
       {stage === "play" && current && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
