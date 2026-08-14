@@ -45,7 +45,11 @@ function InvitePage() {
     note: string;
     recipientLabel: string;
     questionCount: number;
+    topics: string[];
   } | null>(null);
+  const [email, setEmail] = useState("");
+  const [emailState, setEmailState] = useState<"ask" | "done" | "skipped">("ask");
+
   const [stage, setStage] = useState<"landing" | "play" | "summary">("landing");
   const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<PlayQuestion[]>([]);
