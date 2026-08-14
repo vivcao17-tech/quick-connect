@@ -136,6 +136,7 @@ export type Database = {
           inviter_participant_id: string | null
           opened_at: string | null
           personal_note: string | null
+          recipient_email: string | null
           recipient_label: string | null
           recipient_participant_id: string | null
           session_id: string
@@ -149,6 +150,7 @@ export type Database = {
           inviter_participant_id?: string | null
           opened_at?: string | null
           personal_note?: string | null
+          recipient_email?: string | null
           recipient_label?: string | null
           recipient_participant_id?: string | null
           session_id: string
@@ -162,6 +164,7 @@ export type Database = {
           inviter_participant_id?: string | null
           opened_at?: string | null
           personal_note?: string | null
+          recipient_email?: string | null
           recipient_label?: string | null
           recipient_participant_id?: string | null
           session_id?: string
