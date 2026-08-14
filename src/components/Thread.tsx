@@ -106,55 +106,64 @@ export function Thread({
 
       {messages.length === 0 && <p className="mb-4 text-lg">Want to ask why?</p>}
 
-      {prompts && prompts.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {prompts.map((prompt) => (
+      {/* Prompt block — grouped, labelled, dashed chips */}
+      <div className="rounded-2xl bg-secondary/40 px-4 py-4">
+        <p className="mb-3 text-xs tracking-[0.18em] text-muted-foreground uppercase">
+          Tap to start a reply
+        </p>
+
+        {prompts && prompts.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {prompts.map((prompt) => (
+              <button
+                key={prompt}
+                onClick={() => {
+                  onPrompt?.(prompt);
+                  fillDraft(prompt);
+                }}
+                className={chip}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {REACTIONS.map((reaction) => (
             <button
-              key={prompt}
-              onClick={() => {
-                onPrompt?.(prompt);
-                fillDraft(prompt);
-              }}
-              className={chip}
+              key={reaction}
+              disabled={busy}
+              onClick={() => send("reaction", reaction)}
+              className={`${chip} disabled:opacity-40`}
             >
-              {prompt}
+              {reaction}
             </button>
           ))}
         </div>
-      )}
 
-      <div className="flex flex-wrap gap-2">
-        {REACTIONS.map((reaction) => (
-          <button
-            key={reaction}
-            disabled={busy}
-            onClick={() => send("reaction", reaction)}
-            className={`${chip} disabled:opacity-40`}
-          >
-            {reaction}
-          </button>
-        ))}
+        <div className="mt-2 flex flex-wrap gap-2">
+          {QUICK_ASKS.map((ask) => (
+            <button key={ask} onClick={() => fillDraft(ask)} className={chip}>
+              {ask}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-2">
+          {STARTERS.map((starter) => (
+            <button key={starter} onClick={() => fillDraft(starter)} className={chip}>
+              {starter}___
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {QUICK_ASKS.map((ask) => (
-          <button key={ask} onClick={() => fillDraft(ask)} className={chip}>
-            {ask}
-          </button>
-        ))}
-      </div>
+      <div ref={endRef} className="h-px" />
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {STARTERS.map((starter) => (
-          <button key={starter} onClick={() => fillDraft(starter)} className={chip}>
-            {starter}___
-          </button>
-        ))}
-      </div>
-
-
+      {/* Composer — anchored at the bottom of the thread view */}
       <form
-        className="mt-4 flex gap-2"
+        className="sticky bottom-0 z-10 mt-7 flex gap-2 border-t border-border bg-background pt-4 pb-4"
         onSubmit={(event) => {
           event.preventDefault();
           void send("text", draft);
@@ -175,6 +184,7 @@ export function Thread({
           Send
         </button>
       </form>
+
     </div>
   );
 }
