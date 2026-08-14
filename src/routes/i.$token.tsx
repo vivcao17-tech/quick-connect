@@ -5,7 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { PairSummary } from "@/components/PairSummary";
 import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
-import { answerAsRecipient, getInvite, startInvite } from "@/lib/remote.functions";
+import {
+  answerAsRecipient,
+  getInvite,
+  saveRecipientEmail,
+  startInvite,
+} from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 
@@ -37,6 +42,13 @@ type Reveal = {
   tally: { optionKey: OptionKey; votes: number }[];
 };
 
+/** "work", "work and money", "work, money and love" */
+function formatTopics(topics: string[]) {
+  const list = topics.map((topic) => topic.toLowerCase());
+  if (list.length <= 1) return list[0] ?? "";
+  return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+}
+
 function InvitePage() {
   const { token } = Route.useParams();
   const [guestToken, setGuestToken] = useState("");
@@ -45,7 +57,11 @@ function InvitePage() {
     note: string;
     recipientLabel: string;
     questionCount: number;
+    topics: string[];
   } | null>(null);
+  const [email, setEmail] = useState("");
+  const [emailState, setEmailState] = useState<"ask" | "done" | "skipped">("ask");
+
   const [stage, setStage] = useState<"landing" | "play" | "summary">("landing");
   const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<PlayQuestion[]>([]);
@@ -58,6 +74,7 @@ function InvitePage() {
   const load = useServerFn(getInvite);
   const start = useServerFn(startInvite);
   const answer = useServerFn(answerAsRecipient);
+  const saveEmail = useServerFn(saveRecipientEmail);
 
 
   useEffect(() => {
@@ -150,12 +167,22 @@ function InvitePage() {
           {!error && intro && (
             <>
               <h1 className="text-5xl leading-[1.05]">
-                {intro.senderName}
-                <br />
-                <em className="italic text-primary">has already answered.</em>
+                {intro.senderName} answered three questions
+                {intro.topics.length > 0 && (
+                  <>
+                    {" "}
+                    about <em className="italic text-primary">{formatTopics(intro.topics)}</em>
+                  </>
+                )}
+                .
               </h1>
-              {intro.note && <p className="mt-8 text-2xl leading-snug italic">"{intro.note}"</p>}
-              <p className="mt-8 text-muted-foreground">
+              {intro.note && (
+                <p className="card-soft mt-8 px-6 py-5 font-display text-3xl leading-snug italic">
+                  "{intro.note}"
+                </p>
+              )}
+              <p className="mt-8 text-lg">Their answers unlock once you've answered.</p>
+              <p className="mt-2 text-muted-foreground">
                 3 questions · 30 seconds · no signup
               </p>
               <button
@@ -169,6 +196,7 @@ function InvitePage() {
           )}
         </section>
       )}
+
 
       {stage === "play" && current && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
@@ -287,6 +315,46 @@ function InvitePage() {
       {stage === "summary" && (
         <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
           <h1 className="text-4xl leading-tight">Now go talk to them.</h1>
+
+          {emailState === "ask" && (
+            <div className="card-soft mt-8 px-6 py-5">
+              <p className="text-lg leading-snug">
+                Want to know what {intro?.senderName ?? "they"} says back? Leave your email and
+                we'll tell you when there's a reply.
+              </p>
+              <form
+                className="mt-4 flex gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const clean = email.trim();
+                  if (!clean) return;
+                  setEmailState("done");
+                  void saveEmail({ data: { token, email: clean } }).catch(() => undefined);
+                }}
+              >
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@email.com"
+                  className="w-full rounded-full border border-border bg-background px-5 py-3 text-base outline-none focus:border-primary"
+                />
+                <button type="submit" className="btn-quiet shrink-0 hover:bg-secondary">
+                  Tell me
+                </button>
+              </form>
+              <button
+                onClick={() => setEmailState("skipped")}
+                className="mt-3 text-sm text-muted-foreground underline underline-offset-4"
+              >
+                Not now
+              </button>
+            </div>
+          )}
+          {emailState === "done" && (
+            <p className="mt-8 text-lg text-muted-foreground">We'll let you know.</p>
+          )}
+
           <div className="mt-10">
             {guestToken && sessionId && (
               <PairSummary
@@ -298,6 +366,7 @@ function InvitePage() {
           </div>
         </section>
       )}
+
 
     </main>
   );
