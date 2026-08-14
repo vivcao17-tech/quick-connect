@@ -5,7 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { PairSummary } from "@/components/PairSummary";
 import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
-import { answerAsRecipient, getInvite, startInvite } from "@/lib/remote.functions";
+import {
+  answerAsRecipient,
+  getInvite,
+  saveRecipientEmail,
+  startInvite,
+} from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 
@@ -69,6 +74,7 @@ function InvitePage() {
   const load = useServerFn(getInvite);
   const start = useServerFn(startInvite);
   const answer = useServerFn(answerAsRecipient);
+  const saveEmail = useServerFn(saveRecipientEmail);
 
 
   useEffect(() => {
