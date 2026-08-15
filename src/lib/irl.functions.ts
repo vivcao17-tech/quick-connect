@@ -358,18 +358,37 @@ export const voteQuestions = createServerFn({ method: "POST" })
     const ordered = [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
     const chosen = ordered.slice(0, 3);
 
-    const { data: rows } = await supabaseAdmin
-      .from("questions")
-      .select(QUESTION_SELECT)
-      .in("id", chosen);
-    const bank = (rows as QuestionRow[] | null) ?? [];
-
     // A second round appends after the questions already played.
     const { count: existing } = await supabaseAdmin
       .from("session_questions")
       .select("id", { count: "exact", head: true })
       .eq("session_id", data.sessionId);
     const offset = existing ?? 0;
+
+    // First time these two play together: the third question is an impression question.
+    if (offset === 0) {
+      const { data: withTokens } = await supabaseAdmin
+        .from("session_participants")
+        .select("guest_token")
+        .eq("session_id", data.sessionId);
+      const tokens = (withTokens ?? [])
+        .map((p) => p.guest_token)
+        .filter((token): token is string => Boolean(token));
+      const played = await pairPlayedBefore(supabaseAdmin, data.sessionId, tokens);
+      if (!played) {
+        const impression = await pickImpressionQuestion(supabaseAdmin, chosen);
+        if (impression) {
+          chosen.splice(2, chosen.length - 2, impression.id);
+        }
+      }
+    }
+
+    const { data: rows } = await supabaseAdmin
+      .from("questions")
+      .select(QUESTION_SELECT)
+      .in("id", chosen);
+    const bank = (rows as QuestionRow[] | null) ?? [];
+
 
     await supabaseAdmin.from("session_questions").insert(
       chosen.map((id, index) => {
