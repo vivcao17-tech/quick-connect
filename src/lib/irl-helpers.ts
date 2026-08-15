@@ -64,11 +64,13 @@ export async function candidateQuestions(admin: Admin, sessionId: string, spiceM
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
+    .eq("question_type", "standard")
     .lte("spice_level", spiceMax)
     .in("topic_id", union)
     .order("id");
 
   const all = ((rows as QuestionRow[] | null) ?? []).filter(Boolean);
+
 
   if (intersection.length > 0) {
     const shared = all.filter((q) => q.topic_id && intersection.includes(q.topic_id));
