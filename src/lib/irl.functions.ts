@@ -500,6 +500,7 @@ export const answerInRoom = createServerFn({ method: "POST" })
         guestToken: guest,
         sessionQuestionId: z.string().uuid(),
         optionKey: z.enum(["a", "b", "c"]),
+        answerRole: z.enum(["about_self", "about_other"]).optional(),
       })
       .parse(input),
   )
@@ -514,29 +515,51 @@ export const answerInRoom = createServerFn({ method: "POST" })
     if (!sq) throw new Error("Unknown question");
 
     const me = await memberOf(supabaseAdmin, sq.session_id, data.guestToken);
+    const answerRole = data.answerRole ?? "about_self";
+
+    const { data: participants } = await supabaseAdmin
+      .from("session_participants")
+      .select("id")
+      .eq("session_id", sq.session_id);
+    const everyone = participants ?? [];
+    const other = everyone.find((p) => p.id !== me.id);
+
+    const { data: question } = await supabaseAdmin
+      .from("questions")
+      .select("question_type")
+      .eq("id", sq.question_id)
+      .maybeSingle();
+    const questionType = question?.question_type ?? "standard";
 
     const { error } = await supabaseAdmin.from("answers").insert({
       session_question_id: sq.id,
       participant_id: me.id,
       question_id: sq.question_id,
       option_key: data.optionKey,
+      answer_role: answerRole,
+      about_participant_id: answerRole === "about_other" ? (other?.id ?? null) : me.id,
       visibility: "session",
     });
     if (error) throw error;
 
-    const { count: participantCount } = await supabaseAdmin
-      .from("session_participants")
-      .select("id", { count: "exact", head: true })
-      .eq("session_id", sq.session_id);
-
     const { data: answered } = await supabaseAdmin
       .from("answers")
-      .select("participant_id")
+      .select("participant_id, answer_role")
       .eq("session_question_id", sq.id);
-    const distinct = new Set((answered ?? []).map((row) => row.participant_id)).size;
+
+    // Impression questions need both halves from everyone before they count as submitted.
+    const complete = (participantId: string) => {
+      const rows = (answered ?? []).filter((row) => row.participant_id === participantId);
+      if (questionType !== "impression") return rows.length > 0;
+      return (
+        rows.some((row) => (row.answer_role ?? "about_self") === "about_self") &&
+        rows.some((row) => row.answer_role === "about_other")
+      );
+    };
+    const allIn = everyone.length > 0 && everyone.every((p) => complete(p.id));
 
     let revealed = sq.revealed_at !== null;
-    if (!revealed && participantCount !== null && distinct >= participantCount) {
+    if (!revealed && allIn) {
       await supabaseAdmin
         .from("session_questions")
         .update({ revealed_at: new Date().toISOString() })
@@ -547,6 +570,7 @@ export const answerInRoom = createServerFn({ method: "POST" })
         .eq("id", sq.session_id);
       revealed = true;
     }
+
 
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
