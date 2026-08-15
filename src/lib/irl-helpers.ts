@@ -5,7 +5,7 @@ type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseA
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 export const QUESTION_SELECT =
-  "id, topic_id, text, option_a, option_b, option_c, spice_level, reason_chips(id, option_key, text)";
+  "id, topic_id, text, option_a, option_b, option_c, spice_level, question_type, reason_chips(id, option_key, text)";
 
 export type QuestionRow = {
   id: string;
@@ -15,8 +15,10 @@ export type QuestionRow = {
   option_b: string;
   option_c: string | null;
   spice_level: number;
+  question_type?: string | null;
   reason_chips: { id: string; option_key: string; text: string }[] | null;
 };
+
 
 export function roomCode() {
   const bytes = crypto.getRandomValues(new Uint8Array(4));
