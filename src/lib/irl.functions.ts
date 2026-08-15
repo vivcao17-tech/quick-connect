@@ -192,38 +192,110 @@ export const getRoomState = createServerFn({ method: "POST" })
       .eq("session_id", data.sessionId)
       .order("order_index");
 
+    const questionIds = [...new Set((sqs ?? []).map((sq) => sq.question_id))];
+    const { data: bankRows } = questionIds.length
+      ? await supabaseAdmin.from("questions").select("id, question_type").in("id", questionIds)
+      : { data: [] as { id: string; question_type: string }[] };
+    const typeOf = new Map((bankRows ?? []).map((row) => [row.id, row.question_type ?? "standard"]));
+
     const sqIds = (sqs ?? []).map((sq) => sq.id);
     const { data: answers } = sqIds.length
       ? await supabaseAdmin
           .from("answers")
-          .select("session_question_id, participant_id, option_key, created_at")
+          .select("session_question_id, participant_id, option_key, answer_role, created_at")
           .in("session_question_id", sqIds)
           .order("created_at")
-      : { data: [] as { session_question_id: string; participant_id: string; option_key: string }[] };
+      : {
+          data: [] as {
+            session_question_id: string;
+            participant_id: string;
+            option_key: string;
+            answer_role: string;
+          }[],
+        };
+
+    const otherPerson = people.find((p) => !p.isMe);
 
     const questions = (sqs ?? []).map((sq) => {
       const snap = sq.snapshot as Snapshot;
       const revealed = sq.revealed_at !== null;
+      const questionType = typeOf.get(sq.question_id) ?? "standard";
       const rows = (answers ?? []).filter((a) => a.session_question_id === sq.id);
+
       const latest = new Map<string, string>();
-      for (const row of rows) latest.set(row.participant_id, row.option_key);
+      const latestAboutOther = new Map<string, string>();
+      for (const row of rows) {
+        if ((row.answer_role ?? "about_self") === "about_other") {
+          latestAboutOther.set(row.participant_id, row.option_key);
+        } else {
+          latest.set(row.participant_id, row.option_key);
+        }
+      }
       const mine = latest.get(me.id) ?? null;
+      const myAboutOther = latestAboutOther.get(me.id) ?? null;
+
+      const labelOf = (key: string | null | undefined) =>
+        snap.options.find((o) => o.key === key)?.label ?? "—";
+
+      // Impression reveal: two paired comparisons, not four flat rows.
+      let impression: {
+        lead: string;
+        pairs: { title: string; selfLabel: string; otherLabel: string; match: boolean }[];
+      } | null = null;
+
+      if (questionType === "impression" && revealed && otherPerson) {
+        const mySelf = latest.get(me.id) ?? null;
+        const theirSelf = latest.get(otherPerson.participantId) ?? null;
+        const theirReadOfMe = latestAboutOther.get(otherPerson.participantId) ?? null;
+        const myReadOfThem = myAboutOther;
+
+        const pairs = [
+          {
+            title: `You, and how ${otherPerson.name} sees you`,
+            selfLabel: labelOf(mySelf),
+            otherLabel: labelOf(theirReadOfMe),
+            match: Boolean(mySelf && theirReadOfMe && mySelf === theirReadOfMe),
+          },
+          {
+            title: `${otherPerson.name}, and how you see ${otherPerson.name}`,
+            selfLabel: labelOf(theirSelf),
+            otherLabel: labelOf(myReadOfThem),
+            match: Boolean(theirSelf && myReadOfThem && theirSelf === myReadOfThem),
+          },
+        ];
+
+        const first = pairs.find((p) => !p.match);
+        const lead = !first
+          ? `You two read each other exactly the way you read yourselves.`
+          : first === pairs[0]
+            ? `${otherPerson.name} thinks you're ${first.otherLabel.toLowerCase()} — you'd say ${first.selfLabel.toLowerCase()}.`
+            : `You think ${otherPerson.name} is ${first.otherLabel.toLowerCase()} — ${otherPerson.name} would say ${first.selfLabel.toLowerCase()}.`;
+
+        impression = { lead, pairs };
+      }
+
       return {
         sessionQuestionId: sq.id,
         questionId: sq.question_id,
+        questionType,
         text: snap.text,
         options: snap.options,
         revealed,
         myAnswer: mine as OptionKey | null,
+        myAnswerAboutOther: myAboutOther as OptionKey | null,
+        // An impression question only counts as answered once both halves are in.
+        mySubmitted:
+          questionType === "impression" ? Boolean(mine && myAboutOther) : Boolean(mine),
+        otherName: otherPerson?.name ?? "them",
         answeredCount: latest.size,
+        impression,
         // Other people's picks are withheld until the row is revealed.
         picks: revealed
           ? people.map((p) => ({
               name: p.name,
               isMe: p.isMe,
               optionKey: (latest.get(p.participantId) ?? null) as OptionKey | null,
-              label:
-                snap.options.find((o) => o.key === latest.get(p.participantId))?.label ?? "—",
+              label: labelOf(latest.get(p.participantId)),
             }))
           : [],
       };
@@ -234,6 +306,7 @@ export const getRoomState = createServerFn({ method: "POST" })
       const keys = q.picks.map((p) => p.optionKey).filter(Boolean);
       return new Set(keys).size > 1;
     }).length;
+
 
     return {
       sessionId: session.id,
