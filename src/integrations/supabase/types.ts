@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       answers: {
         Row: {
+          about_participant_id: string | null
+          answer_role: string
           attachment_ref: string | null
           created_at: string
           id: string
@@ -28,6 +30,8 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          about_participant_id?: string | null
+          answer_role?: string
           attachment_ref?: string | null
           created_at?: string
           id?: string
@@ -40,6 +44,8 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          about_participant_id?: string | null
+          answer_role?: string
           attachment_ref?: string | null
           created_at?: string
           id?: string
@@ -52,6 +58,13 @@ export type Database = {
           visibility?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "answers_about_participant_id_fkey"
+            columns: ["about_participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "answers_participant_id_fkey"
             columns: ["participant_id"]
@@ -230,6 +243,7 @@ export type Database = {
           option_a: string
           option_b: string
           option_c: string | null
+          question_type: string
           spice_level: number
           text: string
           topic_id: string | null
@@ -241,6 +255,7 @@ export type Database = {
           option_a: string
           option_b: string
           option_c?: string | null
+          question_type?: string
           spice_level?: number
           text: string
           topic_id?: string | null
@@ -252,6 +267,7 @@ export type Database = {
           option_a?: string
           option_b?: string
           option_c?: string | null
+          question_type?: string
           spice_level?: number
           text?: string
           topic_id?: string | null

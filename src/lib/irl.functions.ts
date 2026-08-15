@@ -1,7 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { QUESTION_SELECT, candidateQuestions, memberOf, roomCode, snapshotRow } from "@/lib/irl-helpers";
+import {
+  QUESTION_SELECT,
+  candidateQuestions,
+  memberOf,
+  pairPlayedBefore,
+  pickImpressionQuestion,
+  roomCode,
+  snapshotRow,
+} from "@/lib/irl-helpers";
 import type { QuestionRow } from "@/lib/irl-helpers";
 import type { OptionKey, Snapshot } from "@/lib/remote-shared";
 
@@ -184,38 +192,110 @@ export const getRoomState = createServerFn({ method: "POST" })
       .eq("session_id", data.sessionId)
       .order("order_index");
 
+    const questionIds = [...new Set((sqs ?? []).map((sq) => sq.question_id))];
+    const { data: bankRows } = questionIds.length
+      ? await supabaseAdmin.from("questions").select("id, question_type").in("id", questionIds)
+      : { data: [] as { id: string; question_type: string }[] };
+    const typeOf = new Map((bankRows ?? []).map((row) => [row.id, row.question_type ?? "standard"]));
+
     const sqIds = (sqs ?? []).map((sq) => sq.id);
     const { data: answers } = sqIds.length
       ? await supabaseAdmin
           .from("answers")
-          .select("session_question_id, participant_id, option_key, created_at")
+          .select("session_question_id, participant_id, option_key, answer_role, created_at")
           .in("session_question_id", sqIds)
           .order("created_at")
-      : { data: [] as { session_question_id: string; participant_id: string; option_key: string }[] };
+      : {
+          data: [] as {
+            session_question_id: string;
+            participant_id: string;
+            option_key: string;
+            answer_role: string;
+          }[],
+        };
+
+    const otherPerson = people.find((p) => !p.isMe);
 
     const questions = (sqs ?? []).map((sq) => {
       const snap = sq.snapshot as Snapshot;
       const revealed = sq.revealed_at !== null;
+      const questionType = typeOf.get(sq.question_id) ?? "standard";
       const rows = (answers ?? []).filter((a) => a.session_question_id === sq.id);
+
       const latest = new Map<string, string>();
-      for (const row of rows) latest.set(row.participant_id, row.option_key);
+      const latestAboutOther = new Map<string, string>();
+      for (const row of rows) {
+        if ((row.answer_role ?? "about_self") === "about_other") {
+          latestAboutOther.set(row.participant_id, row.option_key);
+        } else {
+          latest.set(row.participant_id, row.option_key);
+        }
+      }
       const mine = latest.get(me.id) ?? null;
+      const myAboutOther = latestAboutOther.get(me.id) ?? null;
+
+      const labelOf = (key: string | null | undefined) =>
+        snap.options.find((o) => o.key === key)?.label ?? "—";
+
+      // Impression reveal: two paired comparisons, not four flat rows.
+      let impression: {
+        lead: string;
+        pairs: { title: string; selfLabel: string; otherLabel: string; match: boolean }[];
+      } | null = null;
+
+      if (questionType === "impression" && revealed && otherPerson) {
+        const mySelf = latest.get(me.id) ?? null;
+        const theirSelf = latest.get(otherPerson.participantId) ?? null;
+        const theirReadOfMe = latestAboutOther.get(otherPerson.participantId) ?? null;
+        const myReadOfThem = myAboutOther;
+
+        const pairs = [
+          {
+            title: `You, and how ${otherPerson.name} sees you`,
+            selfLabel: labelOf(mySelf),
+            otherLabel: labelOf(theirReadOfMe),
+            match: Boolean(mySelf && theirReadOfMe && mySelf === theirReadOfMe),
+          },
+          {
+            title: `${otherPerson.name}, and how you see ${otherPerson.name}`,
+            selfLabel: labelOf(theirSelf),
+            otherLabel: labelOf(myReadOfThem),
+            match: Boolean(theirSelf && myReadOfThem && theirSelf === myReadOfThem),
+          },
+        ];
+
+        const first = pairs.find((p) => !p.match);
+        const lead = !first
+          ? `You two read each other exactly the way you read yourselves.`
+          : first === pairs[0]
+            ? `${otherPerson.name} thinks you're ${first.otherLabel.toLowerCase()} — you'd say ${first.selfLabel.toLowerCase()}.`
+            : `You think ${otherPerson.name} is ${first.otherLabel.toLowerCase()} — ${otherPerson.name} would say ${first.selfLabel.toLowerCase()}.`;
+
+        impression = { lead, pairs };
+      }
+
       return {
         sessionQuestionId: sq.id,
         questionId: sq.question_id,
+        questionType,
         text: snap.text,
         options: snap.options,
         revealed,
         myAnswer: mine as OptionKey | null,
+        myAnswerAboutOther: myAboutOther as OptionKey | null,
+        // An impression question only counts as answered once both halves are in.
+        mySubmitted:
+          questionType === "impression" ? Boolean(mine && myAboutOther) : Boolean(mine),
+        otherName: otherPerson?.name ?? "them",
         answeredCount: latest.size,
+        impression,
         // Other people's picks are withheld until the row is revealed.
         picks: revealed
           ? people.map((p) => ({
               name: p.name,
               isMe: p.isMe,
               optionKey: (latest.get(p.participantId) ?? null) as OptionKey | null,
-              label:
-                snap.options.find((o) => o.key === latest.get(p.participantId))?.label ?? "—",
+              label: labelOf(latest.get(p.participantId)),
             }))
           : [],
       };
@@ -226,6 +306,7 @@ export const getRoomState = createServerFn({ method: "POST" })
       const keys = q.picks.map((p) => p.optionKey).filter(Boolean);
       return new Set(keys).size > 1;
     }).length;
+
 
     return {
       sessionId: session.id,
@@ -358,18 +439,37 @@ export const voteQuestions = createServerFn({ method: "POST" })
     const ordered = [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
     const chosen = ordered.slice(0, 3);
 
-    const { data: rows } = await supabaseAdmin
-      .from("questions")
-      .select(QUESTION_SELECT)
-      .in("id", chosen);
-    const bank = (rows as QuestionRow[] | null) ?? [];
-
     // A second round appends after the questions already played.
     const { count: existing } = await supabaseAdmin
       .from("session_questions")
       .select("id", { count: "exact", head: true })
       .eq("session_id", data.sessionId);
     const offset = existing ?? 0;
+
+    // First time these two play together: the third question is an impression question.
+    if (offset === 0) {
+      const { data: withTokens } = await supabaseAdmin
+        .from("session_participants")
+        .select("guest_token")
+        .eq("session_id", data.sessionId);
+      const tokens = (withTokens ?? [])
+        .map((p) => p.guest_token)
+        .filter((token): token is string => Boolean(token));
+      const played = await pairPlayedBefore(supabaseAdmin, data.sessionId, tokens);
+      if (!played) {
+        const impression = await pickImpressionQuestion(supabaseAdmin, chosen);
+        if (impression) {
+          chosen.splice(2, chosen.length - 2, impression.id);
+        }
+      }
+    }
+
+    const { data: rows } = await supabaseAdmin
+      .from("questions")
+      .select(QUESTION_SELECT)
+      .in("id", chosen);
+    const bank = (rows as QuestionRow[] | null) ?? [];
+
 
     await supabaseAdmin.from("session_questions").insert(
       chosen.map((id, index) => {
@@ -400,6 +500,7 @@ export const answerInRoom = createServerFn({ method: "POST" })
         guestToken: guest,
         sessionQuestionId: z.string().uuid(),
         optionKey: z.enum(["a", "b", "c"]),
+        answerRole: z.enum(["about_self", "about_other"]).optional(),
       })
       .parse(input),
   )
@@ -414,29 +515,51 @@ export const answerInRoom = createServerFn({ method: "POST" })
     if (!sq) throw new Error("Unknown question");
 
     const me = await memberOf(supabaseAdmin, sq.session_id, data.guestToken);
+    const answerRole = data.answerRole ?? "about_self";
+
+    const { data: participants } = await supabaseAdmin
+      .from("session_participants")
+      .select("id")
+      .eq("session_id", sq.session_id);
+    const everyone = participants ?? [];
+    const other = everyone.find((p) => p.id !== me.id);
+
+    const { data: question } = await supabaseAdmin
+      .from("questions")
+      .select("question_type")
+      .eq("id", sq.question_id)
+      .maybeSingle();
+    const questionType = question?.question_type ?? "standard";
 
     const { error } = await supabaseAdmin.from("answers").insert({
       session_question_id: sq.id,
       participant_id: me.id,
       question_id: sq.question_id,
       option_key: data.optionKey,
+      answer_role: answerRole,
+      about_participant_id: answerRole === "about_other" ? (other?.id ?? null) : me.id,
       visibility: "session",
     });
     if (error) throw error;
 
-    const { count: participantCount } = await supabaseAdmin
-      .from("session_participants")
-      .select("id", { count: "exact", head: true })
-      .eq("session_id", sq.session_id);
-
     const { data: answered } = await supabaseAdmin
       .from("answers")
-      .select("participant_id")
+      .select("participant_id, answer_role")
       .eq("session_question_id", sq.id);
-    const distinct = new Set((answered ?? []).map((row) => row.participant_id)).size;
+
+    // Impression questions need both halves from everyone before they count as submitted.
+    const complete = (participantId: string) => {
+      const rows = (answered ?? []).filter((row) => row.participant_id === participantId);
+      if (questionType !== "impression") return rows.length > 0;
+      return (
+        rows.some((row) => (row.answer_role ?? "about_self") === "about_self") &&
+        rows.some((row) => row.answer_role === "about_other")
+      );
+    };
+    const allIn = everyone.length > 0 && everyone.every((p) => complete(p.id));
 
     let revealed = sq.revealed_at !== null;
-    if (!revealed && participantCount !== null && distinct >= participantCount) {
+    if (!revealed && allIn) {
       await supabaseAdmin
         .from("session_questions")
         .update({ revealed_at: new Date().toISOString() })
@@ -447,6 +570,7 @@ export const answerInRoom = createServerFn({ method: "POST" })
         .eq("id", sq.session_id);
       revealed = true;
     }
+
 
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,

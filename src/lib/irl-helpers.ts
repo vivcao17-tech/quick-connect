@@ -5,7 +5,7 @@ type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseA
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 export const QUESTION_SELECT =
-  "id, topic_id, text, option_a, option_b, option_c, spice_level, reason_chips(id, option_key, text)";
+  "id, topic_id, text, option_a, option_b, option_c, spice_level, question_type, reason_chips(id, option_key, text)";
 
 export type QuestionRow = {
   id: string;
@@ -15,8 +15,10 @@ export type QuestionRow = {
   option_b: string;
   option_c: string | null;
   spice_level: number;
+  question_type?: string | null;
   reason_chips: { id: string; option_key: string; text: string }[] | null;
 };
+
 
 export function roomCode() {
   const bytes = crypto.getRandomValues(new Uint8Array(4));
@@ -62,11 +64,13 @@ export async function candidateQuestions(admin: Admin, sessionId: string, spiceM
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
+    .eq("question_type", "standard")
     .lte("spice_level", spiceMax)
     .in("topic_id", union)
     .order("id");
 
   const all = ((rows as QuestionRow[] | null) ?? []).filter(Boolean);
+
 
   if (intersection.length > 0) {
     const shared = all.filter((q) => q.topic_id && intersection.includes(q.topic_id));
@@ -86,4 +90,46 @@ export async function candidateQuestions(admin: Admin, sessionId: string, spiceM
     round += 1;
   }
   return picked.slice(0, 3);
+}
+
+/** True when these guests have already finished a session together before this one. */
+export async function pairPlayedBefore(admin: Admin, sessionId: string, guestTokens: string[]) {
+  const tokens = [...new Set(guestTokens.filter(Boolean))];
+  if (tokens.length < 2) return false;
+
+  const { data: rows } = await admin
+    .from("session_participants")
+    .select("session_id, guest_token")
+    .in("guest_token", tokens)
+    .neq("session_id", sessionId);
+
+  const bySession = new Map<string, Set<string>>();
+  for (const row of rows ?? []) {
+    if (!row.guest_token) continue;
+    if (!bySession.has(row.session_id)) bySession.set(row.session_id, new Set());
+    bySession.get(row.session_id)!.add(row.guest_token);
+  }
+  const shared = [...bySession.entries()]
+    .filter(([, set]) => tokens.every((token) => set.has(token)))
+    .map(([id]) => id);
+  if (shared.length === 0) return false;
+
+  const { data: finished } = await admin
+    .from("sessions")
+    .select("id")
+    .in("id", shared)
+    .eq("status", "ended");
+  return (finished ?? []).length > 0;
+}
+
+/** One impression question from the bank, avoiding anything already in play. */
+export async function pickImpressionQuestion(admin: Admin, excludeIds: string[]) {
+  const { data: rows } = await admin
+    .from("questions")
+    .select(QUESTION_SELECT)
+    .eq("active", true)
+    .eq("question_type", "impression");
+  const pool = ((rows as QuestionRow[] | null) ?? []).filter((q) => !excludeIds.includes(q.id));
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)]!;
 }
