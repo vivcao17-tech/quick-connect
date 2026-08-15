@@ -315,34 +315,82 @@ export function Room({ sessionId }: { sessionId: string }) {
             </p>
             <h2 className="mt-6 text-4xl leading-tight">{current.text}</h2>
 
-            {!current.revealed && !current.myAnswer && (
+            {current.questionType === "impression" && !current.revealed && !current.mySubmitted && (
+              <p className="mt-4 text-lg text-muted-foreground">
+                {!current.myAnswerAboutOther
+                  ? `Which one is ${current.otherName}?`
+                  : "And you?"}
+              </p>
+            )}
+
+            {!current.revealed && !current.mySubmitted && (
               <div className="mt-10 flex flex-col gap-3">
-                {current.options.map((option) => (
-                  <button
-                    key={option.key}
-                    disabled={busy}
-                    onClick={() =>
-                      run(() =>
-                        submitAnswer({
-                          data: { guestToken, sessionQuestionId: current.sessionQuestionId, optionKey: option.key },
-                        }),
-                      )
-                    }
-                    className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
-                  >
-                    {option.label}
-                  </button>
-                ))}
+                {current.options.map((option) => {
+                  const answerRole =
+                    current.questionType === "impression" && !current.myAnswerAboutOther
+                      ? ("about_other" as const)
+                      : ("about_self" as const);
+                  return (
+                    <button
+                      key={`${answerRole}-${option.key}`}
+                      disabled={busy}
+                      onClick={() =>
+                        run(() =>
+                          submitAnswer({
+                            data: {
+                              guestToken,
+                              sessionQuestionId: current.sessionQuestionId,
+                              optionKey: option.key,
+                              answerRole,
+                            },
+                          }),
+                        )
+                      }
+                      className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
-            {!current.revealed && current.myAnswer && (
+            {!current.revealed && current.mySubmitted && (
               <p className="mt-12 text-lg text-muted-foreground">
                 Submitted — waiting for {other?.name ?? "them"}…
               </p>
             )}
 
-            {current.revealed && (
+            {current.revealed && current.impression && (
+              <div className="mt-10">
+                <p className="text-2xl leading-snug">{current.impression.lead}</p>
+                <div className="mt-6 flex flex-col gap-3">
+                  {current.impression.pairs.map((pair) => (
+                    <div
+                      key={pair.title}
+                      className={`card-soft px-6 py-6 ${pair.match ? "" : "border-primary"}`}
+                    >
+                      <p className="text-sm tracking-[0.18em] text-muted-foreground uppercase">
+                        {pair.title}
+                      </p>
+                      <p className="mt-3 text-lg">
+                        <span className="text-muted-foreground">Says: </span>
+                        {pair.selfLabel}
+                      </p>
+                      <p className="text-lg">
+                        <span className="text-muted-foreground">Read as: </span>
+                        <span className={pair.match ? "" : "text-primary"}>{pair.otherLabel}</span>
+                      </p>
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        {pair.match ? "Same read." : "Different read."}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {current.revealed && !current.impression && (
               <div className="mt-10">
                 <div className={`card-soft px-6 py-6 ${reveal?.differs ? "border-primary" : ""}`}>
                   {current.picks.map((p) => (
@@ -355,6 +403,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                     {reveal?.differs ? "You went different ways." : "Same answer."}
                   </p>
                 </div>
+
 
                 {reveal?.observation && (
                   <p className="mt-6 text-lg leading-snug">{reveal.observation}</p>
