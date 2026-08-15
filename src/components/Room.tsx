@@ -403,8 +403,11 @@ export function Room({ sessionId }: { sessionId: string }) {
                     {reveal?.differs ? "You went different ways." : "Same answer."}
                   </p>
                 </div>
+              </div>
+            )}
 
-
+            {current.revealed && (
+              <div>
                 {reveal?.observation && (
                   <p className="mt-6 text-lg leading-snug">{reveal.observation}</p>
                 )}
@@ -429,8 +432,6 @@ export function Room({ sessionId }: { sessionId: string }) {
                   }
                 />
 
-
-
                 <button
                   onClick={() => {
                     void run(() => advance({ data: { guestToken, sessionId, action: "next" } }));
@@ -441,6 +442,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             )}
+
 
             <div className="mt-14 flex items-center gap-6 text-sm text-muted-foreground">
               <button
