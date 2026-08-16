@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { pickImpressionQuestion } from "@/lib/irl-helpers";
+import { notifyThreadReply } from "@/lib/notify.server";
 import { shortToken, snapshotOf, toPlay } from "@/lib/remote-shared";
 import type { Chip, OptionKey, PlayQuestion, Snapshot } from "@/lib/remote-shared";
 
@@ -22,7 +24,7 @@ export const listTopicQuestions = createServerFn({ method: "POST" })
 
     const { data: questions, error } = await supabaseAdmin
       .from("questions")
-      .select("id, text, option_a, option_b, option_c, reason_chips(id, option_key, text)")
+      .select("id, text, option_a, option_b, option_c, question_type, reason_chips(id, option_key, text)")
       .eq("topic_id", topic.id)
       .eq("active", true)
       .limit(5);
@@ -51,12 +53,17 @@ export const createRemoteSession = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // The third question is always an impression question.
+    const questionIds = [...data.questionIds];
+    const impression = await pickImpressionQuestion(supabaseAdmin, questionIds);
+    if (impression) questionIds[2] = impression.id;
+
     const { data: questions, error: qError } = await supabaseAdmin
       .from("questions")
-      .select("id, text, option_a, option_b, option_c, reason_chips(id, option_key, text)")
-      .in("id", data.questionIds);
+      .select("id, text, option_a, option_b, option_c, question_type, reason_chips(id, option_key, text)")
+      .in("id", questionIds);
     if (qError) throw qError;
-    if (!questions || questions.length !== data.questionIds.length) {
+    if (!questions || questions.length !== questionIds.length) {
       throw new Error("Some questions are unavailable");
     }
 
@@ -82,7 +89,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
     const { data: sqs, error: sqError } = await supabaseAdmin
       .from("session_questions")
       .insert(
-        data.questionIds.map((id, index) => {
+        questionIds.map((id, index) => {
           const q = questions.find((row) => row.id === id)!;
           return {
             session_id: session.id,
@@ -99,7 +106,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
       guest_token: data.guestToken,
       session_id: session.id,
       name: "session_created",
-      props: { kind: "remote", question_count: data.questionIds.length },
+      props: { kind: "remote", question_count: questionIds.length },
     });
 
     return {
@@ -463,6 +470,7 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
         optionKey: z.enum(["a", "b", "c"]),
         reasonText: z.string().max(240).optional(),
         reasonChipId: z.string().uuid().optional(),
+        answerRole: z.enum(["about_self", "about_other"]).optional(),
       })
       .parse(input),
   )
@@ -471,7 +479,7 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
 
     const { data: sq } = await supabaseAdmin
       .from("session_questions")
-      .select("id, session_id, question_id, revealed_at")
+      .select("id, session_id, question_id, revealed_at, snapshot")
       .eq("id", data.sessionQuestionId)
       .maybeSingle();
     if (!sq) throw new Error("Unknown question");
@@ -487,6 +495,9 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
     const sender = (participants ?? []).find((p) => p.role === "sender");
     if (!me) throw new Error("Not your link");
 
+    const isImpression = (sq.snapshot as Snapshot | null)?.kind === "impression";
+    const role = data.answerRole ?? "about_self";
+
     const { error } = await supabaseAdmin.from("answers").insert({
       session_question_id: sq.id,
       participant_id: me.id,
@@ -495,18 +506,25 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       reason_text: data.reasonText ?? null,
       reason_chip_id: data.reasonChipId ?? null,
       visibility: "session",
+      answer_role: role,
+      about_participant_id: role === "about_other" ? (sender?.id ?? null) : null,
     });
     if (error) throw error;
 
     const { data: rows } = await supabaseAdmin
       .from("answers")
-      .select("participant_id, option_key, reason_text, created_at")
+      .select("participant_id, option_key, reason_text, answer_role, created_at")
       .eq("session_question_id", sq.id)
       .order("created_at", { ascending: true });
 
+    const myRoles = new Set(
+      (rows ?? []).filter((r) => r.participant_id === me.id).map((r) => r.answer_role),
+    );
     const answeredBy = new Set((rows ?? []).map((r) => r.participant_id));
+    // An impression question only counts once the recipient has answered both halves.
+    const bothHalves = !isImpression || (myRoles.has("about_self") && myRoles.has("about_other"));
     let revealed = sq.revealed_at !== null;
-    if (!revealed && answeredBy.size >= (participants ?? []).length) {
+    if (!revealed && bothHalves && answeredBy.size >= (participants ?? []).length) {
       await supabaseAdmin
         .from("session_questions")
         .update({ revealed_at: new Date().toISOString() })
@@ -514,13 +532,16 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       revealed = true;
     }
 
-    const latest = (participantId: string | undefined) =>
+    const latest = (participantId: string | undefined, answerRole = "about_self") =>
       participantId
-        ? [...(rows ?? [])].reverse().find((r) => r.participant_id === participantId)
+        ? [...(rows ?? [])]
+            .reverse()
+            .find((r) => r.participant_id === participantId && r.answer_role === answerRole)
         : undefined;
 
     const senderAnswer = latest(sender?.id);
     const mine = latest(me.id);
+    const myReadOfThem = latest(me.id, "about_other");
 
     // Mark the invite complete once every question in this run has been answered.
     const { data: allQs } = await supabaseAdmin
@@ -532,6 +553,7 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       .select("session_question_id")
       .eq("participant_id", me.id);
     const done =
+      bothHalves &&
       new Set((myAnswers ?? []).map((a) => a.session_question_id)).size >= (allQs ?? []).length;
     if (done) {
       await supabaseAdmin
@@ -555,6 +577,17 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
 
     return {
       revealed,
+      kind: isImpression ? ("impression" as const) : ("standard" as const),
+      needsSecondHalf: isImpression && !bothHalves,
+      // Impression pairing: how they see themselves vs how the recipient reads them.
+      impression:
+        isImpression && revealed && senderAnswer && myReadOfThem
+          ? {
+              theirSelf: senderAnswer.option_key as OptionKey,
+              myReadOfThem: myReadOfThem.option_key as OptionKey,
+              match: senderAnswer.option_key === myReadOfThem.option_key,
+            }
+          : null,
       senderName: sender?.display_name ?? "They",
       // Only ever sent once the question is revealed — otherwise it leaks their answer.
       sender:
@@ -660,14 +693,14 @@ export const postThreadMessage = createServerFn({ method: "POST" })
 
     const { data: sq } = await supabaseAdmin
       .from("session_questions")
-      .select("id, session_id")
+      .select("id, session_id, snapshot")
       .eq("id", data.sessionQuestionId)
       .maybeSingle();
     if (!sq) throw new Error("Unknown question");
 
     const { data: mine } = await supabaseAdmin
       .from("session_participants")
-      .select("id")
+      .select("id, display_name")
       .eq("session_id", sq.session_id)
       .eq("guest_token", data.guestToken)
       .limit(1);
@@ -687,6 +720,14 @@ export const postThreadMessage = createServerFn({ method: "POST" })
       session_id: sq.session_id,
       name: data.kind === "reaction" ? "reaction_added" : "thread_message_sent",
       props: { kind: data.kind },
+    });
+
+    await notifyThreadReply(supabaseAdmin, {
+      sessionId: sq.session_id,
+      sessionQuestionId: sq.id,
+      actorParticipantId: me.id,
+      actorName: me.display_name ?? "Someone",
+      questionText: (sq.snapshot as Snapshot | null)?.text ?? "one of your questions",
     });
 
     return { ok: true };
@@ -718,6 +759,24 @@ export const getThread = createServerFn({ method: "POST" })
       .select("id, participant_id, kind, body, created_at")
       .eq("session_question_id", sq.id)
       .order("created_at");
+
+    // Opening the thread clears its unread state and any pending notifications.
+    await supabaseAdmin
+      .from("thread_reads")
+      .upsert(
+        {
+          participant_id: me.id,
+          session_question_id: sq.id,
+          read_at: new Date().toISOString(),
+        },
+        { onConflict: "participant_id,session_question_id" },
+      );
+    await supabaseAdmin
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("participant_id", me.id)
+      .eq("session_question_id", sq.id)
+      .is("read_at", null);
 
     return {
       messages: (rows ?? []).map((row) => ({
@@ -928,5 +987,113 @@ export const getSenderResults = createServerFn({ method: "POST" })
       questions,
       recipients,
       headlines,
+    };
+  });
+
+
+/** Everything the sender has sent out: one row per recipient, with unread replies. */
+export const getInbox = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ guestToken: guest }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: myParticipants } = await supabaseAdmin
+      .from("session_participants")
+      .select("id, session_id, role")
+      .eq("guest_token", data.guestToken);
+    const senderRows = (myParticipants ?? []).filter((p) => p.role === "sender");
+    if (senderRows.length === 0) return { sets: [] };
+
+    const parentIds = senderRows.map((p) => p.session_id);
+    const { data: invites } = await supabaseAdmin
+      .from("invites")
+      .select("token, recipient_label, session_id, child_session_id, completed_at, created_at")
+      .in("session_id", parentIds)
+      .order("created_at", { ascending: false });
+
+    const childIds = (invites ?? [])
+      .map((i) => i.child_session_id)
+      .filter((id): id is string => Boolean(id));
+
+    const myChildParticipants = new Map<string, string>();
+    for (const p of myParticipants ?? []) {
+      if (childIds.includes(p.session_id)) myChildParticipants.set(p.session_id, p.id);
+    }
+
+    const { data: childQs } = childIds.length
+      ? await supabaseAdmin
+          .from("session_questions")
+          .select("id, session_id, revealed_at")
+          .in("session_id", childIds)
+      : { data: [] as { id: string; session_id: string; revealed_at: string | null }[] };
+
+    const sqIds = (childQs ?? []).map((q) => q.id);
+    const { data: answers } = sqIds.length
+      ? await supabaseAdmin
+          .from("answers")
+          .select("session_question_id, participant_id, option_key, answer_role, created_at")
+          .in("session_question_id", sqIds)
+          .order("created_at")
+      : { data: [] as { session_question_id: string; participant_id: string; option_key: string; answer_role: string; created_at: string }[] };
+
+    const { data: messages } = sqIds.length
+      ? await supabaseAdmin
+          .from("thread_messages")
+          .select("session_question_id, participant_id, created_at")
+          .in("session_question_id", sqIds)
+      : { data: [] as { session_question_id: string; participant_id: string; created_at: string }[] };
+
+    const { data: reads } = sqIds.length
+      ? await supabaseAdmin
+          .from("thread_reads")
+          .select("session_question_id, participant_id, read_at")
+          .in("session_question_id", sqIds)
+      : { data: [] as { session_question_id: string; participant_id: string; read_at: string }[] };
+
+    const recipientsFor = (parentId: string) =>
+      (invites ?? [])
+        .filter((invite) => invite.session_id === parentId)
+        .map((invite) => {
+          const childId = invite.child_session_id;
+          const mineId = childId ? myChildParticipants.get(childId) : undefined;
+          const questions = (childQs ?? []).filter((q) => q.session_id === childId);
+
+          let differed = 0;
+          let unread = 0;
+          for (const q of questions) {
+            const rows = (answers ?? []).filter(
+              (a) => a.session_question_id === q.id && a.answer_role === "about_self",
+            );
+            const my = [...rows].reverse().find((a) => a.participant_id === mineId);
+            const theirs = [...rows].reverse().find((a) => a.participant_id !== mineId);
+            if (q.revealed_at && my && theirs && my.option_key !== theirs.option_key) differed += 1;
+
+            const readAt = (reads ?? []).find(
+              (r) => r.session_question_id === q.id && r.participant_id === mineId,
+            )?.read_at;
+            unread += (messages ?? []).filter(
+              (m) =>
+                m.session_question_id === q.id &&
+                m.participant_id !== mineId &&
+                (!readAt || new Date(m.created_at) > new Date(readAt)),
+            ).length;
+          }
+
+          return {
+            token: invite.token,
+            label: invite.recipient_label ?? "Someone",
+            answered: Boolean(invite.completed_at),
+            childSessionId: childId ?? "",
+            differed,
+            unread,
+            questionIds: questions.map((q) => q.id),
+          };
+        });
+
+    return {
+      sets: senderRows.map((row) => ({
+        sessionId: row.session_id,
+        recipients: recipientsFor(row.session_id),
+      })),
     };
   });
