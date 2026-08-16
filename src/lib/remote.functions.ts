@@ -693,14 +693,14 @@ export const postThreadMessage = createServerFn({ method: "POST" })
 
     const { data: sq } = await supabaseAdmin
       .from("session_questions")
-      .select("id, session_id")
+      .select("id, session_id, snapshot")
       .eq("id", data.sessionQuestionId)
       .maybeSingle();
     if (!sq) throw new Error("Unknown question");
 
     const { data: mine } = await supabaseAdmin
       .from("session_participants")
-      .select("id")
+      .select("id, display_name")
       .eq("session_id", sq.session_id)
       .eq("guest_token", data.guestToken)
       .limit(1);
@@ -720,6 +720,14 @@ export const postThreadMessage = createServerFn({ method: "POST" })
       session_id: sq.session_id,
       name: data.kind === "reaction" ? "reaction_added" : "thread_message_sent",
       props: { kind: data.kind },
+    });
+
+    await notifyThreadReply(supabaseAdmin, {
+      sessionId: sq.session_id,
+      sessionQuestionId: sq.id,
+      actorParticipantId: me.id,
+      actorName: me.display_name ?? "Someone",
+      questionText: (sq.snapshot as Snapshot | null)?.text ?? "one of your questions",
     });
 
     return { ok: true };
