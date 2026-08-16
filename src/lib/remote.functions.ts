@@ -470,6 +470,7 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
         optionKey: z.enum(["a", "b", "c"]),
         reasonText: z.string().max(240).optional(),
         reasonChipId: z.string().uuid().optional(),
+        answerRole: z.enum(["about_self", "about_other"]).optional(),
       })
       .parse(input),
   )
@@ -478,7 +479,7 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
 
     const { data: sq } = await supabaseAdmin
       .from("session_questions")
-      .select("id, session_id, question_id, revealed_at")
+      .select("id, session_id, question_id, revealed_at, snapshot")
       .eq("id", data.sessionQuestionId)
       .maybeSingle();
     if (!sq) throw new Error("Unknown question");
@@ -494,6 +495,9 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
     const sender = (participants ?? []).find((p) => p.role === "sender");
     if (!me) throw new Error("Not your link");
 
+    const isImpression = (sq.snapshot as Snapshot | null)?.kind === "impression";
+    const role = data.answerRole ?? "about_self";
+
     const { error } = await supabaseAdmin.from("answers").insert({
       session_question_id: sq.id,
       participant_id: me.id,
@@ -502,18 +506,25 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       reason_text: data.reasonText ?? null,
       reason_chip_id: data.reasonChipId ?? null,
       visibility: "session",
+      answer_role: role,
+      about_participant_id: role === "about_other" ? (sender?.id ?? null) : null,
     });
     if (error) throw error;
 
     const { data: rows } = await supabaseAdmin
       .from("answers")
-      .select("participant_id, option_key, reason_text, created_at")
+      .select("participant_id, option_key, reason_text, answer_role, created_at")
       .eq("session_question_id", sq.id)
       .order("created_at", { ascending: true });
 
+    const myRoles = new Set(
+      (rows ?? []).filter((r) => r.participant_id === me.id).map((r) => r.answer_role),
+    );
     const answeredBy = new Set((rows ?? []).map((r) => r.participant_id));
+    // An impression question only counts once the recipient has answered both halves.
+    const bothHalves = !isImpression || (myRoles.has("about_self") && myRoles.has("about_other"));
     let revealed = sq.revealed_at !== null;
-    if (!revealed && answeredBy.size >= (participants ?? []).length) {
+    if (!revealed && bothHalves && answeredBy.size >= (participants ?? []).length) {
       await supabaseAdmin
         .from("session_questions")
         .update({ revealed_at: new Date().toISOString() })
@@ -521,13 +532,16 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       revealed = true;
     }
 
-    const latest = (participantId: string | undefined) =>
+    const latest = (participantId: string | undefined, answerRole = "about_self") =>
       participantId
-        ? [...(rows ?? [])].reverse().find((r) => r.participant_id === participantId)
+        ? [...(rows ?? [])]
+            .reverse()
+            .find((r) => r.participant_id === participantId && r.answer_role === answerRole)
         : undefined;
 
     const senderAnswer = latest(sender?.id);
     const mine = latest(me.id);
+    const myReadOfThem = latest(me.id, "about_other");
 
     // Mark the invite complete once every question in this run has been answered.
     const { data: allQs } = await supabaseAdmin
@@ -539,6 +553,7 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       .select("session_question_id")
       .eq("participant_id", me.id);
     const done =
+      bothHalves &&
       new Set((myAnswers ?? []).map((a) => a.session_question_id)).size >= (allQs ?? []).length;
     if (done) {
       await supabaseAdmin
@@ -562,6 +577,17 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
 
     return {
       revealed,
+      kind: isImpression ? ("impression" as const) : ("standard" as const),
+      needsSecondHalf: isImpression && !bothHalves,
+      // Impression pairing: how they see themselves vs how the recipient reads them.
+      impression:
+        isImpression && revealed && senderAnswer && myReadOfThem
+          ? {
+              theirSelf: senderAnswer.option_key as OptionKey,
+              myReadOfThem: myReadOfThem.option_key as OptionKey,
+              match: senderAnswer.option_key === myReadOfThem.option_key,
+            }
+          : null,
       senderName: sender?.display_name ?? "They",
       // Only ever sent once the question is revealed — otherwise it leaks their answer.
       sender:
