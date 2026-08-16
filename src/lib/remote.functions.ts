@@ -760,6 +760,24 @@ export const getThread = createServerFn({ method: "POST" })
       .eq("session_question_id", sq.id)
       .order("created_at");
 
+    // Opening the thread clears its unread state and any pending notifications.
+    await supabaseAdmin
+      .from("thread_reads")
+      .upsert(
+        {
+          participant_id: me.id,
+          session_question_id: sq.id,
+          read_at: new Date().toISOString(),
+        },
+        { onConflict: "participant_id,session_question_id" },
+      );
+    await supabaseAdmin
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("participant_id", me.id)
+      .eq("session_question_id", sq.id)
+      .is("read_at", null);
+
     return {
       messages: (rows ?? []).map((row) => ({
         id: row.id,
@@ -969,5 +987,112 @@ export const getSenderResults = createServerFn({ method: "POST" })
       questions,
       recipients,
       headlines,
+    };
+  });
+
+
+/** Everything the sender has sent out: one row per recipient, with unread replies. */
+export const getInbox = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ guestToken: guest }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: myParticipants } = await supabaseAdmin
+      .from("session_participants")
+      .select("id, session_id, role")
+      .eq("guest_token", data.guestToken);
+    const senderRows = (myParticipants ?? []).filter((p) => p.role === "sender");
+    if (senderRows.length === 0) return { sets: [] };
+
+    const parentIds = senderRows.map((p) => p.session_id);
+    const { data: invites } = await supabaseAdmin
+      .from("invites")
+      .select("token, recipient_label, session_id, child_session_id, completed_at, created_at")
+      .in("session_id", parentIds)
+      .order("created_at", { ascending: false });
+
+    const childIds = (invites ?? [])
+      .map((i) => i.child_session_id)
+      .filter((id): id is string => Boolean(id));
+
+    const myChildParticipants = new Map<string, string>();
+    for (const p of myParticipants ?? []) {
+      if (childIds.includes(p.session_id)) myChildParticipants.set(p.session_id, p.id);
+    }
+
+    const { data: childQs } = childIds.length
+      ? await supabaseAdmin
+          .from("session_questions")
+          .select("id, session_id, revealed_at")
+          .in("session_id", childIds)
+      : { data: [] as { id: string; session_id: string; revealed_at: string | null }[] };
+
+    const sqIds = (childQs ?? []).map((q) => q.id);
+    const { data: answers } = sqIds.length
+      ? await supabaseAdmin
+          .from("answers")
+          .select("session_question_id, participant_id, option_key, answer_role, created_at")
+          .in("session_question_id", sqIds)
+          .order("created_at")
+      : { data: [] as { session_question_id: string; participant_id: string; option_key: string; answer_role: string; created_at: string }[] };
+
+    const { data: messages } = sqIds.length
+      ? await supabaseAdmin
+          .from("thread_messages")
+          .select("session_question_id, participant_id, created_at")
+          .in("session_question_id", sqIds)
+      : { data: [] as { session_question_id: string; participant_id: string; created_at: string }[] };
+
+    const { data: reads } = sqIds.length
+      ? await supabaseAdmin
+          .from("thread_reads")
+          .select("session_question_id, participant_id, read_at")
+          .in("session_question_id", sqIds)
+      : { data: [] as { session_question_id: string; participant_id: string; read_at: string }[] };
+
+    const recipientsFor = (parentId: string) =>
+      (invites ?? [])
+        .filter((invite) => invite.session_id === parentId)
+        .map((invite) => {
+          const childId = invite.child_session_id;
+          const mineId = childId ? myChildParticipants.get(childId) : undefined;
+          const questions = (childQs ?? []).filter((q) => q.session_id === childId);
+
+          let differed = 0;
+          let unread = 0;
+          for (const q of questions) {
+            const rows = (answers ?? []).filter(
+              (a) => a.session_question_id === q.id && a.answer_role === "about_self",
+            );
+            const my = [...rows].reverse().find((a) => a.participant_id === mineId);
+            const theirs = [...rows].reverse().find((a) => a.participant_id !== mineId);
+            if (q.revealed_at && my && theirs && my.option_key !== theirs.option_key) differed += 1;
+
+            const readAt = (reads ?? []).find(
+              (r) => r.session_question_id === q.id && r.participant_id === mineId,
+            )?.read_at;
+            unread += (messages ?? []).filter(
+              (m) =>
+                m.session_question_id === q.id &&
+                m.participant_id !== mineId &&
+                (!readAt || new Date(m.created_at) > new Date(readAt)),
+            ).length;
+          }
+
+          return {
+            token: invite.token,
+            label: invite.recipient_label ?? "Someone",
+            answered: Boolean(invite.completed_at),
+            childSessionId: childId ?? "",
+            differed,
+            unread,
+          };
+        });
+
+    return {
+      sets: senderRows.map((row) => ({
+        sessionId: row.session_id,
+        recipients: recipientsFor(row.session_id),
+      })),
     };
   });
