@@ -214,6 +214,64 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_name: string
+          created_at: string
+          id: string
+          link: string
+          participant_id: string
+          question_text: string
+          read_at: string | null
+          session_id: string
+          session_question_id: string
+        }
+        Insert: {
+          actor_name: string
+          created_at?: string
+          id?: string
+          link: string
+          participant_id: string
+          question_text: string
+          read_at?: string | null
+          session_id: string
+          session_question_id: string
+        }
+        Update: {
+          actor_name?: string
+          created_at?: string
+          id?: string
+          link?: string
+          participant_id?: string
+          question_text?: string
+          read_at?: string | null
+          session_id?: string
+          session_question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_session_question_id_fkey"
+            columns: ["session_question_id"]
+            isOneToOne: false
+            referencedRelation: "session_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -572,6 +630,42 @@ export type Database = {
           },
           {
             foreignKeyName: "thread_messages_session_question_id_fkey"
+            columns: ["session_question_id"]
+            isOneToOne: false
+            referencedRelation: "session_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      thread_reads: {
+        Row: {
+          id: string
+          participant_id: string
+          read_at: string
+          session_question_id: string
+        }
+        Insert: {
+          id?: string
+          participant_id: string
+          read_at?: string
+          session_question_id: string
+        }
+        Update: {
+          id?: string
+          participant_id?: string
+          read_at?: string
+          session_question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_reads_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_reads_session_question_id_fkey"
             columns: ["session_question_id"]
             isOneToOne: false
             referencedRelation: "session_questions"
