@@ -8,9 +8,10 @@ import { getInbox } from "@/lib/remote.functions";
 
 export const Route = createFileRoute("/inbox")({
   component: InboxPage,
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: typeof search['q'] === "string" ? (search['q'] as string) : "",
-  }),
+  validateSearch: (search: Record<string, unknown>): { q?: string } => {
+    const q = search['q'];
+    return typeof q === "string" && q ? { q } : {};
+  },
   head: () => ({
     meta: [
       { title: "Who answered you — Beside" },
@@ -37,7 +38,7 @@ function InboxPage() {
   const [guestToken, setGuestToken] = useState("");
   const [inbox, setInbox] = useState<Inbox | null>(null);
   const [open, setOpen] = useState<Recipient | null>(null);
-  const [deepQuestion, setDeepQuestion] = useState(q);
+  const [deepQuestion, setDeepQuestion] = useState(q ?? "");
 
   const load = useServerFn(getInbox);
 
