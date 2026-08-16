@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { pickImpressionQuestion } from "@/lib/irl-helpers";
+import { notifyThreadReply } from "@/lib/notify.server";
 import { shortToken, snapshotOf, toPlay } from "@/lib/remote-shared";
 import type { Chip, OptionKey, PlayQuestion, Snapshot } from "@/lib/remote-shared";
 
@@ -22,7 +24,7 @@ export const listTopicQuestions = createServerFn({ method: "POST" })
 
     const { data: questions, error } = await supabaseAdmin
       .from("questions")
-      .select("id, text, option_a, option_b, option_c, reason_chips(id, option_key, text)")
+      .select("id, text, option_a, option_b, option_c, question_type, reason_chips(id, option_key, text)")
       .eq("topic_id", topic.id)
       .eq("active", true)
       .limit(5);
@@ -51,12 +53,17 @@ export const createRemoteSession = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // The third question is always an impression question.
+    const questionIds = [...data.questionIds];
+    const impression = await pickImpressionQuestion(supabaseAdmin, questionIds);
+    if (impression) questionIds[2] = impression.id;
+
     const { data: questions, error: qError } = await supabaseAdmin
       .from("questions")
-      .select("id, text, option_a, option_b, option_c, reason_chips(id, option_key, text)")
-      .in("id", data.questionIds);
+      .select("id, text, option_a, option_b, option_c, question_type, reason_chips(id, option_key, text)")
+      .in("id", questionIds);
     if (qError) throw qError;
-    if (!questions || questions.length !== data.questionIds.length) {
+    if (!questions || questions.length !== questionIds.length) {
       throw new Error("Some questions are unavailable");
     }
 
@@ -82,7 +89,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
     const { data: sqs, error: sqError } = await supabaseAdmin
       .from("session_questions")
       .insert(
-        data.questionIds.map((id, index) => {
+        questionIds.map((id, index) => {
           const q = questions.find((row) => row.id === id)!;
           return {
             session_id: session.id,
@@ -99,7 +106,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
       guest_token: data.guestToken,
       session_id: session.id,
       name: "session_created",
-      props: { kind: "remote", question_count: data.questionIds.length },
+      props: { kind: "remote", question_count: questionIds.length },
     });
 
     return {
