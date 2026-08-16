@@ -446,21 +446,11 @@ export const voteQuestions = createServerFn({ method: "POST" })
       .eq("session_id", data.sessionId);
     const offset = existing ?? 0;
 
-    // First time these two play together: the third question is an impression question.
+    // The third question is always an impression question, first pairing or not.
     if (offset === 0) {
-      const { data: withTokens } = await supabaseAdmin
-        .from("session_participants")
-        .select("guest_token")
-        .eq("session_id", data.sessionId);
-      const tokens = (withTokens ?? [])
-        .map((p) => p.guest_token)
-        .filter((token): token is string => Boolean(token));
-      const played = await pairPlayedBefore(supabaseAdmin, data.sessionId, tokens);
-      if (!played) {
-        const impression = await pickImpressionQuestion(supabaseAdmin, chosen);
-        if (impression) {
-          chosen.splice(2, chosen.length - 2, impression.id);
-        }
+      const impression = await pickImpressionQuestion(supabaseAdmin, chosen);
+      if (impression) {
+        chosen.splice(2, chosen.length - 2, impression.id);
       }
     }
 
