@@ -17,7 +17,7 @@ export function PairSummary({
   guestToken: string;
   sessionId: string;
   title: string;
-  initialQuestionId?: string;
+  initialQuestionId?: string | undefined;
 }) {
   const load = useServerFn(getPairSummary);
   const [summary, setSummary] = useState<Summary | null>(null);
