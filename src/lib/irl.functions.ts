@@ -5,7 +5,7 @@ import {
   QUESTION_SELECT,
   candidateQuestions,
   memberOf,
-  pairPlayedBefore,
+  
   pickImpressionQuestion,
   roomCode,
   snapshotRow,
