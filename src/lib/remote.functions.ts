@@ -1086,6 +1086,7 @@ export const getInbox = createServerFn({ method: "POST" })
             childSessionId: childId ?? "",
             differed,
             unread,
+            questionIds: questions.map((q) => q.id),
           };
         });
 

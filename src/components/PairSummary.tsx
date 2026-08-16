@@ -12,14 +12,16 @@ export function PairSummary({
   guestToken,
   sessionId,
   title,
+  initialQuestionId,
 }: {
   guestToken: string;
   sessionId: string;
   title: string;
+  initialQuestionId?: string;
 }) {
   const load = useServerFn(getPairSummary);
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [focused, setFocused] = useState("");
+  const [focused, setFocused] = useState(initialQuestionId ?? "");
 
   const refresh = useCallback(() => {
     if (!guestToken || !sessionId) return;
