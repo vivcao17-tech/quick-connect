@@ -36,6 +36,9 @@ export const Route = createFileRoute("/i/$token")({
 
 type Reveal = {
   senderName: string;
+  kind: "standard" | "impression";
+  needsSecondHalf: boolean;
+  impression: { theirSelf: OptionKey; myReadOfThem: OptionKey; match: boolean } | null;
   sender: { optionKey: OptionKey; reason: string } | null;
   mine: { optionKey: OptionKey; reason: string } | null;
   revealed: boolean;
@@ -68,6 +71,7 @@ function InvitePage() {
   const [index, setIndex] = useState(0);
   const [reason, setReason] = useState("");
   const [reveal, setReveal] = useState<Reveal | null>(null);
+  const [half, setHalf] = useState<"other" | "self">("other");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -102,20 +106,33 @@ function InvitePage() {
     }
   }
 
+  const impressionHalf = current?.kind === "impression" ? half : null;
+
   async function choose(optionKey: OptionKey, chipText?: string) {
     if (!current || busy) return;
     setBusy(true);
     try {
       const text = chipText ?? reason.trim();
+      const answerRole =
+        current.kind === "impression" && half === "other"
+          ? ("about_other" as const)
+          : ("about_self" as const);
       const result = await answer({
         data: {
           token,
           guestToken,
           sessionQuestionId: current.sessionQuestionId,
           optionKey,
+          answerRole,
           ...(text ? { reasonText: text } : {}),
         },
       });
+      // The impression question is answered in two halves before anything is revealed.
+      if (result.needsSecondHalf) {
+        setReason("");
+        setHalf("self");
+        return;
+      }
       setReveal(result);
     } catch {
       setError("That didn't go through. Try again.");
@@ -127,6 +144,7 @@ function InvitePage() {
   function openSummary() {
     setReason("");
     setReveal(null);
+    setHalf("other");
     setStage("summary");
   }
 
@@ -134,6 +152,7 @@ function InvitePage() {
   function next() {
     setReason("");
     setReveal(null);
+    setHalf("other");
     if (index + 1 < questions.length) setIndex(index + 1);
     else void openSummary();
   }
@@ -200,7 +219,14 @@ function InvitePage() {
 
       {stage === "play" && current && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
-          <h1 className="text-4xl leading-tight">{current.text}</h1>
+          {impressionHalf && (
+            <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
+              {impressionHalf === "other"
+                ? `Which one is ${intro?.senderName ?? "they"}?`
+                : "And you?"}
+            </p>
+          )}
+          <h1 className="mt-3 text-4xl leading-tight">{current.text}</h1>
 
           {!reveal && (
             <>
@@ -287,6 +313,27 @@ function InvitePage() {
                       </p>
                     )}
                   </div>
+                  {reveal.impression && (
+                    <div className="mt-8 border-t border-border pt-6">
+                      <p className="text-lg leading-snug">
+                        {reveal.impression.match
+                          ? `You read ${reveal.senderName} exactly the way they read themselves.`
+                          : `${reveal.senderName} sees themselves differently than you see them.`}
+                      </p>
+                      <p className="mt-4 text-base">
+                        <span className="text-muted-foreground">
+                          How {reveal.senderName} sees themselves:{" "}
+                        </span>
+                        {labelOf(reveal.impression.theirSelf)}
+                      </p>
+                      <p className="mt-1 text-base">
+                        <span className="text-muted-foreground">How you read them: </span>
+                        <span className={reveal.impression.match ? "" : "text-primary"}>
+                          {labelOf(reveal.impression.myReadOfThem)}
+                        </span>
+                      </p>
+                    </div>
+                  )}
                   {ai.observation && (
                     <p className="mt-6 text-lg leading-snug">{ai.observation}</p>
                   )}
