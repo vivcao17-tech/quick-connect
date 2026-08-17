@@ -245,6 +245,12 @@ function Home() {
           >
             Who you asked
           </Link>
+          <Link
+            to="/conversations"
+            className="mt-3 self-start text-sm text-muted-foreground underline underline-offset-4"
+          >
+            People you've talked to
+          </Link>
         </section>
       )}
 
