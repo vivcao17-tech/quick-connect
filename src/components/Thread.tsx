@@ -1,5 +1,5 @@
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getThread, postThreadMessage } from "@/lib/remote.functions";
 
@@ -12,6 +12,11 @@ const STARTERS = [
 ];
 
 type Message = { id: string; kind: string; body: string; mine: boolean; who: string };
+type Row = { message: Message; showIdentity: boolean; reactions: Message[] };
+
+function initialOf(name: string) {
+  return (name.trim()[0] ?? "?").toUpperCase();
+}
 
 export function Thread({
   guestToken,
@@ -27,9 +32,13 @@ export function Thread({
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [firstUnreadId, setFirstUnreadId] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const nodes = useRef(new Map<string, HTMLDivElement>());
   const lastCount = useRef(0);
+  const settled = useRef(false);
+  const sentRef = useRef(false);
 
   const load = useServerFn(getThread);
   const post = useServerFn(postThreadMessage);
@@ -38,10 +47,14 @@ export function Thread({
   useEffect(() => {
     if (!guestToken || !sessionQuestionId) return;
     let alive = true;
+    settled.current = false;
+    lastCount.current = 0;
     const pull = () =>
       void load({ data: { guestToken, sessionQuestionId } })
         .then((result) => {
-          if (alive) setMessages(result.messages as Message[]);
+          if (!alive) return;
+          setMessages(result.messages as Message[]);
+          if (!settled.current) setFirstUnreadId(result.firstUnreadId ?? "");
         })
         .catch(() => undefined);
     pull();
@@ -52,14 +65,46 @@ export function Thread({
     };
   }, [guestToken, sessionQuestionId, load]);
 
-  // Keep the newest message just above the composer, like a chat app.
+  /* Opening: land on the first unread line when there is one, otherwise stay at
+     the top so the question and both answers are read first. After that, only a
+     message I just sent, or a new arrival, pulls the view down. */
   useEffect(() => {
+    if (messages.length === 0) return;
+    if (!settled.current) {
+      settled.current = true;
+      lastCount.current = messages.length;
+      if (firstUnreadId) {
+        nodes.current.get(firstUnreadId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
     if (messages.length > lastCount.current) {
-      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      const target = sentRef.current
+        ? nodes.current.get(messages[messages.length - 1]?.id ?? "")
+        : undefined;
+      (target ?? endRef.current)?.scrollIntoView({ behavior: "smooth", block: "end" });
+      sentRef.current = false;
     }
     lastCount.current = messages.length;
-  }, [messages]);
+  }, [messages, firstUnreadId]);
 
+  // Reactions ride in the right-hand gutter of the message they answer.
+  const rows = useMemo(() => {
+    const out: Row[] = [];
+    for (const message of messages) {
+      const previous = out[out.length - 1];
+      if (message.kind === "reaction" && previous) {
+        previous.reactions.push(message);
+        continue;
+      }
+      out.push({
+        message,
+        showIdentity: !previous || previous.message.who !== message.who,
+        reactions: [],
+      });
+    }
+    return out;
+  }, [messages]);
 
   async function send(kind: "reaction" | "text" | "quick_ask" | "starter", body: string) {
     const clean = body.trim();
@@ -67,6 +112,7 @@ export function Thread({
     setBusy(true);
     try {
       await post({ data: { guestToken, sessionQuestionId, kind, body: clean } });
+      sentRef.current = true;
       const result = await load({ data: { guestToken, sessionQuestionId } });
       setMessages(result.messages as Message[]);
       setDraft("");
@@ -74,7 +120,6 @@ export function Thread({
       setBusy(false);
     }
   }
-
 
   /** Put text in the box so it can be read, edited or deleted before sending. */
   function fillDraft(starter: string) {
@@ -87,24 +132,53 @@ export function Thread({
     }, 0);
   }
 
-
   const chip =
     "rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground";
 
   return (
     <div className="mt-8 border-t border-border pt-6">
-      {messages.length > 0 && (
-        <div className="mb-6 flex flex-col gap-2">
-          {messages.map((message) => (
-            <p key={message.id} className="text-base">
-              <span className="text-muted-foreground">{message.mine ? "You" : message.who}: </span>
-              {message.body}
-            </p>
+      {rows.length > 0 && (
+        <div className="mb-6 flex flex-col gap-3">
+          {rows.map((row) => (
+            <div
+              key={row.message.id}
+              ref={(node) => {
+                if (node) nodes.current.set(row.message.id, node);
+              }}
+              className="flex items-start gap-3"
+            >
+              <div className="w-8 shrink-0">
+                {row.showIdentity && (
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-sm">
+                    {initialOf(row.message.mine ? "You" : row.message.who)}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                {row.showIdentity && (
+                  <p className="text-xs tracking-wide text-muted-foreground">
+                    {row.message.mine ? "You" : row.message.who}
+                  </p>
+                )}
+                <p className="text-base">{row.message.body}</p>
+              </div>
+              <div className="flex w-20 shrink-0 flex-wrap justify-end gap-1">
+                {row.reactions.map((reaction) => (
+                  <span
+                    key={reaction.id}
+                    title={`${reaction.mine ? "You" : reaction.who}: ${reaction.body}`}
+                    className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground"
+                  >
+                    {reaction.body}
+                  </span>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      {messages.length === 0 && <p className="mb-4 text-lg">Want to ask why?</p>}
+      {rows.length === 0 && <p className="mb-4 text-lg">Want to ask why?</p>}
 
       {/* Prompt block — grouped, labelled, dashed chips */}
       <div className="rounded-2xl bg-secondary/40 px-4 py-4">
@@ -184,7 +258,6 @@ export function Thread({
           Send
         </button>
       </form>
-
     </div>
   );
 }
