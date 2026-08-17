@@ -760,6 +760,21 @@ export const getThread = createServerFn({ method: "POST" })
       .eq("session_question_id", sq.id)
       .order("created_at");
 
+    // Where the reader left off, read before we clear it, so the client can
+    // scroll to the first unread line instead of the bottom.
+    const { data: readRow } = await supabaseAdmin
+      .from("thread_reads")
+      .select("read_at")
+      .eq("participant_id", me.id)
+      .eq("session_question_id", sq.id)
+      .maybeSingle();
+    const readAt = readRow?.read_at ?? null;
+    const firstUnread = (rows ?? []).find(
+      (row) =>
+        row.participant_id !== me.id &&
+        (!readAt || new Date(row.created_at) > new Date(readAt)),
+    );
+
     // Opening the thread clears its unread state and any pending notifications.
     await supabaseAdmin
       .from("thread_reads")
@@ -779,6 +794,7 @@ export const getThread = createServerFn({ method: "POST" })
       .is("read_at", null);
 
     return {
+      firstUnreadId: firstUnread?.id ?? "",
       messages: (rows ?? []).map((row) => ({
         id: row.id,
         kind: row.kind,
