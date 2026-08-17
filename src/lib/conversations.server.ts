@@ -62,7 +62,7 @@ export async function loadRelationships(admin: Admin, guestToken: string): Promi
     .from("session_participants")
     .select("id, session_id, profile_id, guest_token, display_name")
     .in("session_id", sessionIds);
-  const others = ((everyone ?? []) as typeof myRows[]).flat().filter((p) => !myIds.has(p.id));
+  const others = ((everyone ?? []) as typeof myRows).filter((p) => !myIds.has(p.id));
 
   const { data: sqRows } = await admin
     .from("session_questions")
