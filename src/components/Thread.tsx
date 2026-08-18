@@ -3,13 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getThread, postThreadMessage } from "@/lib/remote.functions";
 
-const REACTIONS = ["Called it", "Seriously?", "Tell me more"];
-const QUICK_ASKS = ["Has that always been true?", "What changed?", "Would you do it again?"];
-const STARTERS = [
-  "I picked that because last time ",
-  "I almost went your way because ",
-  "The thing I didn't say is ",
-];
+/** Closing reactions: tapping one posts instantly, because the point is that
+    nothing more is required. */
+const CLOSERS = ["👀", "😂"];
 
 type Message = { id: string; kind: string; body: string; mine: boolean; who: string };
 type Row = { message: Message; showIdentity: boolean; reactions: Message[] };
@@ -178,17 +174,33 @@ export function Thread({
         </div>
       )}
 
-      {rows.length === 0 && <p className="mb-4 text-lg">Want to ask why?</p>}
-
-      {/* Prompt block — grouped, labelled, dashed chips */}
-      <div className="rounded-2xl bg-secondary/40 px-4 py-4">
-        <p className="mb-3 text-xs tracking-[0.18em] text-muted-foreground uppercase">
-          Tap to start a reply
+      {/* Closing reactions sit with the messages, not with the composer. */}
+      <div className="mb-8">
+        <p className="mb-2 text-xs tracking-[0.18em] text-muted-foreground uppercase">
+          No reply needed
         </p>
+        <div className="flex flex-wrap gap-2">
+          {CLOSERS.map((closer) => (
+            <button
+              key={closer}
+              disabled={busy}
+              onClick={() => void send("reaction", closer)}
+              className="rounded-full border border-border px-4 py-2 text-lg disabled:opacity-40"
+            >
+              {closer}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {prompts && prompts.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {prompts.map((prompt) => (
+      {/* Continuation prompts: specific to this question, tapped into the box. */}
+      {prompts && prompts.length > 0 && (
+        <div className="rounded-2xl bg-secondary/40 px-4 py-4">
+          <p className="mb-3 text-xs tracking-[0.18em] text-muted-foreground uppercase">
+            {rows.length === 0 ? "Want to ask why?" : "Tap to start a reply"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {prompts.slice(0, 2).map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => {
@@ -201,37 +213,8 @@ export function Thread({
               </button>
             ))}
           </div>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          {REACTIONS.map((reaction) => (
-            <button
-              key={reaction}
-              disabled={busy}
-              onClick={() => send("reaction", reaction)}
-              className={`${chip} disabled:opacity-40`}
-            >
-              {reaction}
-            </button>
-          ))}
         </div>
-
-        <div className="mt-2 flex flex-wrap gap-2">
-          {QUICK_ASKS.map((ask) => (
-            <button key={ask} onClick={() => fillDraft(ask)} className={chip}>
-              {ask}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-2 flex flex-wrap gap-2">
-          {STARTERS.map((starter) => (
-            <button key={starter} onClick={() => fillDraft(starter)} className={chip}>
-              {starter}___
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       <div ref={endRef} className="h-px" />
 
