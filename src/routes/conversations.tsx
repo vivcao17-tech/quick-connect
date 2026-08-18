@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { listConversations } from "@/lib/conversations.functions";
-import { getGuestToken } from "@/lib/guest";
+import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/conversations")({
   component: ConversationsPage,
@@ -36,14 +36,19 @@ type People = Awaited<ReturnType<typeof listConversations>>["people"];
 function ConversationsPage() {
   const [people, setPeople] = useState<People | null>(null);
   const load = useServerFn(listConversations);
+  const viewer = useViewer();
 
   useEffect(() => {
-    const token = getGuestToken();
-    if (!token) return;
-    void load({ data: { guestToken: token } })
+    if (!viewer.ready || !viewer.guestToken) return;
+    void load({
+      data: {
+        guestToken: viewer.guestToken,
+        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+      },
+    })
       .then((result) => setPeople(result.people))
       .catch(() => setPeople([]));
-  }, [load]);
+  }, [load, viewer.ready, viewer.guestToken, viewer.profileId]);
 
   return (
     <main className="paper min-h-screen bg-background">
