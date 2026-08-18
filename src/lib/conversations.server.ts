@@ -4,10 +4,11 @@ import type { Snapshot } from "@/lib/remote-shared";
  * Person identity across sessions.
  *
  * A registered person is keyed by profile_id, a guest by guest_token. Both are
- * uuids, so one column of route param covers both. If a guest loses their token
- * (cleared storage, new device, private window) they become a new person: their
- * old blocks stay readable only from the original browser, and any new session
- * shows up as a separate row. Signing in is the only durable fix.
+ * uuids, so one column of route param covers both. A signed-in viewer is matched
+ * by profile_id as well as by the guest token of the browser they are on, so
+ * their history follows them across devices. If a guest loses their token
+ * (cleared storage, new device, private window) they become a new person until
+ * they sign in.
  */
 export function personKeyOf(row: { profile_id: string | null; guest_token: string | null; id: string }) {
   return row.profile_id ?? row.guest_token ?? row.id;
@@ -17,7 +18,8 @@ type Admin = {
   from: (table: string) => any;
 };
 
-export type Block = {
+/** One question inside a session: both answers plus its thread. */
+export type QuestionBlock = {
   sessionQuestionId: string;
   sessionId: string;
   text: string;
@@ -32,27 +34,56 @@ export type Block = {
   lastActivity: string;
 };
 
+/** A "block" is one session: the set of questions sent together. */
+export type SessionBlock = {
+  sessionId: string;
+  topic: string;
+  total: number;
+  different: number;
+  messageCount: number;
+  unread: number;
+  revealed: boolean;
+  lastActivity: string;
+  questions: QuestionBlock[];
+};
+
 export type Person = {
   personKey: string;
   name: string;
-  blocks: Block[];
+  sessions: SessionBlock[];
 };
 
 const NIL = "00000000-0000-0000-0000-000000000000";
 
 /** All blocks I share with anyone, grouped by person rather than by session. */
-export async function loadRelationships(admin: Admin, guestToken: string): Promise<Person[]> {
-  const { data: mine } = await admin
-    .from("session_participants")
-    .select("id, session_id, profile_id, guest_token, display_name")
-    .eq("guest_token", guestToken);
-  const myRows = (mine ?? []) as {
+export async function loadRelationships(
+  admin: Admin,
+  guestToken: string,
+  profileId?: string,
+): Promise<Person[]> {
+  const identities: { column: string; value: string }[] = [];
+  if (guestToken) identities.push({ column: "guest_token", value: guestToken });
+  if (profileId) identities.push({ column: "profile_id", value: profileId });
+  if (identities.length === 0) return [];
+
+  type Participant = {
     id: string;
     session_id: string;
     profile_id: string | null;
     guest_token: string | null;
     display_name: string | null;
-  }[];
+  };
+
+  const found = await Promise.all(
+    identities.map(async (identity) => {
+      const { data } = await admin
+        .from("session_participants")
+        .select("id, session_id, profile_id, guest_token, display_name")
+        .eq(identity.column, identity.value);
+      return (data ?? []) as Participant[];
+    }),
+  );
+  const myRows = [...new Map(found.flat().map((row) => [row.id, row])).values()];
   if (myRows.length === 0) return [];
 
   const sessionIds = [...new Set(myRows.map((r) => r.session_id))];
@@ -62,22 +93,34 @@ export async function loadRelationships(admin: Admin, guestToken: string): Promi
     .from("session_participants")
     .select("id, session_id, profile_id, guest_token, display_name")
     .in("session_id", sessionIds);
-  const others = ((everyone ?? []) as typeof myRows).filter((p) => !myIds.has(p.id));
+  const others = ((everyone ?? []) as Participant[]).filter((p) => !myIds.has(p.id));
 
   const { data: sqRows } = await admin
     .from("session_questions")
-    .select("id, session_id, revealed_at, order_index, snapshot")
+    .select("id, session_id, question_id, revealed_at, order_index, snapshot")
     .in("session_id", sessionIds)
     .order("order_index");
   const sqs = (sqRows ?? []) as {
     id: string;
     session_id: string;
+    question_id: string;
     revealed_at: string | null;
     order_index: number;
     snapshot: unknown;
   }[];
   const sqIds = sqs.map((q) => q.id);
   const scope = sqIds.length ? sqIds : [NIL];
+
+  // Topic label per session, taken from the questions that were sent together.
+  const questionIds = [...new Set(sqs.map((q) => q.question_id))];
+  const { data: questionRows } = await admin
+    .from("questions")
+    .select("id, topic:topics(label)")
+    .in("id", questionIds.length ? questionIds : [NIL]);
+  const topicOf = new Map<string, string>();
+  for (const row of (questionRows ?? []) as { id: string; topic: { label: string } | null }[]) {
+    if (row.topic?.label) topicOf.set(row.id, row.topic.label);
+  }
 
   const { data: answerRows } = await admin
     .from("answers")
@@ -153,11 +196,7 @@ export async function loadRelationships(admin: Admin, guestToken: string): Promi
     ];
     const lastActivity = times.sort()[times.length - 1] ?? my.created_at;
 
-    const key = personKeyOf(partner);
-    const person =
-      byPerson.get(key) ??
-      ({ personKey: key, name: partner.display_name ?? "Someone", blocks: [] } as Person);
-    person.blocks.push({
+    const question: QuestionBlock = {
       sessionQuestionId: sq.id,
       sessionId: sq.session_id,
       text: snap.text,
@@ -170,16 +209,43 @@ export async function loadRelationships(admin: Admin, guestToken: string): Promi
       messageCount: mine.length,
       unread,
       lastActivity,
-    });
+    };
+
+    const key = personKeyOf(partner);
+    const person =
+      byPerson.get(key) ??
+      ({ personKey: key, name: partner.display_name ?? "Someone", sessions: [] } as Person);
+    const block =
+      person.sessions.find((s) => s.sessionId === sq.session_id) ??
+      ({
+        sessionId: sq.session_id,
+        topic: topicOf.get(sq.question_id) ?? "",
+        total: 0,
+        different: 0,
+        messageCount: 0,
+        unread: 0,
+        revealed: false,
+        lastActivity,
+        questions: [],
+      } as SessionBlock);
+    if (!block.topic) block.topic = topicOf.get(sq.question_id) ?? "";
+    block.questions.push(question);
+    block.total += 1;
+    if (question.matched === false) block.different += 1;
+    block.messageCount += question.messageCount;
+    block.unread += question.unread;
+    block.revealed = block.revealed || question.revealed;
+    if (block.lastActivity < lastActivity) block.lastActivity = lastActivity;
+    if (!person.sessions.includes(block)) person.sessions.push(block);
     byPerson.set(key, person);
   }
 
   const people = [...byPerson.values()];
   for (const person of people) {
-    person.blocks.sort((a, b) => (a.lastActivity < b.lastActivity ? 1 : -1));
+    person.sessions.sort((a, b) => (a.lastActivity < b.lastActivity ? 1 : -1));
   }
   people.sort((a, b) =>
-    (a.blocks[0]?.lastActivity ?? "") < (b.blocks[0]?.lastActivity ?? "") ? 1 : -1,
+    (a.sessions[0]?.lastActivity ?? "") < (b.sessions[0]?.lastActivity ?? "") ? 1 : -1,
   );
   return people;
 }

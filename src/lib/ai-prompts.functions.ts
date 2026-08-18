@@ -21,7 +21,7 @@ const SYSTEM = [
   "If reasons are missing, ask for the story, not the logic.",
   'Reply with strict JSON only: {"observation": string, "prompts": [string, string, string]}.',
   "observation: one sentence, max 20 words, never a summary of what they picked.",
-  "prompts: 2-3 questions, each under 12 words, second person, directly askable to the other person.",
+  "prompts: exactly 2 questions, each under 12 words, second person, directly askable to the other person.",
 ].join(" ");
 
 /**
@@ -78,12 +78,34 @@ export const getRevealPrompts = createServerFn({ method: "POST" })
       return `${p.display_name ?? "Someone"} chose "${label}"${reason ? ` because: ${reason}` : " (no reason given)"}`;
     });
 
+    // Two fallbacks that still name this question's actual options, so the
+    // continuation prompts are never generic filler.
+    const chosen = [...latest.values()].map((a) => a.option_key);
+    const labelOf = (k: string | undefined) =>
+      snap.options.find((o) => o.key === k)?.label ?? "";
+    const first = labelOf(chosen[0]);
+    const second = labelOf(chosen.find((k) => k !== chosen[0]));
+    const templates: RevealPrompts =
+      second && first
+        ? {
+            source: "template",
+            observation: "",
+            prompts: [`Why "${first}" and not "${second}"?`, `What would make you switch?`],
+          }
+        : first
+          ? {
+              source: "template",
+              observation: "",
+              prompts: [`What made you both say "${first}"?`, `Was it always "${first}"?`],
+            }
+          : fallback;
+
     const key = process.env["LOVABLE_API_KEY"];
-    if (!key) return fallback;
+    if (!key) return templates;
 
     const started = Date.now();
     let succeeded = false;
-    let result: RevealPrompts = fallback;
+    let result: RevealPrompts = templates;
 
     try {
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -120,7 +142,7 @@ export const getRevealPrompts = createServerFn({ method: "POST" })
           prompts?: unknown;
         };
         const prompts = Array.isArray(json.prompts)
-          ? json.prompts.filter((p): p is string => typeof p === "string" && p.trim().length > 0).slice(0, 3)
+          ? json.prompts.filter((p): p is string => typeof p === "string" && p.trim().length > 0).slice(0, 2)
           : [];
         if (prompts.length > 0) {
           result = {

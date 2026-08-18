@@ -24,7 +24,7 @@ export function useRevealPrompts(
     let alive = true;
     void fetchPrompts({ data: { guestToken, sessionQuestionId } })
       .then((result) => {
-        if (alive && result.source === "ai" && result.prompts.length > 0) {
+        if (alive && result.prompts.length > 0) {
           setById((prev) => ({ ...prev, [sessionQuestionId]: result }));
         }
       })
