@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
 
-export type Viewer = { guestToken: string; profileId?: string; ready: boolean };
+export type Viewer = { guestToken: string; profileId?: string | undefined; ready: boolean };
 
 /**
  * Who is looking. Guests are keyed by their browser token; a signed-in person is
