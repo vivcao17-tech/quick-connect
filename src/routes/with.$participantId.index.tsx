@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { getPersonSessions } from "@/lib/conversations.functions";
 import { useViewer } from "@/lib/viewer";
 
-export const Route = createFileRoute("/with/$participantId")({
+export const Route = createFileRoute("/with/$participantId/")({
   component: WithPersonPage,
   head: () => ({
     meta: [
