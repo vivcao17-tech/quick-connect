@@ -19,6 +19,7 @@ import { Route as RoomSessionIdRouteImport } from './routes/room.$sessionId'
 import { Route as SendSessionIdRouteImport } from './routes/send.$sessionId'
 import { Route as SentSessionIdRouteImport } from './routes/sent.$sessionId'
 import { Route as WithParticipantIdIndexRouteImport } from './routes/with.$participantId.index'
+import { Route as WithParticipantIdSessionIdRouteImport } from './routes/with.$participantId.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,12 @@ const WithParticipantIdIndexRoute = WithParticipantIdIndexRouteImport.update({
   path: '/with/$participantId/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WithParticipantIdSessionIdRoute =
+  WithParticipantIdSessionIdRouteImport.update({
+    id: '/with/$participantId/$sessionId',
+    path: '/with/$participantId/$sessionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
+  '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +101,7 @@ export interface FileRoutesByTo {
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
+  '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId': typeof WithParticipantIdIndexRoute
 }
 export interface FileRoutesById {
@@ -106,6 +115,7 @@ export interface FileRoutesById {
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
+  '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/room/$sessionId'
     | '/send/$sessionId'
     | '/sent/$sessionId'
+    | '/with/$participantId/$sessionId'
     | '/with/$participantId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/room/$sessionId'
     | '/send/$sessionId'
     | '/sent/$sessionId'
+    | '/with/$participantId/$sessionId'
     | '/with/$participantId'
   id:
     | '__root__'
@@ -144,6 +156,7 @@ export interface FileRouteTypes {
     | '/room/$sessionId'
     | '/send/$sessionId'
     | '/sent/$sessionId'
+    | '/with/$participantId/$sessionId'
     | '/with/$participantId/'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +170,7 @@ export interface RootRouteChildren {
   RoomSessionIdRoute: typeof RoomSessionIdRoute
   SendSessionIdRoute: typeof SendSessionIdRoute
   SentSessionIdRoute: typeof SentSessionIdRoute
+  WithParticipantIdSessionIdRoute: typeof WithParticipantIdSessionIdRoute
   WithParticipantIdIndexRoute: typeof WithParticipantIdIndexRoute
 }
 
@@ -232,6 +246,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WithParticipantIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/with/$participantId/$sessionId': {
+      id: '/with/$participantId/$sessionId'
+      path: '/with/$participantId/$sessionId'
+      fullPath: '/with/$participantId/$sessionId'
+      preLoaderRoute: typeof WithParticipantIdSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -245,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   RoomSessionIdRoute: RoomSessionIdRoute,
   SendSessionIdRoute: SendSessionIdRoute,
   SentSessionIdRoute: SentSessionIdRoute,
+  WithParticipantIdSessionIdRoute: WithParticipantIdSessionIdRoute,
   WithParticipantIdIndexRoute: WithParticipantIdIndexRoute,
 }
 export const routeTree = rootRouteImport
