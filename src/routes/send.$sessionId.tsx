@@ -36,7 +36,8 @@ type Invite = { token: string; label: string; note: string };
 
 function SendPage() {
   const { sessionId } = Route.useParams();
-  const [guestToken, setGuestToken] = useState("");
+  const viewer = useViewer();
+  const guestToken = viewer.guestToken;
   const [recipients, setRecipients] = useState<Recipient[]>([{ label: "", note: "" }]);
   const [links, setLinks] = useState<Invite[]>([]);
   const [copied, setCopied] = useState("");
@@ -44,10 +45,22 @@ function SendPage() {
   const [error, setError] = useState("");
 
   const send = useServerFn(createInvites);
+  const loadExisting = useServerFn(listSessionInvites);
 
+  // Links live in the database, not in this component's state — a reload must
+  // never lose a link that has already been handed out.
   useEffect(() => {
-    setGuestToken(getGuestToken());
-  }, []);
+    if (!viewer.ready || !guestToken) return;
+    void loadExisting({
+      data: {
+        guestToken,
+        sessionId,
+        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+      },
+    })
+      .then((result) => setLinks(result.invites))
+      .catch(() => undefined);
+  }, [loadExisting, viewer.ready, viewer.profileId, guestToken, sessionId]);
 
   function update(i: number, patch: Partial<Recipient>) {
     setRecipients((prev) => prev.map((item, j) => (j === i ? { ...item, ...patch } : item)));
