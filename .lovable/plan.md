@@ -57,11 +57,12 @@ No change needed here. Worth recording in security memory so a future migration 
 5. **Migration:** `REVOKE EXECUTE ON FUNCTION public.question_tally(uuid) FROM anon, authenticated;` — `is_my_participant` and `is_session_member` keep EXECUTE because the RLS policies call them as the querying role.
 6. **Security memory:** record that `public` intentionally grants nothing to `anon`/`authenticated`, that all access is mediated by service-role server functions, and that the reveal lock is enforced both by policy and by the server functions withholding the other side's answer until `revealed_at` is set.
 
-## Technical summary
+## Files touched
 
-- `src/routes/send.$sessionId.tsx`: fetch existing invites for the session on mount and merge with newly created ones.
-- `src/lib/remote.functions.ts`: add optional `profileId` to `getInbox` / `getSentResults` inputs; resolve participants by either identity; extract a shared `requireParticipant(sessionId, identity)` helper used by every mutating handler.
-- `src/lib/guest.ts`: guarantee UUID-shaped tokens on all fallback paths.
-- `src/routes/conversations.tsx` + `listConversations`: include an awaiting-reply group so pending invites are reachable.
-- Migration: `REVOKE EXECUTE ON FUNCTION public.question_tally(uuid) FROM anon, authenticated;`
-- Security memory: record that `public` intentionally has no `anon`/`authenticated` grants and that all access is mediated by server functions.
+- `src/lib/identity.server.ts` (new) — dual-key participant lookup and profile backfill.
+- `src/lib/remote.functions.ts` — `listSessionInvites` (new); optional `profileId` on `getInbox` and `getSenderResults`; participant lookups routed through the shared helper.
+- `src/lib/conversations.functions.ts` / `conversations.server.ts` — pending-invite list alongside the people list.
+- `src/routes/send.$sessionId.tsx` — load existing invites on mount.
+- `src/routes/conversations.tsx` — awaiting-reply group rendered first when non-empty.
+- `src/lib/guest.ts` — UUID-shaped fallback tokens.
+- One migration for the `question_tally` revoke; security memory updated.
