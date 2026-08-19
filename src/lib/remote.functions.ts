@@ -231,6 +231,48 @@ export const createInvites = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * The links already made for this set. The send screen loads these on mount so
+ * a reload never loses a link that has already gone out.
+ */
+export const listSessionInvites = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        guestToken: guest,
+        sessionId: z.string().uuid(),
+        profileId: z.string().uuid().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipantIn, linkProfileToGuestRows } = await import("@/lib/identity.server");
+
+    const identity = { guestToken: data.guestToken, profileId: data.profileId };
+    await linkProfileToGuestRows(supabaseAdmin as never, identity);
+    const participant = await myParticipantIn(supabaseAdmin as never, data.sessionId, identity);
+    if (!participant) throw new Error("Not your session");
+
+    const { data: invites } = await supabaseAdmin
+      .from("invites")
+      .select("token, recipient_label, personal_note, completed_at, opened_at, created_at")
+      .eq("session_id", data.sessionId)
+      .order("created_at");
+
+    return {
+      invites: (invites ?? []).map((row) => ({
+        token: row.token,
+        label: row.recipient_label ?? "",
+        note: row.personal_note ?? "",
+        answered: Boolean(row.completed_at),
+        opened: Boolean(row.opened_at),
+        sentAt: row.created_at,
+      })),
+    };
+  });
+
+
 export const getInvite = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ token: z.string().min(4).max(40) }).parse(input))
   .handler(async ({ data }) => {
@@ -808,17 +850,21 @@ export const getThread = createServerFn({ method: "POST" })
 
 export const getSenderResults = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ guestToken: guest, sessionId: z.string().uuid() }).parse(input),
+    z
+      .object({
+        guestToken: guest,
+        sessionId: z.string().uuid(),
+        profileId: z.string().uuid().optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipantIn, linkProfileToGuestRows } = await import("@/lib/identity.server");
 
-    const { data: participant } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, display_name")
-      .eq("session_id", data.sessionId)
-      .eq("guest_token", data.guestToken)
-      .maybeSingle();
+    const identity = { guestToken: data.guestToken, profileId: data.profileId };
+    await linkProfileToGuestRows(supabaseAdmin as never, identity);
+    const participant = await myParticipantIn(supabaseAdmin as never, data.sessionId, identity);
     if (!participant) throw new Error("Not your session");
 
     const { data: parentQs } = await supabaseAdmin
@@ -1009,15 +1055,19 @@ export const getSenderResults = createServerFn({ method: "POST" })
 
 /** Everything the sender has sent out: one row per recipient, with unread replies. */
 export const getInbox = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ guestToken: guest }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ guestToken: guest, profileId: z.string().uuid().optional() }).parse(input),
+  )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipants: findParticipants, linkProfileToGuestRows } = await import(
+      "@/lib/identity.server"
+    );
 
-    const { data: myParticipants } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, session_id, role")
-      .eq("guest_token", data.guestToken);
-    const senderRows = (myParticipants ?? []).filter((p) => p.role === "sender");
+    const identity = { guestToken: data.guestToken, profileId: data.profileId };
+    await linkProfileToGuestRows(supabaseAdmin as never, identity);
+    const mine = await findParticipants(supabaseAdmin as never, identity);
+    const senderRows = mine.filter((p) => p.role === "sender");
     if (senderRows.length === 0) return { sets: [] };
 
     const parentIds = senderRows.map((p) => p.session_id);
@@ -1032,7 +1082,7 @@ export const getInbox = createServerFn({ method: "POST" })
       .filter((id): id is string => Boolean(id));
 
     const myChildParticipants = new Map<string, string>();
-    for (const p of myParticipants ?? []) {
+    for (const p of mine) {
       if (childIds.includes(p.session_id)) myChildParticipants.set(p.session_id, p.id);
     }
 

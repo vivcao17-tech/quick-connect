@@ -55,6 +55,57 @@ export type Person = {
 
 const NIL = "00000000-0000-0000-0000-000000000000";
 
+/** A link that has gone out but has no answers back yet. */
+export type PendingInvite = {
+  token: string;
+  label: string;
+  note: string;
+  sentAt: string;
+  opened: boolean;
+  sessionId: string;
+};
+
+/**
+ * Sent, not yet answered. This is the only surface the sender has between
+ * hitting send and the other person replying, so it has to exist somewhere.
+ */
+export async function loadPendingInvites(
+  admin: Admin,
+  guestToken: string,
+  profileId?: string,
+): Promise<PendingInvite[]> {
+  const { myParticipants } = await import("@/lib/identity.server");
+  const mine = await myParticipants(admin, { guestToken, profileId });
+  const parentIds = [
+    ...new Set(mine.filter((p) => p.role === "sender").map((p) => p.session_id)),
+  ];
+  if (parentIds.length === 0) return [];
+
+  const { data } = await admin
+    .from("invites")
+    .select("token, recipient_label, personal_note, opened_at, created_at, session_id")
+    .in("session_id", parentIds)
+    .is("completed_at", null)
+    .order("created_at", { ascending: false });
+
+  return ((data ?? []) as {
+    token: string;
+    recipient_label: string | null;
+    personal_note: string | null;
+    opened_at: string | null;
+    created_at: string;
+    session_id: string;
+  }[]).map((row) => ({
+    token: row.token,
+    label: row.recipient_label ?? "Someone",
+    note: row.personal_note ?? "",
+    sentAt: row.created_at,
+    opened: Boolean(row.opened_at),
+    sessionId: row.session_id,
+  }));
+}
+
+
 /** All blocks I share with anyone, grouped by person rather than by session. */
 export async function loadRelationships(
   admin: Admin,
