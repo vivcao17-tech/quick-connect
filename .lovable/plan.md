@@ -48,11 +48,21 @@ Two independent layers:
 
 No change needed here. Worth recording in security memory so a future migration does not add blanket grants and quietly hand the anon key direct table access.
 
-## Technical summary
+## Build order
 
-- `src/routes/send.$sessionId.tsx`: fetch existing invites for the session on mount and merge with newly created ones.
-- `src/lib/remote.functions.ts`: add optional `profileId` to `getInbox` / `getSentResults` inputs; resolve participants by either identity; extract a shared `requireParticipant(sessionId, identity)` helper used by every mutating handler.
-- `src/lib/guest.ts`: guarantee UUID-shaped tokens on all fallback paths.
-- `src/routes/conversations.tsx` + `listConversations`: include an awaiting-reply group so pending invites are reachable.
-- Migration: `REVOKE EXECUTE ON FUNCTION public.question_tally(uuid) FROM anon, authenticated;`
-- Security memory: record that `public` intentionally has no `anon`/`authenticated` grants and that all access is mediated by server functions.
+1. **Load existing invites on `/send/:sessionId`.** New server function `listSessionInvites({ sessionId, guestToken, profileId? })` returning token, label, note, sent time, and answered state. The page fetches on mount and merges with any links created in the same visit, so a reload no longer loses them.
+2. **Dual-key identity.** New server-only helper `src/lib/identity.server.ts` exposing `myParticipants`, `myParticipantIn`, and `linkProfileToGuestRows`. `getInbox` and `getSenderResults` take an optional `profileId`, resolve participants by `guest_token` OR `profile_id`, and stamp `profile_id` onto the sender's existing guest participant rows when a signed-in viewer calls them.
+3. **Awaiting-reply group on `/conversations`.** `listConversations` also returns pending invites — recipient label, when it was sent, and the link token — for every session where the viewer is the sender and the invite has no `completed_at`. When there is at least one, the group renders first on the page, above the people list, with a copy-link action so the sender can re-send. This closes the gap between sending and the recipient answering, which today has no surface at all.
+4. **UUID-shaped guest tokens.** `src/lib/guest.ts` returns a valid UUID on every fallback path (formatting `getRandomValues` bytes as a v4 UUID, and a `Math.random`-based v4 as the last resort), so a browser with blocked storage no longer produces tokens that every `z.string().uuid()` validator rejects.
+5. **Migration:** `REVOKE EXECUTE ON FUNCTION public.question_tally(uuid) FROM anon, authenticated;` — `is_my_participant` and `is_session_member` keep EXECUTE because the RLS policies call them as the querying role.
+6. **Security memory:** record that `public` intentionally grants nothing to `anon`/`authenticated`, that all access is mediated by service-role server functions, and that the reveal lock is enforced both by policy and by the server functions withholding the other side's answer until `revealed_at` is set.
+
+## Files touched
+
+- `src/lib/identity.server.ts` (new) — dual-key participant lookup and profile backfill.
+- `src/lib/remote.functions.ts` — `listSessionInvites` (new); optional `profileId` on `getInbox` and `getSenderResults`; participant lookups routed through the shared helper.
+- `src/lib/conversations.functions.ts` / `conversations.server.ts` — pending-invite list alongside the people list.
+- `src/routes/send.$sessionId.tsx` — load existing invites on mount.
+- `src/routes/conversations.tsx` — awaiting-reply group rendered first when non-empty.
+- `src/lib/guest.ts` — UUID-shaped fallback tokens.
+- One migration for the `question_tally` revoke; security memory updated.
