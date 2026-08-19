@@ -808,17 +808,21 @@ export const getThread = createServerFn({ method: "POST" })
 
 export const getSenderResults = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ guestToken: guest, sessionId: z.string().uuid() }).parse(input),
+    z
+      .object({
+        guestToken: guest,
+        sessionId: z.string().uuid(),
+        profileId: z.string().uuid().optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipantIn, linkProfileToGuestRows } = await import("@/lib/identity.server");
 
-    const { data: participant } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, display_name")
-      .eq("session_id", data.sessionId)
-      .eq("guest_token", data.guestToken)
-      .maybeSingle();
+    const identity = { guestToken: data.guestToken, profileId: data.profileId };
+    await linkProfileToGuestRows(supabaseAdmin as never, identity);
+    const participant = await myParticipantIn(supabaseAdmin as never, data.sessionId, identity);
     if (!participant) throw new Error("Not your session");
 
     const { data: parentQs } = await supabaseAdmin
