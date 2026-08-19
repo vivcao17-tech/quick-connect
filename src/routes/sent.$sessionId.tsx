@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
 import { PairSummary } from "@/components/PairSummary";
-import { getGuestToken } from "@/lib/guest";
+import { useViewer } from "@/lib/viewer";
 import { getSenderResults } from "@/lib/remote.functions";
 
 export const Route = createFileRoute("/sent/$sessionId")({
@@ -30,7 +30,8 @@ type Results = Awaited<ReturnType<typeof getSenderResults>>;
 
 function SentPage() {
   const { sessionId } = Route.useParams();
-  const [guestToken, setGuestToken] = useState("");
+  const viewer = useViewer();
+  const guestToken = viewer.guestToken;
   const [results, setResults] = useState<Results | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
@@ -39,18 +40,17 @@ function SentPage() {
   const load = useServerFn(getSenderResults);
 
   const refresh = useCallback(
-    (token: string) =>
-      load({ data: { guestToken: token, sessionId } })
+    (token: string, profileId?: string) =>
+      load({ data: { guestToken: token, sessionId, ...(profileId ? { profileId } : {}) } })
         .then(setResults)
         .catch(() => setError("These aren't your results.")),
     [load, sessionId],
   );
 
   useEffect(() => {
-    const token = getGuestToken();
-    setGuestToken(token);
-    void refresh(token);
-  }, [refresh]);
+    if (!viewer.ready || !guestToken) return;
+    void refresh(guestToken, viewer.profileId);
+  }, [refresh, viewer.ready, viewer.profileId, guestToken]);
 
   async function copy(token: string, note: string) {
     const message = `${note ? `${note}\n\n` : ""}3 questions · 30 seconds · no signup\n${window.location.origin}/i/${token}`;

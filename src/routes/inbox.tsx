@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
 import { PairSummary } from "@/components/PairSummary";
-import { getGuestToken } from "@/lib/guest";
+import { useViewer } from "@/lib/viewer";
 import { getInbox } from "@/lib/remote.functions";
 
 export const Route = createFileRoute("/inbox")({
@@ -35,7 +35,8 @@ type Recipient = Inbox["sets"][number]["recipients"][number];
 
 function InboxPage() {
   const { q } = Route.useSearch();
-  const [guestToken, setGuestToken] = useState("");
+  const viewer = useViewer();
+  const guestToken = viewer.guestToken;
   const [inbox, setInbox] = useState<Inbox | null>(null);
   const [open, setOpen] = useState<Recipient | null>(null);
   const [deepQuestion, setDeepQuestion] = useState(q ?? "");
@@ -43,18 +44,17 @@ function InboxPage() {
   const load = useServerFn(getInbox);
 
   const refresh = useCallback(
-    (token: string) =>
-      load({ data: { guestToken: token } })
+    (token: string, profileId?: string) =>
+      load({ data: { guestToken: token, ...(profileId ? { profileId } : {}) } })
         .then(setInbox)
         .catch(() => setInbox({ sets: [] })),
     [load],
   );
 
   useEffect(() => {
-    const token = getGuestToken();
-    setGuestToken(token);
-    void refresh(token);
-  }, [refresh]);
+    if (!viewer.ready || !guestToken) return;
+    void refresh(guestToken, viewer.profileId);
+  }, [refresh, viewer.ready, viewer.profileId, guestToken]);
 
   // A notification link points at one question — open that pair straight away.
   useEffect(() => {
