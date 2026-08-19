@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
-import { getGuestToken } from "@/lib/guest";
-import { createInvites } from "@/lib/remote.functions";
+import { createInvites, listSessionInvites } from "@/lib/remote.functions";
+import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/send/$sessionId")({
   component: SendPage,
