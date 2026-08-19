@@ -7,18 +7,30 @@ const identity = {
   profileId: z.string().uuid().optional(),
 };
 
-/** Every person you've shared a revealed block with, most recent activity first. */
+/**
+ * Every person you've shared a revealed block with, plus the links that are
+ * still out there waiting. Waiting comes first in the UI — it is the window
+ * where people come back to check.
+ */
 export const listConversations = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object(identity).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { loadRelationships } = await import("@/lib/conversations.server");
-    const people = await loadRelationships(
-      supabaseAdmin as never,
-      data.guestToken,
-      data.profileId,
-    );
+    const { loadRelationships, loadPendingInvites } = await import("@/lib/conversations.server");
+    const { linkProfileToGuestRows } = await import("@/lib/identity.server");
+
+    await linkProfileToGuestRows(supabaseAdmin as never, {
+      guestToken: data.guestToken,
+      profileId: data.profileId,
+    });
+
+    const [people, waiting] = await Promise.all([
+      loadRelationships(supabaseAdmin as never, data.guestToken, data.profileId),
+      loadPendingInvites(supabaseAdmin as never, data.guestToken, data.profileId),
+    ]);
+
     return {
+      waiting,
       people: people
         .filter((person) => person.sessions.some((session) => session.revealed))
         .map((person) => ({
