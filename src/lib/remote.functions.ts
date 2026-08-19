@@ -1009,15 +1009,19 @@ export const getSenderResults = createServerFn({ method: "POST" })
 
 /** Everything the sender has sent out: one row per recipient, with unread replies. */
 export const getInbox = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ guestToken: guest }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ guestToken: guest, profileId: z.string().uuid().optional() }).parse(input),
+  )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipants: findParticipants, linkProfileToGuestRows } = await import(
+      "@/lib/identity.server"
+    );
 
-    const { data: myParticipants } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, session_id, role")
-      .eq("guest_token", data.guestToken);
-    const senderRows = (myParticipants ?? []).filter((p) => p.role === "sender");
+    const identity = { guestToken: data.guestToken, profileId: data.profileId };
+    await linkProfileToGuestRows(supabaseAdmin as never, identity);
+    const mine = await findParticipants(supabaseAdmin as never, identity);
+    const senderRows = mine.filter((p) => p.role === "sender");
     if (senderRows.length === 0) return { sets: [] };
 
     const parentIds = senderRows.map((p) => p.session_id);
@@ -1032,7 +1036,7 @@ export const getInbox = createServerFn({ method: "POST" })
       .filter((id): id is string => Boolean(id));
 
     const myChildParticipants = new Map<string, string>();
-    for (const p of myParticipants ?? []) {
+    for (const p of mine) {
       if (childIds.includes(p.session_id)) myChildParticipants.set(p.session_id, p.id);
     }
 
