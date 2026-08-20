@@ -240,6 +240,12 @@ function Home() {
             Or send it to someone who isn't here
           </Link>
           <Link
+            to="/group"
+            className="mt-6 self-start text-sm text-muted-foreground underline underline-offset-4"
+          >
+            Or a whole table of people
+          </Link>
+          <Link
             to="/inbox"
             className="mt-3 self-start text-sm text-muted-foreground underline underline-offset-4"
           >
