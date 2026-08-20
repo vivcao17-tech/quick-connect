@@ -44,7 +44,7 @@ export function snapshotOf(row: {
 }): Snapshot {
   return {
     text: row.text,
-    kind: (row.question_type as QuestionKind | null) ?? "standard",
+    kind: kindOf(row.question_type),
     options: [
       { key: "a", label: row.option_a },
       { key: "b", label: row.option_b },
