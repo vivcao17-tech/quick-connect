@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 
 import { Thread } from "@/components/Thread";
+import { SubjectLine, withName } from "@/components/QuestionText";
 import { TopicCloud } from "@/components/TopicCloud";
 import type { CloudTopic } from "@/components/TopicCloud";
 
