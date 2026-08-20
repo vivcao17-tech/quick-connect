@@ -686,7 +686,13 @@ export const saveSessionEmail = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
+    const me = await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
+    await supabaseAdmin
+      .from("participant_emails")
+      .upsert(
+        { participant_id: me.id, email: data.email.trim().toLowerCase() },
+        { onConflict: "participant_id" },
+      );
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
       session_id: data.sessionId,

@@ -50,13 +50,41 @@ export async function notifyThreadReply(
       if (now - new Date(last.created_at).getTime() < BURST_WINDOW) continue;
     }
 
-    await admin.from("notifications").insert({
-      participant_id: person.id,
-      session_id: opts.sessionId,
-      session_question_id: opts.sessionQuestionId,
-      actor_name: opts.actorName,
-      question_text: opts.questionText,
+    const { data: inserted } = await admin
+      .from("notifications")
+      .insert({
+        participant_id: person.id,
+        session_id: opts.sessionId,
+        session_question_id: opts.sessionQuestionId,
+        actor_name: opts.actorName,
+        question_text: opts.questionText,
+        link,
+      })
+      .select("id")
+      .maybeSingle();
+
+    // The email follows exactly the same gate as the notification row above:
+    // first-ever reply always, otherwise one per thread per hour and no bursts.
+    const { data: contact } = await admin
+      .from("participant_emails")
+      .select("email")
+      .eq("participant_id", person.id)
+      .maybeSingle();
+    if (!contact?.email) continue;
+
+    const { sendReplyEmail } = await import("@/lib/email.server");
+    const result = await sendReplyEmail(admin, {
+      to: contact.email,
+      actorName: opts.actorName,
+      questionText: opts.questionText,
       link,
     });
+    if (result.sent && inserted?.id) {
+      await admin
+        .from("notifications")
+        .update({ emailed_at: new Date().toISOString() })
+        .eq("id", inserted.id);
+    }
   }
 }
+
