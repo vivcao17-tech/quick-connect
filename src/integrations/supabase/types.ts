@@ -141,6 +141,21 @@ export type Database = {
           },
         ]
       }
+      email_optouts: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           created_at: string
@@ -306,6 +321,7 @@ export type Database = {
         Row: {
           actor_name: string
           created_at: string
+          emailed_at: string | null
           id: string
           link: string
           participant_id: string
@@ -317,6 +333,7 @@ export type Database = {
         Insert: {
           actor_name: string
           created_at?: string
+          emailed_at?: string | null
           id?: string
           link: string
           participant_id: string
@@ -328,6 +345,7 @@ export type Database = {
         Update: {
           actor_name?: string
           created_at?: string
+          emailed_at?: string | null
           id?: string
           link?: string
           participant_id?: string
@@ -356,6 +374,32 @@ export type Database = {
             columns: ["session_question_id"]
             isOneToOne: false
             referencedRelation: "session_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participant_emails: {
+        Row: {
+          created_at: string
+          email: string
+          participant_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          participant_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          participant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_emails_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: true
+            referencedRelation: "session_participants"
             referencedColumns: ["id"]
           },
         ]
