@@ -20,6 +20,13 @@ import type { GroupState } from "@/lib/group.functions";
 import { getGuestToken } from "@/lib/guest";
 import { saveSessionEmail } from "@/lib/irl.functions";
 
+/** Informal, factual — never a request to explain. */
+function onlyLine(names: string[]) {
+  if (names.length === 1) return `Only ${names[0]}.`;
+  if (names.length === 2) return `Just ${names[0]} and ${names[1]}.`;
+  return "";
+}
+
 /** A room with more than two people in it: everyone answers, the host reveals. */
 export function GroupRoom({ sessionId }: { sessionId: string }) {
   const load = useServerFn(getGroupState);
