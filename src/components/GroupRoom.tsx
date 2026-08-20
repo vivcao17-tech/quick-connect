@@ -113,6 +113,13 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
   const current = state.current;
   const top = state.differences[0];
 
+  const host = state.participants.find((p) => p.isHost);
+  const hostLine = host
+    ? `${host.isMe ? "You're" : `${host.name} is`} running this — ${
+        host.role === "host_observer" ? "not playing" : "playing too"
+      }`
+    : "";
+
   return (
     <main className="paper min-h-screen bg-background">
       <div className="relative mx-auto max-w-xl px-6 pt-6">
@@ -268,6 +275,11 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
       )}
 
       <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-14">
+        {hostLine && (
+          <p className="mb-6 self-start rounded-full border border-border px-4 py-1.5 text-sm text-muted-foreground">
+            {hostLine}
+          </p>
+        )}
         {state.status === "lobby" && (
           <div>
             <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Room open</p>
