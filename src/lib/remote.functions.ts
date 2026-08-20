@@ -344,10 +344,23 @@ export const saveRecipientEmail = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
+    const email = data.email.trim().toLowerCase();
+    const { data: invite } = await supabaseAdmin
       .from("invites")
-      .update({ recipient_email: data.email.trim().toLowerCase() })
-      .eq("token", data.token);
+      .update({ recipient_email: email })
+      .eq("token", data.token)
+      .select("recipient_participant_id")
+      .maybeSingle();
+    // Kept off session_participants on purpose: that table is readable by the
+    // other people in the session, this address is not.
+    if (invite?.recipient_participant_id) {
+      await supabaseAdmin
+        .from("participant_emails")
+        .upsert(
+          { participant_id: invite.recipient_participant_id, email },
+          { onConflict: "participant_id" },
+        );
+    }
     return { saved: true };
   });
 
