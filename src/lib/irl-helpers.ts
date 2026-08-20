@@ -132,7 +132,8 @@ export async function pickImpressionQuestion(admin: Admin, excludeIds: string[])
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
-    .eq("question_type", "impression");
+    .eq("question_type", "impression")
+    .in("mode", PAIR_MODES);
   const pool = ((rows as QuestionRow[] | null) ?? []).filter((q) => !excludeIds.includes(q.id));
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)]!;
