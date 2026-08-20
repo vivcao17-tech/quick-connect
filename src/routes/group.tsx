@@ -72,24 +72,42 @@ function GroupSetup() {
           className="mt-8 w-full rounded-full border border-border bg-card px-5 py-3 text-lg outline-none focus:border-primary"
         />
 
-        <button
-          onClick={() => setPlaying((value) => !value)}
-          className="mt-6 self-start text-lg underline underline-offset-4"
-        >
-          {playing ? "I'm playing too" : "I'm just running it"}
-        </button>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <button
+            onClick={() => setPlaying(true)}
+            className={`card-soft px-6 py-5 text-left ${playing ? "border-primary" : "opacity-60"}`}
+          >
+            <span className="text-xl">I'm playing too</span>
+            <span className="mt-1 block text-sm text-muted-foreground">
+              You answer along with everyone else.
+            </span>
+          </button>
+          <button
+            onClick={() => setPlaying(false)}
+            className={`card-soft px-6 py-5 text-left ${!playing ? "border-primary" : "opacity-60"}`}
+          >
+            <span className="text-xl">I'm just running it</span>
+            <span className="mt-1 block text-sm text-muted-foreground">
+              You read the questions and reveal. No answers from you.
+            </span>
+          </button>
+        </div>
 
-        <div className="mt-6 flex items-center gap-3">
-          {[5, 8].map((value) => (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {([5, 8] as const).map((value) => (
             <button
               key={value}
-              onClick={() => setLength(value as 5 | 8)}
-              className={`card-soft px-6 py-3 text-lg ${length === value ? "border-primary text-primary" : ""}`}
+              onClick={() => setLength(value)}
+              className={`card-soft px-6 py-5 text-left ${length === value ? "border-primary" : "opacity-60"}`}
             >
-              {value} questions
+              <span className="text-xl">{value} questions</span>
+              <span className="mt-1 block text-sm text-muted-foreground">
+                {value === 5 ? "About ten minutes." : "About twenty minutes."}
+              </span>
             </button>
           ))}
         </div>
+
 
         <button
           onClick={open}
