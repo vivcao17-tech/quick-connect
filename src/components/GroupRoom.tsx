@@ -459,6 +459,36 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
               </div>
             )}
 
+            {state.results.length > 0 && (
+              <div className="mt-12 flex flex-col gap-8">
+                <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
+                  Room {state.roomCode}
+                </p>
+                {state.results.map((question) => (
+                  <div key={question.sessionQuestionId}>
+                    <p className="text-2xl leading-snug">{question.text}</p>
+                    {question.options.map((option) => (
+                      <p key={option.key} className="mt-2 text-base text-muted-foreground">
+                        {option.label} — {option.names.length ? option.names.join(", ") : "Nobody"}
+                      </p>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {state.participants.some((p) => !p.isMe && p.connected) && (
+              <div className="mt-12">
+                <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">Added</p>
+                <p className="mt-2 text-lg">
+                  {state.participants
+                    .filter((p) => !p.isMe && p.connected)
+                    .map((p) => p.name)
+                    .join(", ")}
+                </p>
+              </div>
+            )}
+
             <div className="mt-12">
               {saved ? (
                 <p className="text-lg text-muted-foreground">Saved. Check your inbox.</p>
