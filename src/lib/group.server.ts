@@ -1,5 +1,6 @@
 import { QUESTION_SELECT, snapshotRow } from "@/lib/irl-helpers";
 import type { QuestionRow } from "@/lib/irl-helpers";
+import { AB_TYPES } from "@/lib/remote-shared";
 
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
@@ -23,13 +24,14 @@ export function isHostRole(role: string) {
 }
 
 /** A spread of ordinary A/B questions — group mode has no topic step. */
-export async function pickGroupQuestions(admin: Admin, count: number) {
+export async function pickGroupQuestions(admin: Admin, count: number, spiceMax = 1) {
   const { data: rows } = await admin
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
-    .eq("question_type", "standard")
-    .lte("spice_level", 2);
+    .in("question_type", AB_TYPES as unknown as string[])
+    .in("mode", ["group", "both"])
+    .lte("spice_level", spiceMax);
 
   const pool = ((rows as QuestionRow[] | null) ?? []).filter(Boolean);
   for (let i = pool.length - 1; i > 0; i -= 1) {

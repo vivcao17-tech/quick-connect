@@ -17,6 +17,17 @@ type QuestionRow = {
   reason_chips: { id: string; option_key: string; text: string }[] | null;
 };
 
+/** Pair-eligible A/B questions only — never group-only rows, never inactive bank entries. */
+function pairPool(admin: Admin) {
+  return admin
+    .from("questions")
+    .select(QUESTION_SELECT)
+    .eq("active", true)
+    .in("question_type", ["ab", "ab_reason"])
+    .in("mode", ["pair", "both"])
+    .lte("spice_level", 2);
+}
+
 /** Every question id these guests have ever answered, plus the topics those questions belong to. */
 export async function historyOf(admin: Admin, guestTokens: string[]) {
   const tokens = guestTokens.filter(Boolean);
@@ -82,7 +93,7 @@ export async function drawQuestions(
   const seen = new Set(answered);
 
   const { data: inTopics } = union.length
-    ? await admin.from("questions").select(QUESTION_SELECT).eq("active", true).in("topic_id", union)
+    ? await pairPool(admin).in("topic_id", union)
     : { data: [] as QuestionRow[] };
 
   const pool = ((inTopics as QuestionRow[] | null) ?? [])
@@ -96,7 +107,7 @@ export async function drawQuestions(
 
   // Not enough fresh questions inside those topics — widen to the rest of the bank, still fresh.
   if (picked.length < opts.count) {
-    const { data: rest } = await admin.from("questions").select(QUESTION_SELECT).eq("active", true);
+    const { data: rest } = await pairPool(admin);
     const taken = new Set(picked.map((row) => row.id));
     const widened = ((rest as QuestionRow[] | null) ?? [])
       .filter((row) => !seen.has(row.id) && !taken.has(row.id))
@@ -106,7 +117,7 @@ export async function drawQuestions(
 
   // Last resort: everyone has seen everything, so allow repeats rather than an empty run.
   if (picked.length < opts.count) {
-    const { data: rest } = await admin.from("questions").select(QUESTION_SELECT).eq("active", true);
+    const { data: rest } = await pairPool(admin);
     const taken = new Set(picked.map((row) => row.id));
     const repeats = ((rest as QuestionRow[] | null) ?? [])
       .filter((row) => !taken.has(row.id))

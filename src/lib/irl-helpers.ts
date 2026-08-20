@@ -1,4 +1,7 @@
-import { snapshotOf } from "@/lib/remote-shared";
+import { AB_TYPES, snapshotOf } from "@/lib/remote-shared";
+
+/** Pair sessions only ever see questions marked for pairs or for both modes. */
+export const PAIR_MODES = ["pair", "both"];
 
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
@@ -64,7 +67,8 @@ export async function candidateQuestions(admin: Admin, sessionId: string, spiceM
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
-    .eq("question_type", "standard")
+    .in("question_type", AB_TYPES as unknown as string[])
+    .in("mode", PAIR_MODES)
     .lte("spice_level", spiceMax)
     .in("topic_id", union)
     .order("id");
@@ -128,7 +132,8 @@ export async function pickImpressionQuestion(admin: Admin, excludeIds: string[])
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
-    .eq("question_type", "impression");
+    .eq("question_type", "impression")
+    .in("mode", PAIR_MODES);
   const pool = ((rows as QuestionRow[] | null) ?? []).filter((q) => !excludeIds.includes(q.id));
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)]!;
