@@ -151,6 +151,9 @@ export const getGroupState = createServerFn({ method: "POST" })
       picks: { participantId: string; name: string; isMe: boolean; optionKey: OptionKey }[];
       minority: string;
       ask: string;
+      minorityOption: OptionKey | null;
+      minorityNames: string[];
+      iAmMinority: boolean;
     } | null = null;
 
     if (currentSq) {
@@ -187,6 +190,9 @@ export const getGroupState = createServerFn({ method: "POST" })
         minority: minorityNames.length ? minorityLine(minorityNames) : "",
         // The nudge to speak lands on everyone except the person in the minority.
         ask: minorityNames.length && !iAmMinority ? askLine(minorityNames) : "",
+        minorityOption: isMinority ? (small[0]!.optionKey as OptionKey) : null,
+        minorityNames,
+        iAmMinority,
       };
     }
 
