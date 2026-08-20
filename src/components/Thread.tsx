@@ -194,13 +194,13 @@ export function Thread({
       </div>
 
       {/* Continuation prompts: specific to this question, tapped into the box. */}
-      {prompts && prompts.length > 0 && (
+      {allPrompts.length > 0 && (
         <div className="rounded-2xl bg-secondary/40 px-4 py-4">
           <p className="mb-3 text-xs tracking-[0.18em] text-muted-foreground uppercase">
             {rows.length === 0 ? "Want to ask why?" : "Tap to start a reply"}
           </p>
           <div className="flex flex-wrap gap-2">
-            {prompts.slice(0, 2).map((prompt) => (
+            {(showAll ? allPrompts : allPrompts.slice(0, 2)).map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => {
@@ -212,9 +212,18 @@ export function Thread({
                 {prompt}
               </button>
             ))}
+            {allPrompts.length > 2 && (
+              <button
+                onClick={() => setShowAll((open) => !open)}
+                className="rounded-full px-3 py-2 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+              >
+                {showAll ? "Less" : "More"}
+              </button>
+            )}
           </div>
         </div>
       )}
+
 
       <div ref={endRef} className="h-px" />
 
