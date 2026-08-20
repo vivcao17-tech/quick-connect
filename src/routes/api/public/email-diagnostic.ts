@@ -27,6 +27,40 @@ export const Route = createFileRoute("/api/public/email-diagnostic")({
         };
         if (!apiKey) return Response.json({ ...base, error: "RESEND_API_KEY missing" }, { status: 500 });
 
+        const mode = url.searchParams.get("mode") ?? "";
+        if (mode === "saved") {
+          const participantId = url.searchParams.get("participant") ?? "";
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { data: row } = await supabaseAdmin
+            .from("session_participants")
+            .select("id, session_id")
+            .eq("id", participantId)
+            .maybeSingle();
+          if (!row) return Response.json({ ...base, error: "unknown_participant" }, { status: 404 });
+          const { ensureSessionLink, describeSessionForParticipant } = await import(
+            "@/lib/session-link.server"
+          );
+          const linkToken = await ensureSessionLink(supabaseAdmin, {
+            sessionId: row.session_id,
+            participantId: row.id,
+          });
+          const target = await describeSessionForParticipant(supabaseAdmin, {
+            sessionId: row.session_id,
+            participantId: row.id,
+          });
+          const { sendSessionSavedEmail } = await import("@/lib/email.server");
+          const result = await sendSessionSavedEmail(supabaseAdmin, {
+            to,
+            withName: target.withName,
+            isGroup: target.isGroup,
+            questionCount: target.questionCount,
+            path: `/s/${linkToken}`,
+          });
+          return Response.json({ ...base, target, linkToken, result }, {
+            headers: { "Cache-Control": "no-store" },
+          });
+        }
+
         try {
           const response = await fetch("https://api.resend.com/emails", {
             method: "POST",
