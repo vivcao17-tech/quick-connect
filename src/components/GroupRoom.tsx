@@ -349,36 +349,61 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
             )}
 
             {current.revealed && (
-              <div className="mt-10 flex flex-col gap-3">
-                {current.options.map((option) => {
-                  const names = current.picks.filter((p) => p.optionKey === option.key);
-                  return (
-                    <div key={option.key} className="card-soft px-6 py-5">
-                      <p className="text-xl">{option.label}</p>
-                      <p className="mt-2 text-lg text-muted-foreground">
-                        {names.length === 0
-                          ? "Nobody"
-                          : names.map((p) => (p.isMe ? "You" : p.name)).join(", ")}
-                      </p>
-                    </div>
-                  );
-                })}
-                {current.minority && (
-                  <p className="mt-6 text-2xl leading-snug">
-                    {current.minority}
-                    {current.ask ? ` ${current.ask}` : ""}
-                  </p>
-                )}
+              <div className="mt-10 flex flex-col gap-8">
+                {[...current.options]
+                  .sort((a, b) =>
+                    a.key === current.minorityOption ? -1 : b.key === current.minorityOption ? 1 : 0,
+                  )
+                  .map((option) => {
+                    const names = current.picks.filter((p) => p.optionKey === option.key);
+                    const isMinority = option.key === current.minorityOption;
+                    const isMajority = current.minorityOption !== null && !isMinority;
+                    return (
+                      <div key={option.key}>
+                        {isMinority && (
+                          <p className="mb-3 text-lg text-primary">
+                            👀 {onlyLine(current.minorityNames)}
+                          </p>
+                        )}
+                        <p
+                          className={
+                            isMinority
+                              ? "text-4xl leading-tight text-primary"
+                              : isMajority
+                                ? "text-xl text-muted-foreground opacity-60"
+                                : "text-2xl"
+                          }
+                        >
+                          {option.label}
+                        </p>
+                        <p
+                          className={
+                            isMinority
+                              ? "mt-3 text-3xl leading-snug text-primary"
+                              : isMajority
+                                ? "mt-2 text-base text-muted-foreground opacity-60"
+                                : "mt-2 text-lg text-muted-foreground"
+                          }
+                        >
+                          {names.length === 0
+                            ? "Nobody"
+                            : names.map((p) => (p.isMe ? "You" : p.name)).join(", ")}
+                        </p>
+                      </div>
+                    );
+                  })}
+                {current.ask && <p className="text-2xl leading-snug">{current.ask}</p>}
                 {state.iAmHost && (
                   <button
                     onClick={() => void run(() => next({ data: { guestToken, sessionId } }))}
-                    className="btn-quiet mt-16 self-start"
+                    className="btn-quiet mt-12 self-start"
                   >
                     Next question
                   </button>
                 )}
               </div>
             )}
+
           </div>
         )}
 
