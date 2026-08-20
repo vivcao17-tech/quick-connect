@@ -18,7 +18,7 @@ export const Route = createFileRoute("/i/$token")({
   component: InvitePage,
   head: () => ({
     meta: [
-      { title: "Someone answered three questions for you — Beside" },
+      { title: "Someone answered three questions for you — NoSure" },
       {
         name: "description",
         content: "3 questions · 30 seconds · no signup. They've already answered. Your turn.",

@@ -10,16 +10,16 @@ export const Route = createFileRoute("/sent/$sessionId")({
   component: SentPage,
   head: () => ({
     meta: [
-      { title: "What came back — Beside" },
+      { title: "What came back — NoSure" },
       {
         name: "description",
         content: "The answers that came back from the people you sent your three questions to.",
       },
-      { property: "og:title", content: "What came back — Beside" },
+      { property: "og:title", content: "What came back — NoSure" },
       { property: "og:description", content: "The answers that came back." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "What came back — Beside" },
+      { name: "twitter:title", content: "What came back — NoSure" },
       { name: "twitter:description", content: "The answers that came back." },
       { name: "robots", content: "noindex" },
     ],

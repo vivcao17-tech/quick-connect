@@ -16,20 +16,20 @@ export const Route = createFileRoute("/remote")({
   component: RemotePage,
   head: () => ({
     meta: [
-      { title: "Send three questions — Beside" },
+      { title: "Send three questions — NoSure" },
       {
         name: "description",
         content:
           "Answer three questions, then send them to the people you'd actually want to hear from. 30 seconds, no signup.",
       },
-      { property: "og:title", content: "Beside — 3 questions, 30 seconds" },
+      { property: "og:title", content: "NoSure — 3 questions, 30 seconds" },
       {
         property: "og:description",
         content: "Answer three questions, then send them to someone. No signup.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Beside — 3 questions, 30 seconds" },
+      { name: "twitter:title", content: "NoSure — 3 questions, 30 seconds" },
       {
         name: "twitter:description",
         content: "Answer three questions, then send them to someone. No signup.",

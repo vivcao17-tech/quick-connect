@@ -14,16 +14,16 @@ export const Route = createFileRoute("/inbox")({
   },
   head: () => ({
     meta: [
-      { title: "Who answered you — Beside" },
+      { title: "Who answered you — NoSure" },
       {
         name: "description",
         content: "Everyone you sent three questions to, and what came back from each of them.",
       },
-      { property: "og:title", content: "Who answered you — Beside" },
+      { property: "og:title", content: "Who answered you — NoSure" },
       { property: "og:description", content: "Everyone you sent questions to, in one place." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Who answered you — Beside" },
+      { name: "twitter:title", content: "Who answered you — NoSure" },
       { name: "twitter:description", content: "Everyone you sent questions to, in one place." },
       { name: "robots", content: "noindex" },
     ],

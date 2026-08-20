@@ -9,16 +9,16 @@ export const Route = createFileRoute("/join/$code")({
   component: JoinPage,
   head: () => ({
     meta: [
-      { title: "Join the room — Beside" },
+      { title: "Join the room — NoSure" },
       {
         name: "description",
         content: "Type your name and you're in. Three questions, thirty seconds, no signup.",
       },
-      { property: "og:title", content: "Join the room — Beside" },
+      { property: "og:title", content: "Join the room — NoSure" },
       { property: "og:description", content: "Three questions, thirty seconds, no signup." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Join the room — Beside" },
+      { name: "twitter:title", content: "Join the room — NoSure" },
       { name: "twitter:description", content: "Three questions, thirty seconds, no signup." },
       { name: "robots", content: "noindex" },
     ],

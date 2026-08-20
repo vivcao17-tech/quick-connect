@@ -9,20 +9,20 @@ export const Route = createFileRoute("/send/$sessionId")({
   component: SendPage,
   head: () => ({
     meta: [
-      { title: "Send your three questions — Beside" },
+      { title: "Send your three questions — NoSure" },
       {
         name: "description",
         content:
-          "Make a private link for each person you want to ask. Copy it into your own messages — Beside never sends anything itself.",
+          "Make a private link for each person you want to ask. Copy it into your own messages — NoSure never sends anything itself.",
       },
-      { property: "og:title", content: "Send your three questions — Beside" },
+      { property: "og:title", content: "Send your three questions — NoSure" },
       {
         property: "og:description",
         content: "One private link per person. Copy it into your own messages.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Send your three questions — Beside" },
+      { name: "twitter:title", content: "Send your three questions — NoSure" },
       {
         name: "twitter:description",
         content: "One private link per person. Copy it into your own messages.",

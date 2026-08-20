@@ -11,13 +11,13 @@ export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
     meta: [
-      { title: "Beside — 3 questions, 30 seconds" },
+      { title: "NoSure — 3 questions, 30 seconds" },
       {
         name: "description",
         content:
           "Pick a word. Answer three questions. See where you land against everyone else, then put the phone down and talk.",
       },
-      { property: "og:title", content: "Beside — 3 questions, 30 seconds" },
+      { property: "og:title", content: "NoSure — 3 questions, 30 seconds" },
       {
         property: "og:description",
         content: "Pick a word. Answer three questions. Then talk about it.",
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: "/" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Beside — 3 questions, 30 seconds" },
+      { name: "twitter:title", content: "NoSure — 3 questions, 30 seconds" },
       {
         name: "twitter:description",
         content: "Pick a word. Answer three questions. Then talk about it.",
@@ -199,7 +199,7 @@ function Home() {
     <main className="paper min-h-screen bg-background">
       {stage === "landing" && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-20">
-          <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Beside</p>
+          <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">NoSure</p>
           <h1 className="mt-8 text-6xl leading-[0.95] sm:text-7xl">
             Three questions.
             <br />
