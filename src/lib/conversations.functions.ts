@@ -92,3 +92,67 @@ export const getSessionBlock = createServerFn({ method: "POST" })
     if (!person || !session) return { name: "", topic: "", questions: [] };
     return { name: person.name, topic: session.topic, questions: session.questions };
   });
+
+/**
+ * Everyone the person has any tie to, whatever the origin: a remote block, an
+ * in-person room, or someone they added during a group session.
+ */
+export const listPeople = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object(identity).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { loadRelationships, loadConnections } = await import("@/lib/conversations.server");
+    const { linkProfileToGuestRows } = await import("@/lib/identity.server");
+
+    await linkProfileToGuestRows(supabaseAdmin as never, {
+      guestToken: data.guestToken,
+      profileId: data.profileId,
+    });
+
+    const [shared, connections] = await Promise.all([
+      loadRelationships(supabaseAdmin as never, data.guestToken, data.profileId),
+      loadConnections(supabaseAdmin as never, data.guestToken, data.profileId),
+    ]);
+
+    type Row = {
+      personKey: string;
+      name: string;
+      sessionCount: number;
+      unread: number;
+      lastActivity: string;
+      met: string;
+    };
+    const byKey = new Map<string, Row>();
+
+    for (const person of shared) {
+      const count = person.sessions.length;
+      byKey.set(person.personKey, {
+        personKey: person.personKey,
+        name: person.name,
+        sessionCount: count,
+        unread: person.sessions.reduce((sum, s) => sum + s.unread, 0),
+        lastActivity: person.sessions[0]?.lastActivity ?? "",
+        met: count === 1 ? "1 session together" : `${count} sessions together`,
+      });
+    }
+
+    for (const person of connections) {
+      const existing = byKey.get(person.personKey);
+      if (existing) {
+        if (!existing.lastActivity) existing.lastActivity = person.addedAt;
+        continue;
+      }
+      byKey.set(person.personKey, {
+        personKey: person.personKey,
+        name: person.name,
+        sessionCount: 0,
+        unread: 0,
+        lastActivity: person.addedAt,
+        met: "Added in a group session",
+      });
+    }
+
+    return {
+      people: [...byKey.values()].sort((a, b) => (a.lastActivity < b.lastActivity ? 1 : -1)),
+    };
+  });

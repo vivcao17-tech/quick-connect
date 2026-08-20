@@ -9,20 +9,20 @@ export const Route = createFileRoute("/group")({
   component: GroupSetup,
   head: () => ({
     meta: [
-      { title: "Start a group room — Beside" },
+      { title: "Start a group room — NoSure" },
       {
         name: "description",
         content:
           "Open a room, everyone joins with a name, and each question shows where the room split. Best with 3–6 people.",
       },
-      { property: "og:title", content: "Start a group room — Beside" },
+      { property: "og:title", content: "Start a group room — NoSure" },
       {
         property: "og:description",
         content: "Everyone answers on their own phone. Then you talk about it.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Start a group room — Beside" },
+      { name: "twitter:title", content: "Start a group room — NoSure" },
       { name: "twitter:description", content: "Everyone answers on their own phone." },
     ],
   }),

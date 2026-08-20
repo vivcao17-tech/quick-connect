@@ -11,19 +11,19 @@ export const Route = createFileRoute("/with/$participantId/$sessionId")({
   component: SessionBlockPage,
   head: () => ({
     meta: [
-      { title: "The three questions — Beside" },
+      { title: "The three questions — NoSure" },
       {
         name: "description",
         content: "The three questions in this set, both answers, and what you said about them.",
       },
-      { property: "og:title", content: "The three questions — Beside" },
+      { property: "og:title", content: "The three questions — NoSure" },
       {
         property: "og:description",
         content: "Both answers to each question in this set, and the conversation after.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "The three questions — Beside" },
+      { name: "twitter:title", content: "The three questions — NoSure" },
       {
         name: "twitter:description",
         content: "Both answers to each question in this set, and the conversation after.",

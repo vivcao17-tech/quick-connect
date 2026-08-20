@@ -9,19 +9,19 @@ export const Route = createFileRoute("/conversations")({
   component: ConversationsPage,
   head: () => ({
     meta: [
-      { title: "People you've talked to — Beside" },
+      { title: "People you've talked to — NoSure" },
       {
         name: "description",
         content: "Everyone you've answered questions with, and the last thing you talked about.",
       },
-      { property: "og:title", content: "People you've talked to — Beside" },
+      { property: "og:title", content: "People you've talked to — NoSure" },
       {
         property: "og:description",
         content: "Everyone you've answered questions with, in one place.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "People you've talked to — Beside" },
+      { name: "twitter:title", content: "People you've talked to — NoSure" },
       {
         name: "twitter:description",
         content: "Everyone you've answered questions with, in one place.",

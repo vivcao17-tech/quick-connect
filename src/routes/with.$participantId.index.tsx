@@ -9,19 +9,19 @@ export const Route = createFileRoute("/with/$participantId/")({
   component: WithPersonPage,
   head: () => ({
     meta: [
-      { title: "Everything you two answered — Beside" },
+      { title: "Everything you two answered — NoSure" },
       {
         name: "description",
         content: "Every set of questions you and this person have both answered, newest first.",
       },
-      { property: "og:title", content: "Everything you two answered — Beside" },
+      { property: "og:title", content: "Everything you two answered — NoSure" },
       {
         property: "og:description",
         content: "Every set of questions you two have both answered, newest first.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Everything you two answered — Beside" },
+      { name: "twitter:title", content: "Everything you two answered — NoSure" },
       {
         name: "twitter:description",
         content: "Every set of questions you two have both answered, newest first.",
