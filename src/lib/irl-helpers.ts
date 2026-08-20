@@ -67,7 +67,8 @@ export async function candidateQuestions(admin: Admin, sessionId: string, spiceM
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
-    .eq("question_type", "standard")
+    .in("question_type", AB_TYPES as unknown as string[])
+    .in("mode", PAIR_MODES)
     .lte("spice_level", spiceMax)
     .in("topic_id", union)
     .order("id");
