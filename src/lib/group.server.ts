@@ -1,5 +1,6 @@
 import { QUESTION_SELECT, snapshotRow } from "@/lib/irl-helpers";
 import type { QuestionRow } from "@/lib/irl-helpers";
+import { AB_TYPES } from "@/lib/remote-shared";
 
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
