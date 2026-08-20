@@ -60,6 +60,8 @@ export const startSession = createServerFn({ method: "POST" })
       .select("id, text, option_a, option_b, option_c, spice_level")
       .eq("topic_id", topic.id)
       .eq("active", true)
+      .in("question_type", ["ab", "ab_reason"])
+      .in("mode", ["pair", "both"])
       .lte("spice_level", data.spiceMax ?? 2)
       .limit(12);
     if (questionsError) throw questionsError;
