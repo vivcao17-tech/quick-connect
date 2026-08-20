@@ -46,7 +46,7 @@ function escapeHtml(value: string): string {
 export async function sendReplyEmail(
   admin: Admin,
   opts: { to: string; actorName: string; questionText: string; link: string },
-): Promise<{ sent: boolean; reason?: string; id?: string }> {
+): Promise<{ sent: boolean; reason?: string; id?: string | undefined }> {
   const apiKey = process.env["RESEND_API_KEY"];
   if (!apiKey) return { sent: false, reason: "no_api_key" };
 
