@@ -297,19 +297,7 @@ function RemotePage() {
                 placeholder="Why? (one line, optional)"
                 className="mt-6 w-full rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
               />
-              {current.chips.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {current.chips.map((chip) => (
-                    <button
-                      key={chip.id}
-                      onClick={() => setReason(chip.text)}
-                      className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
-                    >
-                      {chip.text}
-                    </button>
-                  ))}
-                </div>
-              )}
+
             </>
           )}
 
