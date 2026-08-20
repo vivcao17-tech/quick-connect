@@ -9,7 +9,7 @@ function jitterOf(id: string, slot: number) {
   const pick = (shift: number, span: number) => ((hash >> shift) % span) - Math.floor(span / 2);
   return {
     rotate: pick(3, 13),
-    x: pick(9, 15),
+    x: Math.max(0, pick(9, 15) + 6),
     y: pick(15, 13),
     size: 1.9 + ((hash >> 21) % 7) / 10,
   };
