@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
-type Admin = { from: (table: string) => any };
+type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
 const SITE_URL = "https://nosure.app";
 const FROM = "NoSure <replies@nosure.app>";
