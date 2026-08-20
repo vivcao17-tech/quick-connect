@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
 const SITE_URL = "https://nosure.app";
-const FROM = "NoSure <replies@nosure.app>";
+export const FROM = "NoSure <hello@nosure.app>";
 
 /** Signed so an unsubscribe link can't be forged for someone else's address. */
 export function unsubscribeToken(email: string): string {
@@ -46,7 +46,7 @@ function escapeHtml(value: string): string {
 export async function sendReplyEmail(
   admin: Admin,
   opts: { to: string; actorName: string; questionText: string; link: string },
-): Promise<{ sent: boolean; reason?: string }> {
+): Promise<{ sent: boolean; reason?: string; id?: string }> {
   const apiKey = process.env["RESEND_API_KEY"];
   if (!apiKey) return { sent: false, reason: "no_api_key" };
 
@@ -81,10 +81,16 @@ export async function sendReplyEmail(
     body: JSON.stringify({ from: FROM, to: [to], subject, html, text }),
   });
 
+  const body = await response.text();
   if (!response.ok) {
-    const body = await response.text();
     console.error(`[email] resend failed [${response.status}]: ${body}`);
     return { sent: false, reason: `resend_${response.status}` };
   }
-  return { sent: true };
+  let id: string | undefined;
+  try {
+    id = (JSON.parse(body) as { id?: string }).id;
+  } catch {
+    id = undefined;
+  }
+  return { sent: true, id };
 }
