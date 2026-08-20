@@ -18,15 +18,19 @@ export function Thread({
   guestToken,
   sessionQuestionId,
   prompts,
+  extraPrompts,
   onPrompt,
 }: {
   guestToken: string;
   sessionQuestionId: string;
   prompts?: string[];
+  /** Reason chips for this question: conversation starters, shown behind "More". */
+  extraPrompts?: string[];
   onPrompt?: (prompt: string) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [firstUnreadId, setFirstUnreadId] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +87,20 @@ export function Thread({
     }
     lastCount.current = messages.length;
   }, [messages, firstUnreadId]);
+
+  /** Two quick prompts up front; the reason chips live behind "More". */
+  const allPrompts = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const item of [...(prompts ?? []), ...(extraPrompts ?? [])]) {
+      const clean = item.trim();
+      const key = clean.toLowerCase();
+      if (!clean || seen.has(key)) continue;
+      seen.add(key);
+      out.push(clean);
+    }
+    return out;
+  }, [prompts, extraPrompts]);
 
   // Reactions ride in the right-hand gutter of the message they answer.
   const rows = useMemo(() => {
