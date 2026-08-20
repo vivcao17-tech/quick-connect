@@ -224,7 +224,27 @@ export const getGroupState = createServerFn({ method: "POST" })
       })
       .sort((a, b) => b.count - a.count);
 
+    // The whole room, once it's over: every question, everyone's answer.
+    const results = sqs
+      .filter((sq) => sq.revealed_at)
+      .map((sq) => {
+        const snap = sq.snapshot as Snapshot;
+        return {
+          sessionQuestionId: sq.id,
+          index: sq.order_index,
+          text: snap.text,
+          options: snap.options.map((option) => ({
+            key: option.key,
+            label: option.label,
+            names: players
+              .filter((p) => latest.get(`${sq.id}:${p.participantId}`) === option.key)
+              .map((p) => (p.isMe ? "You" : p.name)),
+          })),
+        };
+      });
+
     return {
+      results,
       sessionId: session.id,
       roomCode: session.room_code ?? "",
       status: session.status,
