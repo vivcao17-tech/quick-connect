@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConversationsRouteImport } from './routes/conversations'
+import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as RemoteRouteImport } from './routes/remote'
+import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
 import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as RoomSessionIdRouteImport } from './routes/room.$sessionId'
@@ -31,6 +33,11 @@ const ConversationsRoute = ConversationsRouteImport.update({
   path: '/conversations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GroupRoute = GroupRouteImport.update({
+  id: '/group',
+  path: '/group',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -39,6 +46,11 @@ const InboxRoute = InboxRouteImport.update({
 const RemoteRoute = RemoteRouteImport.update({
   id: '/remote',
   path: '/remote',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GSessionIdRoute = GSessionIdRouteImport.update({
+  id: '/g/$sessionId',
+  path: '/g/$sessionId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ITokenRoute = ITokenRouteImport.update({
@@ -81,8 +93,10 @@ const WithParticipantIdSessionIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/conversations': typeof ConversationsRoute
+  '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/remote': typeof RemoteRoute
+  '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
@@ -94,8 +108,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/conversations': typeof ConversationsRoute
+  '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/remote': typeof RemoteRoute
+  '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
@@ -108,8 +124,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/conversations': typeof ConversationsRoute
+  '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/remote': typeof RemoteRoute
+  '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
@@ -123,8 +141,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/conversations'
+    | '/group'
     | '/inbox'
     | '/remote'
+    | '/g/$sessionId'
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
@@ -136,8 +156,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/conversations'
+    | '/group'
     | '/inbox'
     | '/remote'
+    | '/g/$sessionId'
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
@@ -149,8 +171,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/conversations'
+    | '/group'
     | '/inbox'
     | '/remote'
+    | '/g/$sessionId'
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
@@ -163,8 +187,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConversationsRoute: typeof ConversationsRoute
+  GroupRoute: typeof GroupRoute
   InboxRoute: typeof InboxRoute
   RemoteRoute: typeof RemoteRoute
+  GSessionIdRoute: typeof GSessionIdRoute
   ITokenRoute: typeof ITokenRoute
   JoinCodeRoute: typeof JoinCodeRoute
   RoomSessionIdRoute: typeof RoomSessionIdRoute
@@ -190,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConversationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/group': {
+      id: '/group'
+      path: '/group'
+      fullPath: '/group'
+      preLoaderRoute: typeof GroupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inbox': {
       id: '/inbox'
       path: '/inbox'
@@ -202,6 +235,13 @@ declare module '@tanstack/react-router' {
       path: '/remote'
       fullPath: '/remote'
       preLoaderRoute: typeof RemoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/g/$sessionId': {
+      id: '/g/$sessionId'
+      path: '/g/$sessionId'
+      fullPath: '/g/$sessionId'
+      preLoaderRoute: typeof GSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/i/$token': {
@@ -259,8 +299,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConversationsRoute: ConversationsRoute,
+  GroupRoute: GroupRoute,
   InboxRoute: InboxRoute,
   RemoteRoute: RemoteRoute,
+  GSessionIdRoute: GSessionIdRoute,
   ITokenRoute: ITokenRoute,
   JoinCodeRoute: JoinCodeRoute,
   RoomSessionIdRoute: RoomSessionIdRoute,

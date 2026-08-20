@@ -79,7 +79,7 @@ export const joinRoom = createServerFn({ method: "POST" })
 
     const { data: session } = await supabaseAdmin
       .from("sessions")
-      .select("id, status")
+      .select("id, status, kind")
       .eq("room_code", code)
       .neq("status", "ended")
       .order("created_at", { ascending: false })
@@ -108,7 +108,8 @@ export const joinRoom = createServerFn({ method: "POST" })
       .single();
     if (error) throw error;
 
-    if (session.status === "lobby") {
+    // Group rooms wait for the host to start; pair rooms jump straight to picking words.
+    if (session.status === "lobby" && session.kind !== "group") {
       await supabaseAdmin
         .from("sessions")
         .update({ status: "topic_select" })
@@ -122,7 +123,7 @@ export const joinRoom = createServerFn({ method: "POST" })
       props: { session_id: session.id, is_guest: true },
     });
 
-    return { sessionId: session.id, participantId: participant.id };
+    return { sessionId: session.id, participantId: participant.id, kind: session.kind };
   });
 
 export const getRoomState = createServerFn({ method: "POST" })

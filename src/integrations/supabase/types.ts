@@ -95,6 +95,52 @@ export type Database = {
           },
         ]
       }
+      connections: {
+        Row: {
+          created_at: string
+          id: string
+          owner_participant_id: string
+          session_id: string | null
+          target_participant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_participant_id: string
+          session_id?: string | null
+          target_participant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_participant_id?: string
+          session_id?: string | null
+          target_participant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connections_owner_participant_id_fkey"
+            columns: ["owner_participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_target_participant_id_fkey"
+            columns: ["target_participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -133,6 +179,48 @@ export type Database = {
           },
           {
             foreignKeyName: "events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      host_requests: {
+        Row: {
+          created_at: string
+          id: string
+          requester_participant_id: string
+          resolved_at: string | null
+          session_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requester_participant_id: string
+          resolved_at?: string | null
+          session_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requester_participant_id?: string
+          resolved_at?: string | null
+          session_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_requests_requester_participant_id_fkey"
+            columns: ["requester_participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "host_requests_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"

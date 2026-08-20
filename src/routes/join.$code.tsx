@@ -47,7 +47,10 @@ function JoinPage() {
       const result = await join({
         data: { guestToken: token, displayName: name.trim(), roomCode: code.toUpperCase() },
       });
-      await navigate({ to: "/room/$sessionId", params: { sessionId: result.sessionId } });
+      await navigate({
+        to: result.kind === "group" ? "/g/$sessionId" : "/room/$sessionId",
+        params: { sessionId: result.sessionId },
+      });
     } catch {
       setError("That room isn't open. Check the code.");
       setBusy(false);
