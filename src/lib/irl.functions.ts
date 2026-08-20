@@ -79,7 +79,7 @@ export const joinRoom = createServerFn({ method: "POST" })
 
     const { data: session } = await supabaseAdmin
       .from("sessions")
-      .select("id, status")
+      .select("id, status, kind")
       .eq("room_code", code)
       .neq("status", "ended")
       .order("created_at", { ascending: false })
