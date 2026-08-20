@@ -1,0 +1,461 @@
+import { useServerFn } from "@tanstack/react-start";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import QRCode from "qrcode";
+
+import {
+  addConnection,
+  answerInGroup,
+  declineHostRequest,
+  endGroupSession,
+  getGroupState,
+  handOffHost,
+  nextGroupQuestion,
+  requestHost,
+  revealGroupQuestion,
+  startGroup,
+  startOneOnOne,
+} from "@/lib/group.functions";
+import type { GroupState } from "@/lib/group.functions";
+import { getGuestToken } from "@/lib/guest";
+import { saveSessionEmail } from "@/lib/irl.functions";
+
+/** A room with more than two people in it: everyone answers, the host reveals. */
+export function GroupRoom({ sessionId }: { sessionId: string }) {
+  const load = useServerFn(getGroupState);
+  const begin = useServerFn(startGroup);
+  const answer = useServerFn(answerInGroup);
+  const reveal = useServerFn(revealGroupQuestion);
+  const next = useServerFn(nextGroupQuestion);
+  const finish = useServerFn(endGroupSession);
+  const ask = useServerFn(requestHost);
+  const decline = useServerFn(declineHostRequest);
+  const handOff = useServerFn(handOffHost);
+  const connect = useServerFn(addConnection);
+  const oneOnOne = useServerFn(startOneOnOne);
+  const saveEmail = useServerFn(saveSessionEmail);
+
+  const [guestToken, setGuestToken] = useState("");
+  const [state, setState] = useState<GroupState | null>(null);
+  const [lost, setLost] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [handOffOpen, setHandOffOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [qr, setQr] = useState("");
+  const [email, setEmail] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [link, setLink] = useState("");
+  const pending = useRef(false);
+
+  useEffect(() => setGuestToken(getGuestToken()), []);
+
+  const refresh = useCallback(async () => {
+    if (!guestToken || pending.current) return;
+    pending.current = true;
+    try {
+      setState(await load({ data: { guestToken, sessionId } }));
+      setLost(false);
+    } catch {
+      setLost(true);
+    } finally {
+      pending.current = false;
+    }
+  }, [guestToken, sessionId, load]);
+
+  useEffect(() => {
+    if (!guestToken) return;
+    void refresh();
+    const timer = setInterval(() => void refresh(), 2000);
+    return () => clearInterval(timer);
+  }, [guestToken, refresh]);
+
+  const joinUrl =
+    state?.roomCode && typeof window !== "undefined"
+      ? `${window.location.origin}/join/${state.roomCode}`
+      : "";
+
+  useEffect(() => {
+    if (!joinUrl) return;
+    void QRCode.toDataURL(joinUrl, { margin: 1, width: 320, color: { dark: "#221c17", light: "#0000" } })
+      .then(setQr)
+      .catch(() => setQr(""));
+  }, [joinUrl]);
+
+  async function run(fn: () => Promise<unknown>) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await fn();
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!state) {
+    return (
+      <main className="paper flex min-h-screen items-center justify-center bg-background px-6">
+        <p className="text-lg text-muted-foreground">
+          {lost ? "This room isn't open on this phone." : "One moment…"}
+        </p>
+      </main>
+    );
+  }
+
+  const current = state.current;
+  const top = state.differences[0];
+
+  return (
+    <main className="paper min-h-screen bg-background">
+      <div className="relative mx-auto max-w-xl px-6 pt-6">
+        <button
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-label="Room options"
+          className="absolute right-6 top-6 text-2xl leading-none text-muted-foreground hover:text-foreground"
+        >
+          ⋯
+        </button>
+        {menuOpen && (
+          <div className="absolute right-6 top-14 z-10 w-64 rounded-2xl border border-border bg-card p-2 text-left text-sm">
+            {!state.iAmHost && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  void run(() => ask({ data: { guestToken, sessionId } }));
+                }}
+                className="block w-full rounded-xl px-3 py-2 text-left hover:bg-secondary"
+              >
+                Request host
+              </button>
+            )}
+            {state.iAmHost && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  setHandOffOpen(true);
+                }}
+                className="block w-full rounded-xl px-3 py-2 text-left hover:bg-secondary"
+              >
+                Hand off host
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                setConnectOpen(true);
+              }}
+              className="block w-full rounded-xl px-3 py-2 text-left hover:bg-secondary"
+            >
+              Add someone as a connection
+            </button>
+            {state.iAmHost && state.status !== "ended" && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  void run(() => finish({ data: { guestToken, sessionId } }));
+                }}
+                className="block w-full rounded-xl px-3 py-2 text-left hover:bg-secondary"
+              >
+                End session
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {handOffOpen && (
+        <div className="mx-auto max-w-xl px-6 pt-4">
+          <div className="card-soft px-6 py-5">
+            <p className="text-sm text-muted-foreground">Who runs it now?</p>
+            <div className="mt-3 flex flex-col gap-2">
+              {state.participants
+                .filter((p) => !p.isMe)
+                .map((p) => (
+                  <button
+                    key={p.participantId}
+                    onClick={() => {
+                      setHandOffOpen(false);
+                      void run(() =>
+                        handOff({ data: { guestToken, sessionId, toParticipantId: p.participantId } }),
+                      );
+                    }}
+                    className="text-left text-lg underline underline-offset-4"
+                  >
+                    {p.name}
+                  </button>
+                ))}
+            </div>
+            <button
+              onClick={() => setHandOffOpen(false)}
+              className="mt-4 text-sm text-muted-foreground underline underline-offset-4"
+            >
+              Never mind
+            </button>
+          </div>
+        </div>
+      )}
+
+      {connectOpen && (
+        <div className="mx-auto max-w-xl px-6 pt-4">
+          <div className="card-soft px-6 py-5">
+            <p className="text-sm text-muted-foreground">Add someone in the room</p>
+            <div className="mt-3 flex flex-col gap-2">
+              {state.participants
+                .filter((p) => !p.isMe)
+                .map((p) => (
+                  <button
+                    key={p.participantId}
+                    disabled={p.connected}
+                    onClick={() =>
+                      void run(() =>
+                        connect({ data: { guestToken, sessionId, targetParticipantId: p.participantId } }),
+                      )
+                    }
+                    className="text-left text-lg underline underline-offset-4 disabled:no-underline disabled:opacity-50"
+                  >
+                    {p.name}
+                    {p.connected ? " — added" : ""}
+                  </button>
+                ))}
+            </div>
+            <button
+              onClick={() => setConnectOpen(false)}
+              className="mt-4 text-sm text-muted-foreground underline underline-offset-4"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {state.hostRequest && (
+        <div className="mx-auto max-w-xl px-6 pt-4">
+          <div className="card-soft px-6 py-4">
+            {state.hostRequest.isMine ? (
+              <p className="text-base">
+                You asked to run this. It transfers in {state.hostRequest.secondsLeft}s unless they say
+                no.
+              </p>
+            ) : state.iAmHost ? (
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-base">
+                  {state.hostRequest.name} wants to run this. {state.hostRequest.secondsLeft}s.
+                </p>
+                <button
+                  onClick={() =>
+                    void run(() =>
+                      decline({ data: { guestToken, sessionId, requestId: state.hostRequest!.id } }),
+                    )
+                  }
+                  className="text-sm underline underline-offset-4"
+                >
+                  Keep it
+                </button>
+              </div>
+            ) : (
+              <p className="text-base">{state.hostRequest.name} asked to run this.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-14">
+        {state.status === "lobby" && (
+          <div>
+            <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Room open</p>
+            <p className="mt-6 text-7xl tracking-[0.2em]">{state.roomCode}</p>
+            {qr && (
+              <img src={qr} alt={`QR code to join room ${state.roomCode}`} className="mt-6 h-48 w-48" />
+            )}
+            <p className="mt-6 text-lg text-muted-foreground">Best with 3–6 people.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              They scan the code on your screen. Nothing to download.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-1">
+              {state.participants.map((p) => (
+                <p key={p.participantId} className="text-lg">
+                  {p.name}
+                  {p.isMe ? " (you)" : ""}
+                  {p.isHost ? " — running it" : ""}
+                </p>
+              ))}
+            </div>
+
+            {state.iAmHost && (
+              <button
+                disabled={busy}
+                onClick={() => void run(() => begin({ data: { guestToken, sessionId } }))}
+                className="btn-ink mt-10 self-start disabled:opacity-30"
+              >
+                Start — {state.total} questions
+              </button>
+            )}
+            {!state.iAmHost && (
+              <p className="mt-10 text-lg text-muted-foreground">Waiting for the first question…</p>
+            )}
+          </div>
+        )}
+
+        {(state.status === "answering" || state.status === "revealed") && current && (
+          <div>
+            <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
+              Question {state.currentIndex + 1} of {state.total}
+            </p>
+            <h2 className="mt-6 text-4xl leading-tight">{current.text}</h2>
+
+            {!current.revealed && state.iAmPlaying && !current.myAnswer && (
+              <div className="mt-10 flex flex-col gap-3">
+                {current.options.map((option) => (
+                  <button
+                    key={option.key}
+                    disabled={busy}
+                    onClick={() =>
+                      void run(() =>
+                        answer({
+                          data: {
+                            guestToken,
+                            sessionQuestionId: current.sessionQuestionId,
+                            optionKey: option.key,
+                          },
+                        }),
+                      )
+                    }
+                    className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!current.revealed && state.iAmPlaying && current.myAnswer && (
+              <p className="mt-12 text-lg text-muted-foreground">That's yours.</p>
+            )}
+
+            {!current.revealed && state.iAmHost && (
+              <div className="mt-12">
+                <p className="text-lg text-muted-foreground">
+                  {current.answeredCount} of {state.playerCount} answered
+                </p>
+                <button
+                  onClick={() => void run(() => reveal({ data: { guestToken, sessionId } }))}
+                  className="btn-ink mt-4 self-start"
+                >
+                  Reveal
+                </button>
+              </div>
+            )}
+
+            {current.revealed && (
+              <div className="mt-10 flex flex-col gap-3">
+                {current.options.map((option) => {
+                  const names = current.picks.filter((p) => p.optionKey === option.key);
+                  return (
+                    <div key={option.key} className="card-soft px-6 py-5">
+                      <p className="text-xl">{option.label}</p>
+                      <p className="mt-2 text-lg text-muted-foreground">
+                        {names.length === 0
+                          ? "Nobody"
+                          : names.map((p) => (p.isMe ? "You" : p.name)).join(", ")}
+                      </p>
+                    </div>
+                  );
+                })}
+                {current.minority && (
+                  <p className="mt-6 text-2xl leading-snug">
+                    {current.minority}
+                    {current.ask ? ` ${current.ask}` : ""}
+                  </p>
+                )}
+                {state.iAmHost && (
+                  <button
+                    onClick={() => void run(() => next({ data: { guestToken, sessionId } }))}
+                    className="btn-quiet mt-16 self-start"
+                  >
+                    Next question
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {state.status === "ended" && (
+          <div>
+            <h2 className="text-4xl leading-tight">
+              {top && top.count > 0
+                ? `You and ${top.name} disagreed on ${top.count} question${top.count === 1 ? "" : "s"} — more than anyone else here.`
+                : "That's the session."}
+            </h2>
+
+            {top && top.count > 0 && top.topSessionQuestionId && (
+              <div className="mt-8">
+                {link ? (
+                  <div>
+                    <p className="text-lg">Send this to {top.name}:</p>
+                    <p className="mt-2 break-all text-base text-muted-foreground">{link}</p>
+                    <button
+                      onClick={() => void navigator.clipboard.writeText(link)}
+                      className="btn-quiet mt-4"
+                    >
+                      Copy link
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        const result = await oneOnOne({
+                          data: {
+                            guestToken,
+                            sessionId,
+                            withParticipantId: top.participantId,
+                            sessionQuestionId: top.topSessionQuestionId,
+                          },
+                        });
+                        setLink(`${window.location.origin}/i/${result.token}`);
+                      })
+                    }
+                    className="btn-ink self-start disabled:opacity-30"
+                  >
+                    Keep going with {top.name}
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="mt-12">
+              {saved ? (
+                <p className="text-lg text-muted-foreground">Saved. Check your inbox.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <input
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="you@email.com"
+                    className="w-full rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
+                  />
+                  <button
+                    disabled={!email.includes("@") || busy}
+                    onClick={() =>
+                      void run(async () => {
+                        await saveEmail({ data: { guestToken, sessionId, email } });
+                        setSaved(true);
+                      })
+                    }
+                    className="btn-ink self-start disabled:opacity-30"
+                  >
+                    Save this session
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
