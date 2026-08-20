@@ -94,3 +94,70 @@ export async function sendReplyEmail(
   }
   return { sent: true, id };
 }
+
+/**
+ * Sent the moment someone saves a session with their email. The whole point is
+ * the link: it's their way back into this exact conversation, no account needed.
+ */
+export async function sendSessionSavedEmail(
+  admin: Admin,
+  opts: {
+    to: string;
+    withName: string;
+    isGroup: boolean;
+    questionCount: number;
+    path: string;
+  },
+): Promise<{ sent: boolean; reason?: string; id?: string | undefined }> {
+  const apiKey = process.env["RESEND_API_KEY"];
+  if (!apiKey) return { sent: false, reason: "no_api_key" };
+
+  const to = opts.to.trim().toLowerCase();
+  if (await isOptedOut(admin, to)) return { sent: false, reason: "opted_out" };
+
+  const deepLink = `${SITE_URL}${opts.path}`;
+  const optOut = unsubscribeUrl(to);
+  const count = opts.questionCount;
+  const questions = `${count} question${count === 1 ? "" : "s"}`;
+  const headline = opts.isGroup
+    ? `${opts.withName} — ${questions}`
+    : `You and ${opts.withName} — ${questions}`;
+  const second = opts.isGroup
+    ? "Everyone's answers are in there, and anyone you added. Here's your way back in."
+    : "They said one thing you didn't expect. Here's your way back in.";
+  const subject = headline;
+
+  const html = `
+    <div style="font-family:Georgia,serif;color:#221c17;padding:24px;max-width:520px">
+      <p style="letter-spacing:.24em;text-transform:uppercase;font-size:12px;color:#8a8079">no/sure</p>
+      <p style="font-size:24px;line-height:1.35;margin:24px 0 8px">${escapeHtml(headline)}</p>
+      <p style="font-size:16px;color:#6f665f;margin:0 0 24px">${escapeHtml(second)}</p>
+      <p><a href="${deepLink}" style="background:#221c17;color:#fbf7f1;padding:12px 26px;border-radius:999px;text-decoration:none;font-size:16px">Open</a></p>
+      <p style="font-size:14px;color:#8a8079;margin-top:24px">
+        Keep this email. The link opens the questions, both sides' answers and the thread — no sign-in.
+      </p>
+      <p style="font-size:12px;color:#8a8079;margin-top:32px">
+        <a href="${optOut}" style="color:#8a8079">Unsubscribe</a>
+      </p>
+    </div>`;
+  const text = `${headline}\n${second}\n\n${deepLink}\n\nKeep this email — the link opens the questions, both sides' answers and the thread, no sign-in.\n\nUnsubscribe: ${optOut}`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ from: FROM, to: [to], subject, html, text }),
+  });
+
+  const body = await response.text();
+  if (!response.ok) {
+    console.error(`[email] session-saved resend failed [${response.status}]: ${body}`);
+    return { sent: false, reason: `resend_${response.status}` };
+  }
+  let id: string | undefined;
+  try {
+    id = (JSON.parse(body) as { id?: string }).id;
+  } catch {
+    id = undefined;
+  }
+  return { sent: true, id };
+}
