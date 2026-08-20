@@ -20,6 +20,7 @@ import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
 import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as RoomSessionIdRouteImport } from './routes/room.$sessionId'
+import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as SendSessionIdRouteImport } from './routes/send.$sessionId'
 import { Route as SentSessionIdRouteImport } from './routes/sent.$sessionId'
 import { Route as ApiPublicEmailDiagnosticRouteImport } from './routes/api/public/email-diagnostic'
@@ -82,6 +83,11 @@ const RoomSessionIdRoute = RoomSessionIdRouteImport.update({
   path: '/room/$sessionId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const STokenRoute = STokenRouteImport.update({
+  id: '/s/$token',
+  path: '/s/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SendSessionIdRoute = SendSessionIdRouteImport.update({
   id: '/send/$sessionId',
   path: '/send/$sessionId',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
+  '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
+  '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
+  '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
   '/sent/$sessionId': typeof SentSessionIdRoute
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
+    | '/s/$token'
     | '/send/$sessionId'
     | '/sent/$sessionId'
     | '/api/public/email-diagnostic'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
+    | '/s/$token'
     | '/send/$sessionId'
     | '/sent/$sessionId'
     | '/api/public/email-diagnostic'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/join/$code'
     | '/room/$sessionId'
+    | '/s/$token'
     | '/send/$sessionId'
     | '/sent/$sessionId'
     | '/api/public/email-diagnostic'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   ITokenRoute: typeof ITokenRoute
   JoinCodeRoute: typeof JoinCodeRoute
   RoomSessionIdRoute: typeof RoomSessionIdRoute
+  STokenRoute: typeof STokenRoute
   SendSessionIdRoute: typeof SendSessionIdRoute
   SentSessionIdRoute: typeof SentSessionIdRoute
   ApiPublicEmailDiagnosticRoute: typeof ApiPublicEmailDiagnosticRoute
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/s/$token': {
+      id: '/s/$token'
+      path: '/s/$token'
+      fullPath: '/s/$token'
+      preLoaderRoute: typeof STokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/send/$sessionId': {
       id: '/send/$sessionId'
       path: '/send/$sessionId'
@@ -389,6 +409,7 @@ const rootRouteChildren: RootRouteChildren = {
   ITokenRoute: ITokenRoute,
   JoinCodeRoute: JoinCodeRoute,
   RoomSessionIdRoute: RoomSessionIdRoute,
+  STokenRoute: STokenRoute,
   SendSessionIdRoute: SendSessionIdRoute,
   SentSessionIdRoute: SentSessionIdRoute,
   ApiPublicEmailDiagnosticRoute: ApiPublicEmailDiagnosticRoute,

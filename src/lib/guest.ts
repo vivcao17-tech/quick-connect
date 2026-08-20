@@ -64,3 +64,14 @@ export function guestTokenIsEphemeral(): boolean {
     return true;
   }
 }
+
+/** Restores a known identity — used when someone opens a saved session link. */
+export function setGuestToken(token: string): void {
+  if (typeof window === "undefined" || !UUID_RE.test(token)) return;
+  memoryToken = token;
+  try {
+    window.localStorage.setItem(KEY, token);
+  } catch {
+    // memory-only identity is still better than none
+  }
+}

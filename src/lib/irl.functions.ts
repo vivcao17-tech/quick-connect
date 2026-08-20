@@ -699,7 +699,42 @@ export const saveSessionEmail = createServerFn({ method: "POST" })
       name: "session_save_requested",
       props: { email: data.email },
     });
-    return { ok: true };
+
+    const { ensureSessionLink, describeSessionForParticipant } = await import(
+      "@/lib/session-link.server"
+    );
+    const [token, target] = await Promise.all([
+      ensureSessionLink(supabaseAdmin, { sessionId: data.sessionId, participantId: me.id }),
+      describeSessionForParticipant(supabaseAdmin, {
+        sessionId: data.sessionId,
+        participantId: me.id,
+      }),
+    ]);
+
+    const { sendSessionSavedEmail } = await import("@/lib/email.server");
+    const result = await sendSessionSavedEmail(supabaseAdmin, {
+      to: data.email,
+      withName: target.withName,
+      isGroup: target.isGroup,
+      questionCount: target.questionCount,
+      path: `/s/${token}`,
+    });
+    if (!result.sent) console.error(`[email] session save not sent: ${result.reason}`);
+
+    return { ok: true, sent: result.sent };
+  });
+
+/** Opens a saved link: restores who this person was and where they left off. */
+export const openSessionLink = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ token: z.string().min(8).max(64) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveSessionLink } = await import("@/lib/session-link.server");
+    const resolved = await resolveSessionLink(supabaseAdmin, data.token);
+    if (!resolved) return { ok: false as const };
+    return { ok: true as const, guestToken: resolved.guestToken, path: resolved.path };
   });
 
 export type RoomState = Awaited<ReturnType<typeof getRoomState>>;

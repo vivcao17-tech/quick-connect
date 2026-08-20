@@ -25,9 +25,44 @@ export async function notifyThreadReply(
 ) {
   const { data: others } = await admin
     .from("session_participants")
-    .select("id")
+    .select("id, guest_token, profile_id")
     .eq("session_id", opts.sessionId)
     .neq("id", opts.actorParticipantId);
+
+  /**
+   * An address is saved against one participant row, but it belongs to the
+   * person. Look across every row that is the same human, otherwise a reply in
+   * a later session silently has nowhere to go.
+   */
+  async function emailFor(person: {
+    id: string;
+    guest_token: string | null;
+    profile_id: string | null;
+  }): Promise<string | null> {
+    const direct = await admin
+      .from("participant_emails")
+      .select("email")
+      .eq("participant_id", person.id)
+      .maybeSingle();
+    if (direct.data?.email) return direct.data.email;
+
+    let siblings = admin.from("session_participants").select("id");
+    if (person.profile_id) siblings = siblings.eq("profile_id", person.profile_id);
+    else if (person.guest_token) siblings = siblings.eq("guest_token", person.guest_token);
+    else return null;
+
+    const { data: rows } = await siblings.limit(200);
+    const ids = (rows ?? []).map((r) => r.id).filter((id) => id !== person.id);
+    if (ids.length === 0) return null;
+
+    const { data: found } = await admin
+      .from("participant_emails")
+      .select("email, created_at")
+      .in("participant_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    return found?.[0]?.email ?? null;
+  }
 
   const now = Date.now();
   const link = `/inbox?q=${opts.sessionQuestionId}`;
@@ -65,19 +100,22 @@ export async function notifyThreadReply(
 
     // The email follows exactly the same gate as the notification row above:
     // first-ever reply always, otherwise one per thread per hour and no bursts.
-    const { data: contact } = await admin
-      .from("participant_emails")
-      .select("email")
-      .eq("participant_id", person.id)
-      .maybeSingle();
-    if (!contact?.email) continue;
+    const address = await emailFor(person);
+    if (!address) continue;
+
+    // Token link so the mail opens the conversation on any device, no sign-in.
+    const { ensureSessionLink } = await import("@/lib/session-link.server");
+    const token = await ensureSessionLink(admin, {
+      sessionId: opts.sessionId,
+      participantId: person.id,
+    });
 
     const { sendReplyEmail } = await import("@/lib/email.server");
     const result = await sendReplyEmail(admin, {
-      to: contact.email,
+      to: address,
       actorName: opts.actorName,
       questionText: opts.questionText,
-      link,
+      link: `/s/${token}`,
     });
     if (result.sent && inserted?.id) {
       await admin
