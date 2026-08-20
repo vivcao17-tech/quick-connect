@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 
 import { Thread } from "@/components/Thread";
+import { TopicCloud } from "@/components/TopicCloud";
+import type { CloudTopic } from "@/components/TopicCloud";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getRevealPrompts } from "@/lib/ai-prompts.functions";
@@ -21,18 +23,6 @@ import {
 import type { RoomState } from "@/lib/irl.functions";
 import { logEvent } from "@/lib/play.functions";
 
-const SCATTER = [
-  { top: 2, left: 6, size: 2.6, rotate: -7 },
-  { top: 13, left: 55, size: 3.3, rotate: 4 },
-  { top: 26, left: 16, size: 2.9, rotate: 8 },
-  { top: 36, left: 61, size: 2.4, rotate: -5 },
-  { top: 47, left: 8, size: 3.5, rotate: -2 },
-  { top: 58, left: 52, size: 2.7, rotate: 6 },
-  { top: 68, left: 18, size: 3.1, rotate: -9 },
-  { top: 78, left: 58, size: 2.5, rotate: 3 },
-  { top: 87, left: 10, size: 2.9, rotate: 5 },
-  { top: 93, left: 56, size: 2.3, rotate: -4 },
-];
 
 const DIFFERENT_PROMPTS = [
   "What happened last time?",
@@ -211,35 +201,21 @@ export function Room({ sessionId }: { sessionId: string }) {
           <div>
             <h2 className="text-3xl">What's on your mind?</h2>
             <p className="mt-2 text-muted-foreground">Tap two words.</p>
-            <div className="relative mt-8 h-[520px]">
-              {state.topics.map((topic, i) => {
-                const spot = SCATTER[i % SCATTER.length]!;
-                const chosen = topicDraft.includes(topic.id) || state.myTopicIds.includes(topic.id);
-                return (
-                  <button
-                    key={topic.id}
-                    disabled={busy || state.myTopicsDone}
-                    onClick={() => {
-                      setTopicDraft((prev) =>
-                        prev.includes(topic.id)
-                          ? prev.filter((id) => id !== topic.id)
-                          : prev.length >= 2
-                            ? prev
-                            : [...prev, topic.id],
-                      );
-                    }}
-                    className={`topic-word absolute hover:scale-105 ${chosen ? "text-primary" : ""}`}
-                    style={{
-                      top: `${spot.top}%`,
-                      left: `${spot.left}%`,
-                      fontSize: `${spot.size}rem`,
-                      transform: `rotate(${spot.rotate}deg)`,
-                    }}
-                  >
-                    {topic.label}
-                  </button>
-                );
-              })}
+            <div className="mt-8">
+              <TopicCloud
+                topics={state.topics}
+                selectedIds={[...topicDraft, ...state.myTopicIds]}
+                disabled={busy || state.myTopicsDone}
+                onToggle={(topic: CloudTopic) =>
+                  setTopicDraft((prev) =>
+                    prev.includes(topic.id)
+                      ? prev.filter((id) => id !== topic.id)
+                      : prev.length >= 2
+                        ? prev
+                        : [...prev, topic.id],
+                  )
+                }
+              />
             </div>
 
             {!state.myTopicsDone && (
