@@ -465,12 +465,21 @@ export const addConnection = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const me = await groupMember(supabaseAdmin, data.sessionId, data.guestToken);
     if (me.id === data.targetParticipantId) return { ok: true };
+    // Both directions, so the person who was added can find them again too —
+    // a group room leaves no other durable trace for either side.
     await supabaseAdmin.from("connections").upsert(
-      {
-        session_id: data.sessionId,
-        owner_participant_id: me.id,
-        target_participant_id: data.targetParticipantId,
-      },
+      [
+        {
+          session_id: data.sessionId,
+          owner_participant_id: me.id,
+          target_participant_id: data.targetParticipantId,
+        },
+        {
+          session_id: data.sessionId,
+          owner_participant_id: data.targetParticipantId,
+          target_participant_id: me.id,
+        },
+      ],
       { onConflict: "owner_participant_id,target_participant_id" },
     );
     return { ok: true };

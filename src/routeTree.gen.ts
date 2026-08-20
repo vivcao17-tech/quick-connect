@@ -15,6 +15,7 @@ import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as RemoteRouteImport } from './routes/remote'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
 import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
@@ -52,6 +53,11 @@ const PeopleRoute = PeopleRouteImport.update({
 const RemoteRoute = RemoteRouteImport.update({
   id: '/remote',
   path: '/remote',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GSessionIdRoute = GSessionIdRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
+  '/start': typeof StartRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
+  '/start': typeof StartRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
+  '/start': typeof StartRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/join/$code': typeof JoinCodeRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/people'
     | '/remote'
+    | '/start'
     | '/g/$sessionId'
     | '/i/$token'
     | '/join/$code'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/people'
     | '/remote'
+    | '/start'
     | '/g/$sessionId'
     | '/i/$token'
     | '/join/$code'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/people'
     | '/remote'
+    | '/start'
     | '/g/$sessionId'
     | '/i/$token'
     | '/join/$code'
@@ -203,6 +215,7 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   PeopleRoute: typeof PeopleRoute
   RemoteRoute: typeof RemoteRoute
+  StartRoute: typeof StartRoute
   GSessionIdRoute: typeof GSessionIdRoute
   ITokenRoute: typeof ITokenRoute
   JoinCodeRoute: typeof JoinCodeRoute
@@ -255,6 +268,13 @@ declare module '@tanstack/react-router' {
       path: '/remote'
       fullPath: '/remote'
       preLoaderRoute: typeof RemoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/g/$sessionId': {
@@ -323,6 +343,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   PeopleRoute: PeopleRoute,
   RemoteRoute: RemoteRoute,
+  StartRoute: StartRoute,
   GSessionIdRoute: GSessionIdRoute,
   ITokenRoute: ITokenRoute,
   JoinCodeRoute: JoinCodeRoute,
