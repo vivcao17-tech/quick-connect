@@ -107,7 +107,7 @@ export async function drawQuestions(
 
   // Not enough fresh questions inside those topics — widen to the rest of the bank, still fresh.
   if (picked.length < opts.count) {
-    const { data: rest } = await admin.from("questions").select(QUESTION_SELECT).eq("active", true);
+    const { data: rest } = await pairPool(admin);
     const taken = new Set(picked.map((row) => row.id));
     const widened = ((rest as QuestionRow[] | null) ?? [])
       .filter((row) => !seen.has(row.id) && !taken.has(row.id))
@@ -117,7 +117,7 @@ export async function drawQuestions(
 
   // Last resort: everyone has seen everything, so allow repeats rather than an empty run.
   if (picked.length < opts.count) {
-    const { data: rest } = await admin.from("questions").select(QUESTION_SELECT).eq("active", true);
+    const { data: rest } = await pairPool(admin);
     const taken = new Set(picked.map((row) => row.id));
     const repeats = ((rest as QuestionRow[] | null) ?? [])
       .filter((row) => !taken.has(row.id))
