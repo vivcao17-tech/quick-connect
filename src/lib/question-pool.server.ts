@@ -82,7 +82,7 @@ export async function drawQuestions(
   const seen = new Set(answered);
 
   const { data: inTopics } = union.length
-    ? await admin.from("questions").select(QUESTION_SELECT).eq("active", true).in("topic_id", union)
+    ? await pairPool(admin).in("topic_id", union)
     : { data: [] as QuestionRow[] };
 
   const pool = ((inTopics as QuestionRow[] | null) ?? [])
