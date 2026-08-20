@@ -1,6 +1,15 @@
 export type OptionKey = "a" | "b" | "c";
 export type Chip = { id: string; optionKey: OptionKey; text: string };
 export type QuestionKind = "standard" | "impression" | "prediction";
+
+/** Bank types that play as a plain A/B card (with or without reason chips). */
+export const AB_TYPES = ["ab", "ab_reason"] as const;
+
+export function kindOf(questionType?: string | null): QuestionKind {
+  if (questionType === "impression") return "impression";
+  if (questionType === "prediction") return "prediction";
+  return "standard";
+}
 export type Snapshot = {
   text: string;
   kind?: QuestionKind;
