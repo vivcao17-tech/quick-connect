@@ -17,6 +17,17 @@ type QuestionRow = {
   reason_chips: { id: string; option_key: string; text: string }[] | null;
 };
 
+/** Pair-eligible A/B questions only — never group-only rows, never inactive bank entries. */
+function pairPool(admin: Admin) {
+  return admin
+    .from("questions")
+    .select(QUESTION_SELECT)
+    .eq("active", true)
+    .in("question_type", ["ab", "ab_reason"])
+    .in("mode", ["pair", "both"])
+    .lte("spice_level", 2);
+}
+
 /** Every question id these guests have ever answered, plus the topics those questions belong to. */
 export async function historyOf(admin: Admin, guestTokens: string[]) {
   const tokens = guestTokens.filter(Boolean);
