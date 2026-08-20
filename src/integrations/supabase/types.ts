@@ -385,7 +385,9 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          follow_up: string | null
           id: string
+          mode: string
           option_a: string
           option_b: string
           option_c: string | null
@@ -397,7 +399,9 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          follow_up?: string | null
           id?: string
+          mode?: string
           option_a: string
           option_b: string
           option_c?: string | null
@@ -409,7 +413,9 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          follow_up?: string | null
           id?: string
+          mode?: string
           option_a?: string
           option_b?: string
           option_c?: string | null
