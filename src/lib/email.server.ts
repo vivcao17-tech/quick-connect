@@ -62,7 +62,7 @@ export async function sendReplyEmail(
       <p style="font-size:22px;line-height:1.35;margin:24px 0 8px">
         ${escapeHtml(opts.actorName)} replied.
       </p>
-      <p style="font-size:16px;color:#6f6season;color:#6f665f;margin:0 0 24px">
+      <p style="font-size:16px;color:#6f665f;margin:0 0 24px">
         ${escapeHtml(opts.questionText)}
       </p>
       <p><a href="${deepLink}" style="background:#221c17;color:#fbf7f1;padding:12px 22px;border-radius:999px;text-decoration:none;font-size:16px">Read it</a></p>
