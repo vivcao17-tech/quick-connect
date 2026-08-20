@@ -27,6 +27,9 @@ export const listTopicQuestions = createServerFn({ method: "POST" })
       .select("id, text, option_a, option_b, option_c, question_type, reason_chips(id, option_key, text)")
       .eq("topic_id", topic.id)
       .eq("active", true)
+      .in("question_type", ["ab", "ab_reason"])
+      .in("mode", ["pair", "both"])
+      .lte("spice_level", 2)
       .limit(5);
     if (error) throw error;
 
