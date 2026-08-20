@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
+import { TopicCloud } from "@/components/TopicCloud";
+import type { CloudTopic } from "@/components/TopicCloud";
 import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
 import {
@@ -42,16 +44,6 @@ type Topic = { id: string; slug: string; label: string };
 type Candidate = { id: string; text: string; options: { key: OptionKey; label: string }[] };
 
 
-const SCATTER = [
-  { top: 4, left: 6, size: 2.9, rotate: -7 },
-  { top: 18, left: 55, size: 3.7, rotate: 4 },
-  { top: 32, left: 12, size: 3.2, rotate: 9 },
-  { top: 45, left: 60, size: 2.6, rotate: -5 },
-  { top: 56, left: 20, size: 4.1, rotate: -2 },
-  { top: 69, left: 52, size: 3.0, rotate: 7 },
-  { top: 80, left: 10, size: 2.7, rotate: -9 },
-  { top: 88, left: 58, size: 3.4, rotate: 3 },
-];
 
 function RemotePage() {
   const [stage, setStage] = useState<"topics" | "pick" | "play">("topics");
@@ -205,27 +197,15 @@ function RemotePage() {
           </p>
           <p className="mt-4 text-muted-foreground">Tap a word.</p>
 
-          <div className="relative mt-10 h-[520px]">
-            {topics.map((topic, i) => {
-              const spot = SCATTER[i % SCATTER.length]!;
-              return (
-                <button
-                  key={topic.id}
-                  disabled={busy}
-                  onClick={() => pickTopic(topic)}
-                  className="topic-word absolute hover:scale-105 hover:text-primary disabled:opacity-40"
-                  style={{
-                    top: `${spot.top}%`,
-                    left: `${spot.left}%`,
-                    fontSize: `${spot.size}rem`,
-                    transform: `rotate(${spot.rotate}deg)`,
-                  }}
-                >
-                  {topic.label}
-                </button>
-              );
-            })}
+          <div className="mt-10">
+            <TopicCloud
+              topics={topics}
+              selectedIds={[]}
+              disabled={busy}
+              onToggle={(topic: CloudTopic) => void pickTopic(topics.find((t) => t.id === topic.id)!)}
+            />
           </div>
+
           {error && <p className="text-sm text-primary">{error}</p>}
         </section>
       )}
@@ -297,19 +277,7 @@ function RemotePage() {
                 placeholder="Why? (one line, optional)"
                 className="mt-6 w-full rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
               />
-              {current.chips.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {current.chips.map((chip) => (
-                    <button
-                      key={chip.id}
-                      onClick={() => setReason(chip.text)}
-                      className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
-                    >
-                      {chip.text}
-                    </button>
-                  ))}
-                </div>
-              )}
+
             </>
           )}
 

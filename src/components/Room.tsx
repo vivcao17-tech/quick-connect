@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 
 import { Thread } from "@/components/Thread";
+import { SubjectLine, withName } from "@/components/QuestionText";
+import { TopicCloud } from "@/components/TopicCloud";
+import type { CloudTopic } from "@/components/TopicCloud";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getRevealPrompts } from "@/lib/ai-prompts.functions";
@@ -21,18 +24,6 @@ import {
 import type { RoomState } from "@/lib/irl.functions";
 import { logEvent } from "@/lib/play.functions";
 
-const SCATTER = [
-  { top: 2, left: 6, size: 2.6, rotate: -7 },
-  { top: 13, left: 55, size: 3.3, rotate: 4 },
-  { top: 26, left: 16, size: 2.9, rotate: 8 },
-  { top: 36, left: 61, size: 2.4, rotate: -5 },
-  { top: 47, left: 8, size: 3.5, rotate: -2 },
-  { top: 58, left: 52, size: 2.7, rotate: 6 },
-  { top: 68, left: 18, size: 3.1, rotate: -9 },
-  { top: 78, left: 58, size: 2.5, rotate: 3 },
-  { top: 87, left: 10, size: 2.9, rotate: 5 },
-  { top: 93, left: 56, size: 2.3, rotate: -4 },
-];
 
 const DIFFERENT_PROMPTS = [
   "What happened last time?",
@@ -211,35 +202,21 @@ export function Room({ sessionId }: { sessionId: string }) {
           <div>
             <h2 className="text-3xl">What's on your mind?</h2>
             <p className="mt-2 text-muted-foreground">Tap two words.</p>
-            <div className="relative mt-8 h-[520px]">
-              {state.topics.map((topic, i) => {
-                const spot = SCATTER[i % SCATTER.length]!;
-                const chosen = topicDraft.includes(topic.id) || state.myTopicIds.includes(topic.id);
-                return (
-                  <button
-                    key={topic.id}
-                    disabled={busy || state.myTopicsDone}
-                    onClick={() => {
-                      setTopicDraft((prev) =>
-                        prev.includes(topic.id)
-                          ? prev.filter((id) => id !== topic.id)
-                          : prev.length >= 2
-                            ? prev
-                            : [...prev, topic.id],
-                      );
-                    }}
-                    className={`topic-word absolute hover:scale-105 ${chosen ? "text-primary" : ""}`}
-                    style={{
-                      top: `${spot.top}%`,
-                      left: `${spot.left}%`,
-                      fontSize: `${spot.size}rem`,
-                      transform: `rotate(${spot.rotate}deg)`,
-                    }}
-                  >
-                    {topic.label}
-                  </button>
-                );
-              })}
+            <div className="mt-8">
+              <TopicCloud
+                topics={state.topics}
+                selectedIds={[...topicDraft, ...state.myTopicIds]}
+                disabled={busy || state.myTopicsDone}
+                onToggle={(topic: CloudTopic) =>
+                  setTopicDraft((prev) =>
+                    prev.includes(topic.id)
+                      ? prev.filter((id) => id !== topic.id)
+                      : prev.length >= 2
+                        ? prev
+                        : [...prev, topic.id],
+                  )
+                }
+              />
             </div>
 
             {!state.myTopicsDone && (
@@ -310,50 +287,77 @@ export function Room({ sessionId }: { sessionId: string }) {
 
         {(state.status === "answering" || state.status === "revealed") && current && (
           <div>
-            <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
-              Question {state.currentIndex + 1} of {total}
-            </p>
-            <h2 className="mt-6 text-4xl leading-tight">{current.text}</h2>
+            {(() => {
+              const impressionStep =
+                current.questionType === "impression" && !current.revealed
+                  ? current.myAnswerAboutOther
+                    ? "self"
+                    : "other"
+                  : null;
+              const subject = impressionStep === "self" ? "You" : (current.otherName ?? "");
+              return (
+                <div
+                  className={
+                    impressionStep
+                      ? `rounded-3xl px-6 py-6 ${
+                          impressionStep === "other"
+                            ? "bg-secondary/60 ring-1 ring-border"
+                            : "bg-card ring-1 ring-primary/40"
+                        }`
+                      : ""
+                  }
+                >
+                  <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
+                    Question {state.currentIndex + 1} of {total}
+                  </p>
+                  <h2 className="mt-6 text-4xl leading-tight">
+                    {withName(current.text, subject)}
+                  </h2>
 
-            {current.questionType === "impression" && !current.revealed && !current.mySubmitted && (
-              <p className="mt-4 text-lg text-muted-foreground">
-                {!current.myAnswerAboutOther
-                  ? `Which one is ${current.otherName}?`
-                  : "And you?"}
-              </p>
-            )}
+                  {impressionStep && !current.mySubmitted && (
+                    <div className="mt-4">
+                      <SubjectLine
+                        name={current.otherName ?? ""}
+                        aboutSelf={impressionStep === "self"}
+                      />
+                    </div>
+                  )}
 
-            {!current.revealed && !current.mySubmitted && (
-              <div className="mt-10 flex flex-col gap-3">
-                {current.options.map((option) => {
-                  const answerRole =
-                    current.questionType === "impression" && !current.myAnswerAboutOther
-                      ? ("about_other" as const)
-                      : ("about_self" as const);
-                  return (
-                    <button
-                      key={`${answerRole}-${option.key}`}
-                      disabled={busy}
-                      onClick={() =>
-                        run(() =>
-                          submitAnswer({
-                            data: {
-                              guestToken,
-                              sessionQuestionId: current.sessionQuestionId,
-                              optionKey: option.key,
-                              answerRole,
-                            },
-                          }),
-                        )
-                      }
-                      className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                  {!current.revealed && !current.mySubmitted && (
+                    <div className="mt-10 flex flex-col gap-3">
+                      {current.options.map((option) => {
+                        const answerRole =
+                          current.questionType === "impression" && !current.myAnswerAboutOther
+                            ? ("about_other" as const)
+                            : ("about_self" as const);
+                        return (
+                          <button
+                            key={`${answerRole}-${option.key}`}
+                            disabled={busy}
+                            onClick={() =>
+                              run(() =>
+                                submitAnswer({
+                                  data: {
+                                    guestToken,
+                                    sessionQuestionId: current.sessionQuestionId,
+                                    optionKey: option.key,
+                                    answerRole,
+                                  },
+                                }),
+                              )
+                            }
+                            className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
 
             {!current.revealed && current.mySubmitted && (
               <p className="mt-12 text-lg text-muted-foreground">

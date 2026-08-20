@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { PairSummary } from "@/components/PairSummary";
+import { SubjectLine, withName } from "@/components/QuestionText";
 import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
 import {
@@ -219,14 +220,30 @@ function InvitePage() {
 
       {stage === "play" && current && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
-          {impressionHalf && (
-            <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
-              {impressionHalf === "other"
-                ? `Which one is ${intro?.senderName ?? "they"}?`
-                : "And you?"}
-            </p>
-          )}
-          <h1 className="mt-3 text-4xl leading-tight">{current.text}</h1>
+          <div
+            className={
+              impressionHalf && !reveal
+                ? `rounded-3xl px-6 py-6 ${
+                    impressionHalf === "other"
+                      ? "bg-secondary/60 ring-1 ring-border"
+                      : "bg-card ring-1 ring-primary/40"
+                  }`
+                : ""
+            }
+          >
+            {impressionHalf && !reveal && (
+              <SubjectLine
+                name={intro?.senderName ?? ""}
+                aboutSelf={impressionHalf === "self"}
+              />
+            )}
+            <h1 className="mt-3 text-4xl leading-tight">
+              {withName(
+                current.text,
+                impressionHalf === "self" ? "You" : (intro?.senderName ?? ""),
+              )}
+            </h1>
+          </div>
 
           {!reveal && (
             <>
@@ -248,19 +265,6 @@ function InvitePage() {
                 placeholder="Why? (one line, optional)"
                 className="mt-6 w-full rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
               />
-              {current.chips.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {current.chips.map((chip) => (
-                    <button
-                      key={chip.id}
-                      onClick={() => setReason(chip.text)}
-                      className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
-                    >
-                      {chip.text}
-                    </button>
-                  ))}
-                </div>
-              )}
             </>
           )}
 
@@ -341,6 +345,7 @@ function InvitePage() {
                     guestToken={guestToken}
                     sessionQuestionId={current.sessionQuestionId}
                     prompts={ai.prompts}
+                    extraPrompts={current.chips.map((chip) => chip.text)}
                   />
                 </>
               ) : (

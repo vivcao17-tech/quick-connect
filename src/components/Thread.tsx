@@ -18,15 +18,19 @@ export function Thread({
   guestToken,
   sessionQuestionId,
   prompts,
+  extraPrompts,
   onPrompt,
 }: {
   guestToken: string;
   sessionQuestionId: string;
   prompts?: string[];
+  /** Reason chips for this question: conversation starters, shown behind "More". */
+  extraPrompts?: string[];
   onPrompt?: (prompt: string) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [firstUnreadId, setFirstUnreadId] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +87,20 @@ export function Thread({
     }
     lastCount.current = messages.length;
   }, [messages, firstUnreadId]);
+
+  /** Two quick prompts up front; the reason chips live behind "More". */
+  const allPrompts = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const item of [...(prompts ?? []), ...(extraPrompts ?? [])]) {
+      const clean = item.trim();
+      const key = clean.toLowerCase();
+      if (!clean || seen.has(key)) continue;
+      seen.add(key);
+      out.push(clean);
+    }
+    return out;
+  }, [prompts, extraPrompts]);
 
   // Reactions ride in the right-hand gutter of the message they answer.
   const rows = useMemo(() => {
@@ -194,13 +212,13 @@ export function Thread({
       </div>
 
       {/* Continuation prompts: specific to this question, tapped into the box. */}
-      {prompts && prompts.length > 0 && (
+      {allPrompts.length > 0 && (
         <div className="rounded-2xl bg-secondary/40 px-4 py-4">
           <p className="mb-3 text-xs tracking-[0.18em] text-muted-foreground uppercase">
             {rows.length === 0 ? "Want to ask why?" : "Tap to start a reply"}
           </p>
           <div className="flex flex-wrap gap-2">
-            {prompts.slice(0, 2).map((prompt) => (
+            {(showAll ? allPrompts : allPrompts.slice(0, 2)).map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => {
@@ -212,9 +230,18 @@ export function Thread({
                 {prompt}
               </button>
             ))}
+            {allPrompts.length > 2 && (
+              <button
+                onClick={() => setShowAll((open) => !open)}
+                className="rounded-full px-3 py-2 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+              >
+                {showAll ? "Less" : "More"}
+              </button>
+            )}
           </div>
         </div>
       )}
+
 
       <div ref={endRef} className="h-px" />
 
