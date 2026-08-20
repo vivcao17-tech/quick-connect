@@ -31,7 +31,7 @@
   - the exact Resend response body (including the email `id` for Resend Logs, or the exact error message).
 - If Resend returns 200 with an `id` but nothing arrives, I'll give you that id to look up in Resend Logs and read the delivery status there.
 
-Tell me which address the test email should go to (ideally one you can check immediately).
+Test recipient: **vivcao17@gmail.com**.
 
 ## Note
 
