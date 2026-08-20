@@ -205,27 +205,15 @@ function RemotePage() {
           </p>
           <p className="mt-4 text-muted-foreground">Tap a word.</p>
 
-          <div className="relative mt-10 h-[520px]">
-            {topics.map((topic, i) => {
-              const spot = SCATTER[i % SCATTER.length]!;
-              return (
-                <button
-                  key={topic.id}
-                  disabled={busy}
-                  onClick={() => pickTopic(topic)}
-                  className="topic-word absolute hover:scale-105 hover:text-primary disabled:opacity-40"
-                  style={{
-                    top: `${spot.top}%`,
-                    left: `${spot.left}%`,
-                    fontSize: `${spot.size}rem`,
-                    transform: `rotate(${spot.rotate}deg)`,
-                  }}
-                >
-                  {topic.label}
-                </button>
-              );
-            })}
+          <div className="mt-10">
+            <TopicCloud
+              topics={topics}
+              selectedIds={[]}
+              disabled={busy}
+              onToggle={(topic) => void pickTopic(topics.find((t) => t.id === topic.id)!)}
+            />
           </div>
+
           {error && <p className="text-sm text-primary">{error}</p>}
         </section>
       )}
