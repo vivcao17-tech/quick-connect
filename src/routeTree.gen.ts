@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as PeopleRouteImport } from './routes/people'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
 import { Route as ITokenRouteImport } from './routes/i.$token'
@@ -41,6 +42,11 @@ const GroupRoute = GroupRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PeopleRoute = PeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RemoteRoute = RemoteRouteImport.update({
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/conversations': typeof ConversationsRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/conversations': typeof ConversationsRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/conversations': typeof ConversationsRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/i/$token': typeof ITokenRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/conversations'
     | '/group'
     | '/inbox'
+    | '/people'
     | '/remote'
     | '/g/$sessionId'
     | '/i/$token'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/conversations'
     | '/group'
     | '/inbox'
+    | '/people'
     | '/remote'
     | '/g/$sessionId'
     | '/i/$token'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/conversations'
     | '/group'
     | '/inbox'
+    | '/people'
     | '/remote'
     | '/g/$sessionId'
     | '/i/$token'
@@ -189,6 +201,7 @@ export interface RootRouteChildren {
   ConversationsRoute: typeof ConversationsRoute
   GroupRoute: typeof GroupRoute
   InboxRoute: typeof InboxRoute
+  PeopleRoute: typeof PeopleRoute
   RemoteRoute: typeof RemoteRoute
   GSessionIdRoute: typeof GSessionIdRoute
   ITokenRoute: typeof ITokenRoute
@@ -228,6 +241,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/people': {
+      id: '/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof PeopleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/remote': {
@@ -301,6 +321,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConversationsRoute: ConversationsRoute,
   GroupRoute: GroupRoute,
   InboxRoute: InboxRoute,
+  PeopleRoute: PeopleRoute,
   RemoteRoute: RemoteRoute,
   GSessionIdRoute: GSessionIdRoute,
   ITokenRoute: ITokenRoute,
