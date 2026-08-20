@@ -300,3 +300,50 @@ export async function loadRelationships(
   );
   return people;
 }
+
+/** Someone deliberately added as a connection — usually from a group room. */
+export type ConnectionPerson = { personKey: string; name: string; addedAt: string };
+
+/**
+ * Connections are the only durable trace of a group room: the session itself is
+ * a one-off, but "add this person" has to survive the refresh.
+ */
+export async function loadConnections(
+  admin: Admin,
+  guestToken: string,
+  profileId?: string,
+): Promise<ConnectionPerson[]> {
+  const { myParticipants } = await import("@/lib/identity.server");
+  const mine = await myParticipants(admin, { guestToken, profileId });
+  const myIds = mine.map((row) => row.id);
+  if (myIds.length === 0) return [];
+
+  const { data: links } = await admin
+    .from("connections")
+    .select("target_participant_id, created_at")
+    .in("owner_participant_id", myIds);
+  const rows = (links ?? []) as { target_participant_id: string; created_at: string }[];
+  if (rows.length === 0) return [];
+
+  const targets = [...new Set(rows.map((r) => r.target_participant_id))];
+  const { data: peopleRows } = await admin
+    .from("session_participants")
+    .select("id, display_name, profile_id, guest_token")
+    .in("id", targets);
+
+  const byKey = new Map<string, ConnectionPerson>();
+  for (const person of (peopleRows ?? []) as {
+    id: string;
+    display_name: string | null;
+    profile_id: string | null;
+    guest_token: string | null;
+  }[]) {
+    const key = personKeyOf(person);
+    const addedAt = rows.find((r) => r.target_participant_id === person.id)?.created_at ?? "";
+    const existing = byKey.get(key);
+    if (!existing || existing.addedAt < addedAt) {
+      byKey.set(key, { personKey: key, name: person.display_name ?? "Someone", addedAt });
+    }
+  }
+  return [...byKey.values()].sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1));
+}
