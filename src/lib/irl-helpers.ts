@@ -1,4 +1,7 @@
-import { snapshotOf } from "@/lib/remote-shared";
+import { AB_TYPES, snapshotOf } from "@/lib/remote-shared";
+
+/** Pair sessions only ever see questions marked for pairs or for both modes. */
+export const PAIR_MODES = ["pair", "both"];
 
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
