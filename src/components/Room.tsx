@@ -19,7 +19,6 @@ import {
   pickTopics,
   saveSessionEmail,
   setSpice,
-  voteQuestions,
 } from "@/lib/irl.functions";
 import type { RoomState } from "@/lib/irl.functions";
 import { logEvent } from "@/lib/play.functions";
@@ -37,7 +36,6 @@ const SAME_PROMPTS = ["You both picked the same — but your reasons might be co
 export function Room({ sessionId }: { sessionId: string }) {
   const load = useServerFn(getRoomState);
   const submitTopics = useServerFn(pickTopics);
-  const submitVotes = useServerFn(voteQuestions);
   const submitAnswer = useServerFn(answerInRoom);
   const advance = useServerFn(advanceRoom);
   const changeSpice = useServerFn(setSpice);
@@ -49,7 +47,6 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [lost, setLost] = useState(false);
   const [busy, setBusy] = useState(false);
   const [topicDraft, setTopicDraft] = useState<string[]>([]);
-  const [questionDraft, setQuestionDraft] = useState<string[]>([]);
   const [email, setEmail] = useState("");
   const [saved, setSaved] = useState(false);
   const [qr, setQr] = useState("");
@@ -241,50 +238,6 @@ export function Room({ sessionId }: { sessionId: string }) {
           </div>
         )}
 
-        {state.status === "question_select" && (
-          <div>
-            <h2 className="text-3xl">Which of these?</h2>
-            <p className="mt-2 text-muted-foreground">Tap the ones you'd want to hear.</p>
-            <div className="mt-8 flex flex-col gap-3">
-              {state.candidates.map((q) => {
-                const chosen = questionDraft.includes(q.id);
-                return (
-                  <button
-                    key={q.id}
-                    disabled={state.myVotesDone}
-                    onClick={() =>
-                      setQuestionDraft((prev) =>
-                        prev.includes(q.id) ? prev.filter((id) => id !== q.id) : [...prev, q.id],
-                      )
-                    }
-                    className={`card-soft px-6 py-5 text-left text-lg ${chosen ? "border-primary text-primary" : ""}`}
-                  >
-                    {q.text}
-                  </button>
-                );
-              })}
-            </div>
-            {!state.myVotesDone && (
-              <button
-                disabled={questionDraft.length === 0 || busy}
-                onClick={() =>
-                  run(() => submitVotes({ data: { guestToken, sessionId, questionIds: questionDraft } }))
-                }
-                className="btn-ink mt-8 self-start disabled:opacity-30"
-              >
-                Done
-              </button>
-            )}
-            <p className="mt-6 text-sm text-muted-foreground">
-              {state.myVotesDone && other?.questionsDone
-                ? "Both ready"
-                : state.myVotesDone && other
-                  ? `${other.name} is still picking…`
-                  : ""}
-            </p>
-          </div>
-        )}
-
         {(state.status === "answering" || state.status === "revealed") && current && (
           <div>
             {(() => {
@@ -367,30 +320,22 @@ export function Room({ sessionId }: { sessionId: string }) {
 
             {current.revealed && current.impression && (
               <div className="mt-10">
-                <p className="text-2xl leading-snug">{current.impression.lead}</p>
-                <div className="mt-6 flex flex-col gap-3">
-                  {current.impression.pairs.map((pair) => (
-                    <div
-                      key={pair.title}
-                      className={`card-soft px-6 py-6 ${pair.match ? "" : "border-primary"}`}
-                    >
-                      <p className="text-sm tracking-[0.18em] text-muted-foreground uppercase">
-                        {pair.title}
-                      </p>
-                      <p className="mt-3 text-lg">
-                        <span className="text-muted-foreground">Says: </span>
-                        {pair.selfLabel}
-                      </p>
-                      <p className="text-lg">
-                        <span className="text-muted-foreground">Read as: </span>
-                        <span className={pair.match ? "" : "text-primary"}>{pair.otherLabel}</span>
-                      </p>
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        {pair.match ? "Same read." : "Different read."}
-                      </p>
-                    </div>
+                <div className="flex flex-col gap-4">
+                  {current.impression.lines.map((line) => (
+                    <p key={line.leadIn} className="text-2xl leading-snug">
+                      <span className={line.match ? "text-foreground" : "text-primary"}>
+                        {line.match ? "\u2713" : "\u2717"}
+                      </span>{" "}
+                      {line.leadIn} <strong className="font-semibold">{line.answer}</strong>.{" "}
+                      {line.tail}{" "}
+                      <strong className={`font-semibold ${line.match ? "" : "text-primary"}`}>
+                        {line.tailAnswer}
+                      </strong>
+                      .
+                    </p>
                   ))}
                 </div>
+                <p className="mt-6 text-lg text-muted-foreground">{current.impression.summary}</p>
               </div>
             )}
 
@@ -456,6 +401,14 @@ export function Room({ sessionId }: { sessionId: string }) {
                 className="underline underline-offset-4"
               >
                 Skip this one
+              </button>
+              <button
+                onClick={() => {
+                  void run(() => advance({ data: { guestToken, sessionId, action: "more" } }));
+                }}
+                className="underline underline-offset-4"
+              >
+                Add another question
               </button>
               <button
                 onClick={() =>
