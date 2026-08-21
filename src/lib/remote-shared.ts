@@ -12,6 +12,8 @@ export function kindOf(questionType?: string | null): QuestionKind {
 }
 export type Snapshot = {
   text: string;
+  stemOther?: string | null;
+  stemSelf?: string | null;
   kind?: QuestionKind;
   options: { key: OptionKey; label: string }[];
   chips: Chip[];
@@ -20,6 +22,8 @@ export type PlayQuestion = {
   sessionQuestionId: string;
   questionId: string;
   text: string;
+  stemOther?: string | null;
+  stemSelf?: string | null;
   kind: QuestionKind;
   options: { key: OptionKey; label: string }[];
   chips: Chip[];
@@ -40,10 +44,14 @@ export function snapshotOf(row: {
   option_b: string;
   option_c: string | null;
   question_type?: string | null;
+  stem_other?: string | null;
+  stem_self?: string | null;
   chips: { id: string; option_key: string; text: string }[];
 }): Snapshot {
   return {
     text: row.text,
+    stemOther: row.stem_other ?? null,
+    stemSelf: row.stem_self ?? null,
     kind: kindOf(row.question_type),
     options: [
       { key: "a", label: row.option_a },
@@ -68,6 +76,8 @@ export function toPlay(sq: {
     sessionQuestionId: sq.id,
     questionId: sq.question_id,
     text: snap.text,
+    stemOther: snap.stemOther ?? null,
+    stemSelf: snap.stemSelf ?? null,
     kind: snap.kind ?? "standard",
     options: snap.options,
     chips: snap.chips ?? [],

@@ -8,7 +8,7 @@ type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseA
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 export const QUESTION_SELECT =
-  "id, topic_id, text, option_a, option_b, option_c, spice_level, question_type, reason_chips(id, option_key, text)";
+  "id, topic_id, text, option_a, option_b, option_c, spice_level, question_type, stem_other, stem_self, reason_chips(id, option_key, text)";
 
 export type QuestionRow = {
   id: string;
@@ -19,6 +19,8 @@ export type QuestionRow = {
   option_c: string | null;
   spice_level: number;
   question_type?: string | null;
+  stem_other?: string | null;
+  stem_self?: string | null;
   reason_chips: { id: string; option_key: string; text: string }[] | null;
 };
 
