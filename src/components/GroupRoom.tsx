@@ -51,7 +51,7 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
   const [connectOpen, setConnectOpen] = useState(false);
   const [qr, setQr] = useState("");
   const [email, setEmail] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "sent" | "failed">("idle");
   const [link, setLink] = useState("");
   const pending = useRef(false);
 
