@@ -155,7 +155,7 @@ export async function pickImpressionQuestion(admin: Admin, excludeIds: string[])
 
 /**
  * Draws questions straight from both people's topics and appends them to the room.
- * The very first draw always ends on an impression question.
+ * The first draw is fixed by position: Q1 spice 1, Q2 spice 2, Q3 impression.
  */
 export async function seedQuestions(
   admin: Admin,
@@ -170,16 +170,36 @@ export async function seedQuestions(
   const offset = count ?? 0;
   const alreadyPlayed = (existingRows ?? []).map((row) => row.question_id);
 
-  const pool = await candidateQuestions(admin, sessionId, spiceMax);
-  let chosen = pool.filter((q) => !alreadyPlayed.includes(q.id)).slice(0, want);
+  let chosen: QuestionRow[] = [];
 
-  if (offset === 0 && chosen.length > 0) {
-    const impression = await pickImpressionQuestion(
-      admin,
-      chosen.map((q) => q.id),
-    );
-    if (impression) chosen = [...chosen.slice(0, Math.max(0, want - 1)), impression];
+  if (offset === 0) {
+    const taken = new Set(alreadyPlayed);
+    // Q1 and Q2 get an exact spice level each, so every room has one dividing question.
+    for (const spice of [1, Math.min(2, Math.max(1, spiceMax))]) {
+      if (chosen.length >= want) break;
+      const exact = await candidateQuestions(admin, sessionId, spiceMax, {
+        spiceExact: spice,
+        limit: 4,
+      });
+      let next = exact.find((q) => !taken.has(q.id));
+      if (!next) {
+        const fallback = await candidateQuestions(admin, sessionId, spiceMax, { limit: 6 });
+        next = fallback.find((q) => !taken.has(q.id));
+      }
+      if (next) {
+        taken.add(next.id);
+        chosen.push(next);
+      }
+    }
+    if (chosen.length > 0 && want >= 3) {
+      const impression = await pickImpressionQuestion(admin, [...taken]);
+      if (impression) chosen = [...chosen.slice(0, want - 1), impression];
+    }
+  } else {
+    const pool = await candidateQuestions(admin, sessionId, spiceMax, { limit: want + 3 });
+    chosen = pool.filter((q) => !alreadyPlayed.includes(q.id)).slice(0, want);
   }
+
 
   if (chosen.length === 0) return 0;
 
