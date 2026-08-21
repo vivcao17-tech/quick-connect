@@ -1,4 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -30,6 +32,15 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const navigate = useNavigate();
+  const [code, setCode] = useState("");
+
+  function onCode(value: string) {
+    const next = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 4);
+    setCode(next);
+    if (next.length === 4) {
+      void navigate({ to: "/join/$code", params: { code: next } });
+    }
+  }
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -50,6 +61,26 @@ function Home() {
           </button>
           <p className="mt-3 text-sm text-muted-foreground">30 seconds, no account</p>
         </div>
+
+        <div className="mt-10 flex items-center gap-4">
+          <label htmlFor="room-code" className="text-sm text-muted-foreground">
+            Got a code?
+          </label>
+          <input
+            id="room-code"
+            value={code}
+            onChange={(event) => onCode(event.target.value)}
+            inputMode="text"
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={4}
+            placeholder="＿＿＿＿"
+            aria-label="Four letter room code"
+            className="w-32 rounded-full border border-border bg-card px-4 py-2 text-center text-lg tracking-[0.4em] uppercase outline-none focus:border-primary"
+          />
+        </div>
+
 
         <Link
           to="/people"
