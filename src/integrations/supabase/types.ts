@@ -437,6 +437,8 @@ export type Database = {
           option_c: string | null
           question_type: string
           spice_level: number
+          stem_other: string | null
+          stem_self: string | null
           text: string
           topic_id: string | null
         }
@@ -451,6 +453,8 @@ export type Database = {
           option_c?: string | null
           question_type?: string
           spice_level?: number
+          stem_other?: string | null
+          stem_self?: string | null
           text: string
           topic_id?: string | null
         }
@@ -465,6 +469,8 @@ export type Database = {
           option_c?: string | null
           question_type?: string
           spice_level?: number
+          stem_other?: string | null
+          stem_self?: string | null
           text?: string
           topic_id?: string | null
         }

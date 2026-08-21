@@ -278,6 +278,8 @@ export const getRoomState = createServerFn({ method: "POST" })
         questionId: sq.question_id,
         questionType,
         text: snap.text,
+        stemOther: snap.stemOther ?? null,
+        stemSelf: snap.stemSelf ?? null,
         options: snap.options,
         revealed,
         myAnswer: mine as OptionKey | null,
