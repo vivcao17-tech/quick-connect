@@ -65,6 +65,9 @@ function InvitePage() {
   } | null>(null);
   const [email, setEmail] = useState("");
   const [emailState, setEmailState] = useState<"ask" | "done" | "skipped">("ask");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailFailed, setEmailFailed] = useState(false);
+
 
   const [stage, setStage] = useState<"landing" | "play" | "summary">("landing");
   const [sessionId, setSessionId] = useState("");
