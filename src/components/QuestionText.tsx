@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 /**
  * Impression questions switch subject between two people, so the person being
- * asked about is named — never "they" — and marked in the sentence itself.
+ * asked about is named inside the stem itself — never "they".
  */
 export function withName(text: string, name?: string | null): ReactNode {
   const clean = (name ?? "").trim();
@@ -20,23 +20,27 @@ export function withName(text: string, name?: string | null): ReactNode {
   );
 }
 
-/** "Which one is Tim?" / "And you?" — the subject line above an impression step. */
-export function SubjectLine({ name, aboutSelf }: { name: string; aboutSelf: boolean }) {
-  return (
-    <p className="text-lg text-muted-foreground">
-      {aboutSelf ? (
-        <>
-          Now <span className="font-semibold text-foreground underline decoration-primary underline-offset-4">you</span>.
-        </>
-      ) : (
-        <>
-          Which one is{" "}
-          <span className="font-semibold text-foreground underline decoration-primary underline-offset-4">
-            {name}
-          </span>
-          ?
-        </>
-      )}
-    </p>
-  );
+/** Fallback when the other person hasn't been named yet (sender answers first). */
+export const UNKNOWN_SUBJECT = "Your friend";
+
+/**
+ * The sentence shown for an impression step. Step "other" uses the stored
+ * {name} template with the other person's display name; step "self" uses the
+ * second-person wording. Falls back to the plain question text.
+ */
+export function impressionStem(
+  question: { text: string; stemOther?: string | null; stemSelf?: string | null },
+  step: "other" | "self",
+  otherName?: string | null,
+) {
+  if (step === "self") return question.stemSelf ?? question.text;
+  const template = question.stemOther ?? question.text;
+  const name = (otherName ?? "").trim() || UNKNOWN_SUBJECT;
+  return template.replace(/\{name\}/g, name);
+}
+
+/** The name actually rendered inside a step-1 stem, for highlighting. */
+export function subjectName(step: "other" | "self", otherName?: string | null) {
+  if (step === "self") return "";
+  return (otherName ?? "").trim() || UNKNOWN_SUBJECT;
 }
