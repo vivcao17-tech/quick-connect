@@ -2,13 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import {
-  QUESTION_SELECT,
   memberOf,
   roomCode,
   seedQuestions,
-  snapshotRow,
 } from "@/lib/irl-helpers";
-import type { QuestionRow } from "@/lib/irl-helpers";
 import type { OptionKey, Snapshot } from "@/lib/remote-shared";
 
 const guest = z.string().uuid();
@@ -231,41 +228,49 @@ export const getRoomState = createServerFn({ method: "POST" })
       const labelOf = (key: string | null | undefined) =>
         snap.options.find((o) => o.key === key)?.label ?? "—";
 
-      // Impression reveal: two paired comparisons, not four flat rows.
+      // Impression reveal: plain sentences with real names, one per direction.
       let impression: {
-        lead: string;
-        pairs: { title: string; selfLabel: string; otherLabel: string; match: boolean }[];
+        lines: { leadIn: string; answer: string; tail: string; tailAnswer: string; match: boolean }[];
+        summary: string;
       } | null = null;
 
       if (questionType === "impression" && revealed && otherPerson) {
+        const them = otherPerson.name;
         const mySelf = latest.get(me.id) ?? null;
         const theirSelf = latest.get(otherPerson.participantId) ?? null;
         const theirReadOfMe = latestAboutOther.get(otherPerson.participantId) ?? null;
         const myReadOfThem = myAboutOther;
 
-        const pairs = [
+        const theyGotMe = Boolean(mySelf && theirReadOfMe && mySelf === theirReadOfMe);
+        const iGotThem = Boolean(theirSelf && myReadOfThem && theirSelf === myReadOfThem);
+
+        const lines = [
           {
-            title: `You, and how ${otherPerson.name} sees you`,
-            selfLabel: labelOf(mySelf),
-            otherLabel: labelOf(theirReadOfMe),
-            match: Boolean(mySelf && theirReadOfMe && mySelf === theirReadOfMe),
+            leadIn: `${them} read you as`,
+            answer: labelOf(theirReadOfMe),
+            tail: "You said",
+            tailAnswer: labelOf(mySelf),
+            match: theyGotMe,
           },
           {
-            title: `${otherPerson.name}, and how you see ${otherPerson.name}`,
-            selfLabel: labelOf(theirSelf),
-            otherLabel: labelOf(myReadOfThem),
-            match: Boolean(theirSelf && myReadOfThem && theirSelf === myReadOfThem),
+            leadIn: `You read ${them} as`,
+            answer: labelOf(myReadOfThem),
+            tail: `${them} said`,
+            tailAnswer: labelOf(theirSelf),
+            match: iGotThem,
           },
         ];
 
-        const first = pairs.find((p) => !p.match);
-        const lead = !first
-          ? `You two read each other exactly the way you read yourselves.`
-          : first === pairs[0]
-            ? `${otherPerson.name} thinks you're ${first.otherLabel.toLowerCase()} — you'd say ${first.selfLabel.toLowerCase()}.`
-            : `You think ${otherPerson.name} is ${first.otherLabel.toLowerCase()} — ${otherPerson.name} would say ${first.selfLabel.toLowerCase()}.`;
+        const summary =
+          theyGotMe && iGotThem
+            ? "You both called it."
+            : !theyGotMe && !iGotThem
+              ? "Neither of you saw it coming."
+              : theyGotMe
+                ? `${them} had you figured out. You didn't.`
+                : `You had ${them} figured out. ${them} didn't.`;
 
-        impression = { lead, pairs };
+        impression = { lines, summary };
       }
 
       return {
@@ -513,19 +518,14 @@ export const advanceRoom = createServerFn({ method: "POST" })
     }
 
     if (data.action === "more") {
+      // Adds one more question from the same topics and jumps straight to it.
+      const added = await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 1);
+      if (added === 0) return { status: "answering" as const };
       await supabaseAdmin
         .from("sessions")
-        .update({ status: "topic_select" })
+        .update({ status: "answering", current_index: total })
         .eq("id", data.sessionId);
-      await supabaseAdmin
-        .from("session_participant_topics")
-        .delete()
-        .eq("session_id", data.sessionId);
-      await supabaseAdmin
-        .from("session_question_votes")
-        .delete()
-        .eq("session_id", data.sessionId);
-      return { status: "topic_select" as const };
+      return { status: "answering" as const };
     }
 
     if (data.action === "skip") {
