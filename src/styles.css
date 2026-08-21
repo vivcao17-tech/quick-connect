@@ -73,7 +73,15 @@
   --accent-foreground: oklch(0.2 0.03 168);
   --border: oklch(1 0 0 / 12%);
   --ring: oklch(0.72 0.12 44);
+
+  --code-ink-1: oklch(0.7 0.17 30);
+  --code-ink-2: oklch(0.66 0.13 265);
+  --code-ink-3: oklch(0.68 0.12 155);
+  --code-ink-4: oklch(0.7 0.13 145);
+  --code-ink-5: oklch(0.68 0.15 305);
+  --code-ink-6: oklch(0.68 0.08 55);
 }
+
 
 @layer base {
   * {
