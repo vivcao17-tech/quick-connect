@@ -1,18 +1,17 @@
-# CSV backup of live data
+# Complete CSV snapshot of live data
 
-Export four tables from the live backend to CSV files you can download.
+Export every table in the live backend to CSV files you can download.
 
-## What gets exported
+## Tables exported
 
-- `sessions` (72 rows)
-- `invites` (24 rows)
-- `answers` (262 rows)
-- `thread_messages` (52 rows)
+All 20 public tables, one CSV each with a header row and full columns:
 
-Each table becomes one CSV with a header row, full columns, written to `/mnt/documents/nosure-backup/`.
+`answers`, `connections`, `email_optouts`, `events`, `host_requests`, `invites`, `notifications`, `participant_emails`, `profiles`, `questions`, `reason_chips`, `session_links`, `session_participant_topics`, `session_participants`, `session_question_votes`, `session_questions`, `sessions`, `thread_messages`, `thread_reads`, `topics`
+
+Written to `/mnt/documents/nosure-backup/`, plus a short `manifest.csv` listing each table and its row count so you can confirm nothing was truncated.
 
 ## Notes
 
 - Read-only: nothing in the database or the app changes.
-- These are point-in-time snapshots, not a live sync — re-run any time for a fresh copy.
-- I can add other tables (for example `session_participants`, `notifications`, `participant_emails`) to the same export if you want a fuller backup.
+- Point-in-time snapshot, not a live sync — re-run any time for a fresh copy.
+- `participant_emails`, `profiles`, `session_links`, and `email_optouts` contain personal data and access tokens; keep the export private.
