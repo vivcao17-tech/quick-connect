@@ -48,7 +48,13 @@ export async function memberOf(admin: Admin, sessionId: string, guestToken: stri
 }
 
 /** Candidate questions: intersection of both people's topics, otherwise evenly from each. */
-export async function candidateQuestions(admin: Admin, sessionId: string, spiceMax: number) {
+export async function candidateQuestions(
+  admin: Admin,
+  sessionId: string,
+  spiceMax: number,
+  opts?: { spiceExact?: number; limit?: number },
+) {
+  const limit = opts?.limit ?? 3;
   const { data: picks } = await admin
     .from("session_participant_topics")
     .select("participant_id, topic_id")
@@ -65,38 +71,44 @@ export async function candidateQuestions(admin: Admin, sessionId: string, spiceM
   const union = [...new Set(sets.flatMap((s) => [...s]))];
   const intersection = union.filter((id) => sets.every((s) => s.has(id)));
 
-  const { data: rows } = await admin
+  let query = admin
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
     .in("question_type", AB_TYPES as unknown as string[])
     .in("mode", PAIR_MODES)
-    .lte("spice_level", spiceMax)
-    .in("topic_id", union)
-    .order("id");
+    .in("topic_id", union);
+
+  query =
+    opts?.spiceExact !== undefined
+      ? query.eq("spice_level", opts.spiceExact)
+      : query.lte("spice_level", spiceMax);
+
+  const { data: rows } = await query.order("id");
 
   const all = ((rows as QuestionRow[] | null) ?? []).filter(Boolean);
 
 
   if (intersection.length > 0) {
     const shared = all.filter((q) => q.topic_id && intersection.includes(q.topic_id));
-    if (shared.length >= 3) return shared.slice(0, 3);
+    if (shared.length >= limit) return shared.slice(0, limit);
     const rest = all.filter((q) => !shared.includes(q));
-    return [...shared, ...rest].slice(0, 3);
+    return [...shared, ...rest].slice(0, limit);
   }
 
   const picked: QuestionRow[] = [];
   let round = 0;
-  while (picked.length < 3 && round < 6) {
+  while (picked.length < limit && round < limit * 2) {
     for (const set of sets) {
-      if (picked.length >= 3) break;
+      if (picked.length >= limit) break;
       const next = all.find((q) => q.topic_id && set.has(q.topic_id) && !picked.includes(q));
       if (next) picked.push(next);
     }
     round += 1;
   }
-  return picked.slice(0, 3);
+  return picked.slice(0, limit);
 }
+
 
 /** True when these guests have already finished a session together before this one. */
 export async function pairPlayedBefore(admin: Admin, sessionId: string, guestTokens: string[]) {
@@ -143,7 +155,7 @@ export async function pickImpressionQuestion(admin: Admin, excludeIds: string[])
 
 /**
  * Draws questions straight from both people's topics and appends them to the room.
- * The very first draw always ends on an impression question.
+ * The first draw is fixed by position: Q1 spice 1, Q2 spice 2, Q3 impression.
  */
 export async function seedQuestions(
   admin: Admin,
@@ -158,16 +170,36 @@ export async function seedQuestions(
   const offset = count ?? 0;
   const alreadyPlayed = (existingRows ?? []).map((row) => row.question_id);
 
-  const pool = await candidateQuestions(admin, sessionId, spiceMax);
-  let chosen = pool.filter((q) => !alreadyPlayed.includes(q.id)).slice(0, want);
+  let chosen: QuestionRow[] = [];
 
-  if (offset === 0 && chosen.length > 0) {
-    const impression = await pickImpressionQuestion(
-      admin,
-      chosen.map((q) => q.id),
-    );
-    if (impression) chosen = [...chosen.slice(0, Math.max(0, want - 1)), impression];
+  if (offset === 0) {
+    const taken = new Set(alreadyPlayed);
+    // Q1 and Q2 get an exact spice level each, so every room has one dividing question.
+    for (const spice of [1, Math.min(2, Math.max(1, spiceMax))]) {
+      if (chosen.length >= want) break;
+      const exact = await candidateQuestions(admin, sessionId, spiceMax, {
+        spiceExact: spice,
+        limit: 4,
+      });
+      let next = exact.find((q) => !taken.has(q.id));
+      if (!next) {
+        const fallback = await candidateQuestions(admin, sessionId, spiceMax, { limit: 6 });
+        next = fallback.find((q) => !taken.has(q.id));
+      }
+      if (next) {
+        taken.add(next.id);
+        chosen.push(next);
+      }
+    }
+    if (chosen.length > 0 && want >= 3) {
+      const impression = await pickImpressionQuestion(admin, [...taken]);
+      if (impression) chosen = [...chosen.slice(0, want - 1), impression];
+    }
+  } else {
+    const pool = await candidateQuestions(admin, sessionId, spiceMax, { limit: want + 3 });
+    chosen = pool.filter((q) => !alreadyPlayed.includes(q.id)).slice(0, want);
   }
+
 
   if (chosen.length === 0) return 0;
 
