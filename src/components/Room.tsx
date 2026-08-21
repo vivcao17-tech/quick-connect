@@ -266,7 +266,12 @@ export function Room({ sessionId }: { sessionId: string }) {
                   <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
                     Question {state.currentIndex + 1} of {total}
                   </p>
-                  <h2 className="mt-6 text-4xl leading-tight">
+                  {impressionStep === "other" && (
+                    <p className="mt-6 text-sm tracking-[0.24em] text-muted-foreground uppercase">
+                      Guess:
+                    </p>
+                  )}
+                  <h2 className={`text-4xl leading-tight ${impressionStep === "other" ? "mt-2" : "mt-6"}`}>
                     {impressionStep
                       ? withName(
                           impressionStem(current, impressionStep, current.otherName),

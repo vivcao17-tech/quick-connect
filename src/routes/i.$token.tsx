@@ -231,7 +231,16 @@ function InvitePage() {
                 : ""
             }
           >
-            <h1 className="mt-3 text-4xl leading-tight">
+            {impressionHalf === "other" && !reveal && (
+              <p className="mt-3 text-sm tracking-[0.24em] text-muted-foreground uppercase">
+                Guess:
+              </p>
+            )}
+            <h1
+              className={`text-4xl leading-tight ${
+                impressionHalf === "other" && !reveal ? "mt-2" : "mt-3"
+              }`}
+            >
               {impressionHalf
                 ? withName(
                     impressionStem(current, impressionHalf, intro?.senderName),
