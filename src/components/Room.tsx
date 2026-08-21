@@ -195,8 +195,12 @@ export function Room({ sessionId }: { sessionId: string }) {
               />
             )}
             <p className="mt-4 text-lg text-muted-foreground">
-              or enter <span className="tracking-[0.2em] text-foreground">{state.roomCode}</span>
+              or enter{" "}
+              <span className="block mt-1 text-6xl leading-none font-semibold tracking-[0.2em] text-foreground">
+                {state.roomCode}
+              </span>
             </p>
+
             <p className="mt-3 text-sm text-muted-foreground">
               They scan the code on your screen. Nothing to download.
             </p>
