@@ -3,11 +3,9 @@ import { z } from "zod";
 
 import {
   QUESTION_SELECT,
-  candidateQuestions,
   memberOf,
-  
-  pickImpressionQuestion,
   roomCode,
+  seedQuestions,
   snapshotRow,
 } from "@/lib/irl-helpers";
 import type { QuestionRow } from "@/lib/irl-helpers";
@@ -173,11 +171,6 @@ export const getRoomState = createServerFn({ method: "POST" })
       .filter((row) => row.participant_id === me.id)
       .map((row) => row.topic_id);
 
-    const candidates =
-      session.status === "question_select"
-        ? await candidateQuestions(supabaseAdmin, data.sessionId, session.spice_max)
-        : [];
-
     const { data: votes } = await supabaseAdmin
       .from("session_question_votes")
       .select("participant_id, question_id")
@@ -325,7 +318,6 @@ export const getRoomState = createServerFn({ method: "POST" })
       myTopicIds,
       myTopicsDone: myTopicIds.length >= 2,
       myVotesDone: (voteCount.get(me.id) ?? 0) >= 1,
-      candidates: candidates.map((q) => ({ id: q.id, text: q.text })),
       questions,
       differing,
     };
@@ -381,11 +373,20 @@ export const pickTopics = createServerFn({ method: "POST" })
       (participants ?? []).every((p) => (done.get(p.id) ?? 0) >= 2);
 
     if (everyone) {
-      await supabaseAdmin
+      // No question voting step: draw straight away and start on the first one.
+      const { data: session } = await supabaseAdmin
         .from("sessions")
-        .update({ status: "question_select" })
+        .select("spice_max, status")
         .eq("id", data.sessionId)
-        .eq("status", "topic_select");
+        .maybeSingle();
+      if (session?.status === "topic_select") {
+        await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 3);
+        await supabaseAdmin
+          .from("sessions")
+          .update({ status: "answering", current_index: 0 })
+          .eq("id", data.sessionId)
+          .eq("status", "topic_select");
+      }
     }
     return { advanced: everyone };
   });
