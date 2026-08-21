@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { PairSummary } from "@/components/PairSummary";
-import { SubjectLine, withName } from "@/components/QuestionText";
+import { impressionStem, subjectName, withName } from "@/components/QuestionText";
 import { Thread } from "@/components/Thread";
 import { getGuestToken } from "@/lib/guest";
 import {
@@ -231,17 +231,13 @@ function InvitePage() {
                 : ""
             }
           >
-            {impressionHalf && !reveal && (
-              <SubjectLine
-                name={intro?.senderName ?? ""}
-                aboutSelf={impressionHalf === "self"}
-              />
-            )}
             <h1 className="mt-3 text-4xl leading-tight">
-              {withName(
-                current.text,
-                impressionHalf === "self" ? "You" : (intro?.senderName ?? ""),
-              )}
+              {impressionHalf
+                ? withName(
+                    impressionStem(current, impressionHalf, intro?.senderName),
+                    impressionHalf === "self" ? "You" : subjectName("other", intro?.senderName),
+                  )
+                : current.text}
             </h1>
           </div>
 

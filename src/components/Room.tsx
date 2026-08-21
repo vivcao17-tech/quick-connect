@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 
 import { Thread } from "@/components/Thread";
-import { SubjectLine, withName } from "@/components/QuestionText";
+import { impressionStem, subjectName, withName } from "@/components/QuestionText";
 import { TopicCloud } from "@/components/TopicCloud";
 import type { CloudTopic } from "@/components/TopicCloud";
 
@@ -247,7 +247,10 @@ export function Room({ sessionId }: { sessionId: string }) {
                     ? "self"
                     : "other"
                   : null;
-              const subject = impressionStep === "self" ? "You" : (current.otherName ?? "");
+              const subject =
+                impressionStep === "self"
+                  ? "You"
+                  : subjectName("other", current.otherName);
               return (
                 <div
                   className={
@@ -264,17 +267,13 @@ export function Room({ sessionId }: { sessionId: string }) {
                     Question {state.currentIndex + 1} of {total}
                   </p>
                   <h2 className="mt-6 text-4xl leading-tight">
-                    {withName(current.text, subject)}
+                    {impressionStep
+                      ? withName(
+                          impressionStem(current, impressionStep, current.otherName),
+                          subject,
+                        )
+                      : current.text}
                   </h2>
-
-                  {impressionStep && !current.mySubmitted && (
-                    <div className="mt-4">
-                      <SubjectLine
-                        name={current.otherName ?? ""}
-                        aboutSelf={impressionStep === "self"}
-                      />
-                    </div>
-                  )}
 
                   {!current.revealed && !current.mySubmitted && (
                     <div className="mt-10 flex flex-col gap-3">
