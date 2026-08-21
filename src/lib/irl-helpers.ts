@@ -48,7 +48,13 @@ export async function memberOf(admin: Admin, sessionId: string, guestToken: stri
 }
 
 /** Candidate questions: intersection of both people's topics, otherwise evenly from each. */
-export async function candidateQuestions(admin: Admin, sessionId: string, spiceMax: number) {
+export async function candidateQuestions(
+  admin: Admin,
+  sessionId: string,
+  spiceMax: number,
+  opts?: { spiceExact?: number; limit?: number },
+) {
+  const limit = opts?.limit ?? 3;
   const { data: picks } = await admin
     .from("session_participant_topics")
     .select("participant_id, topic_id")
@@ -65,38 +71,44 @@ export async function candidateQuestions(admin: Admin, sessionId: string, spiceM
   const union = [...new Set(sets.flatMap((s) => [...s]))];
   const intersection = union.filter((id) => sets.every((s) => s.has(id)));
 
-  const { data: rows } = await admin
+  let query = admin
     .from("questions")
     .select(QUESTION_SELECT)
     .eq("active", true)
     .in("question_type", AB_TYPES as unknown as string[])
     .in("mode", PAIR_MODES)
-    .lte("spice_level", spiceMax)
-    .in("topic_id", union)
-    .order("id");
+    .in("topic_id", union);
+
+  query =
+    opts?.spiceExact !== undefined
+      ? query.eq("spice_level", opts.spiceExact)
+      : query.lte("spice_level", spiceMax);
+
+  const { data: rows } = await query.order("id");
 
   const all = ((rows as QuestionRow[] | null) ?? []).filter(Boolean);
 
 
   if (intersection.length > 0) {
     const shared = all.filter((q) => q.topic_id && intersection.includes(q.topic_id));
-    if (shared.length >= 3) return shared.slice(0, 3);
+    if (shared.length >= limit) return shared.slice(0, limit);
     const rest = all.filter((q) => !shared.includes(q));
-    return [...shared, ...rest].slice(0, 3);
+    return [...shared, ...rest].slice(0, limit);
   }
 
   const picked: QuestionRow[] = [];
   let round = 0;
-  while (picked.length < 3 && round < 6) {
+  while (picked.length < limit && round < limit * 2) {
     for (const set of sets) {
-      if (picked.length >= 3) break;
+      if (picked.length >= limit) break;
       const next = all.find((q) => q.topic_id && set.has(q.topic_id) && !picked.includes(q));
       if (next) picked.push(next);
     }
     round += 1;
   }
-  return picked.slice(0, 3);
+  return picked.slice(0, limit);
 }
+
 
 /** True when these guests have already finished a session together before this one. */
 export async function pairPlayedBefore(admin: Admin, sessionId: string, guestTokens: string[]) {
