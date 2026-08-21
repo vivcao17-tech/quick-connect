@@ -51,7 +51,7 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
   const [connectOpen, setConnectOpen] = useState(false);
   const [qr, setQr] = useState("");
   const [email, setEmail] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "sent" | "failed">("idle");
   const [link, setLink] = useState("");
   const pending = useRef(false);
 
@@ -502,8 +502,8 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
             )}
 
             <div className="mt-12">
-              {saved ? (
-                <p className="text-lg text-muted-foreground">Saved. Check your inbox.</p>
+              {saveState === "sent" ? (
+                <p className="text-lg text-muted-foreground">Sent. Check your inbox.</p>
               ) : (
                 <div className="flex flex-col gap-3">
                   <input
@@ -516,17 +516,23 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                     disabled={!email.includes("@") || busy}
                     onClick={() =>
                       void run(async () => {
-                        await saveEmail({ data: { guestToken, sessionId, email } });
-                        setSaved(true);
+                        const result = await saveEmail({ data: { guestToken, sessionId, email } });
+                        setSaveState(result.sent ? "sent" : "failed");
                       })
                     }
                     className="btn-ink self-start disabled:opacity-30"
                   >
                     Save this session
                   </button>
+                  {saveState === "failed" && (
+                    <p className="text-sm text-primary">
+                      That email didn't go out. Try again in a moment.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
+
           </div>
         )}
       </section>

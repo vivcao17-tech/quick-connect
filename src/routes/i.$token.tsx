@@ -65,6 +65,9 @@ function InvitePage() {
   } | null>(null);
   const [email, setEmail] = useState("");
   const [emailState, setEmailState] = useState<"ask" | "done" | "skipped">("ask");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailFailed, setEmailFailed] = useState(false);
+
 
   const [stage, setStage] = useState<"landing" | "play" | "summary">("landing");
   const [sessionId, setSessionId] = useState("");
@@ -384,16 +387,23 @@ function InvitePage() {
             <div className="card-soft mt-8 px-6 py-5">
               <p className="text-lg leading-snug">
                 Want to know what {intro?.senderName ?? "they"} says back? Leave your email and
-                we'll tell you when there's a reply.
+                we'll send you a link back to this.
               </p>
               <form
                 className="mt-4 flex gap-2"
                 onSubmit={(event) => {
                   event.preventDefault();
                   const clean = email.trim();
-                  if (!clean) return;
-                  setEmailState("done");
-                  void saveEmail({ data: { token, email: clean } }).catch(() => undefined);
+                  if (!clean || emailBusy) return;
+                  setEmailBusy(true);
+                  setEmailFailed(false);
+                  void saveEmail({ data: { token, email: clean } })
+                    .then((result) => {
+                      if (result.sent) setEmailState("done");
+                      else setEmailFailed(true);
+                    })
+                    .catch(() => setEmailFailed(true))
+                    .finally(() => setEmailBusy(false));
                 }}
               >
                 <input
@@ -403,10 +413,19 @@ function InvitePage() {
                   placeholder="you@email.com"
                   className="w-full rounded-full border border-border bg-background px-5 py-3 text-base outline-none focus:border-primary"
                 />
-                <button type="submit" className="btn-quiet shrink-0 hover:bg-secondary">
-                  Tell me
+                <button
+                  type="submit"
+                  disabled={emailBusy}
+                  className="btn-quiet shrink-0 hover:bg-secondary disabled:opacity-40"
+                >
+                  {emailBusy ? "Sending" : "Tell me"}
                 </button>
               </form>
+              {emailFailed && (
+                <p className="mt-3 text-sm text-primary">
+                  That email didn't go out. Try again in a moment.
+                </p>
+              )}
               <button
                 onClick={() => setEmailState("skipped")}
                 className="mt-3 text-sm text-muted-foreground underline underline-offset-4"
@@ -416,8 +435,9 @@ function InvitePage() {
             </div>
           )}
           {emailState === "done" && (
-            <p className="mt-8 text-lg text-muted-foreground">We'll let you know.</p>
+            <p className="mt-8 text-lg text-muted-foreground">Sent. Check your inbox.</p>
           )}
+
 
           <div className="mt-10">
             {guestToken && sessionId && (

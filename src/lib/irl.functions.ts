@@ -630,7 +630,15 @@ export const saveSessionEmail = createServerFn({ method: "POST" })
     });
     if (!result.sent) console.error(`[email] session save not sent: ${result.reason}`);
 
+    await supabaseAdmin.from("events").insert({
+      guest_token: data.guestToken,
+      session_id: data.sessionId,
+      name: "session_save_email",
+      props: { sent: result.sent, reason: result.reason ?? null, source: "room" },
+    });
+
     return { ok: true, sent: result.sent };
+
   });
 
 /** Opens a saved link: restores who this person was and where they left off. */

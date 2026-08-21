@@ -349,20 +349,54 @@ export const saveRecipientEmail = createServerFn({ method: "POST" })
       .from("invites")
       .update({ recipient_email: email })
       .eq("token", data.token)
-      .select("recipient_participant_id")
+      .select("session_id, child_session_id, recipient_participant_id")
       .maybeSingle();
     // Kept off session_participants on purpose: that table is readable by the
     // other people in the session, this address is not.
-    if (invite?.recipient_participant_id) {
-      await supabaseAdmin
-        .from("participant_emails")
-        .upsert(
-          { participant_id: invite.recipient_participant_id, email },
-          { onConflict: "participant_id" },
-        );
-    }
-    return { saved: true };
+    if (!invite?.recipient_participant_id) return { saved: true, sent: false };
+
+    await supabaseAdmin
+      .from("participant_emails")
+      .upsert(
+        { participant_id: invite.recipient_participant_id, email },
+        { onConflict: "participant_id" },
+      );
+
+    // Always re-send: the point of this email is handing them the link back.
+    const sessionId = invite.child_session_id ?? invite.session_id;
+    const { ensureSessionLink, describeSessionForParticipant } = await import(
+      "@/lib/session-link.server"
+    );
+    const [linkToken, target] = await Promise.all([
+      ensureSessionLink(supabaseAdmin, {
+        sessionId,
+        participantId: invite.recipient_participant_id,
+      }),
+      describeSessionForParticipant(supabaseAdmin, {
+        sessionId,
+        participantId: invite.recipient_participant_id,
+      }),
+    ]);
+
+    const { sendSessionSavedEmail } = await import("@/lib/email.server");
+    const result = await sendSessionSavedEmail(supabaseAdmin, {
+      to: email,
+      withName: target.withName,
+      isGroup: target.isGroup,
+      questionCount: target.questionCount,
+      path: `/s/${linkToken}`,
+    });
+    if (!result.sent) console.error(`[email] recipient save not sent: ${result.reason}`);
+
+    await supabaseAdmin.from("events").insert({
+      session_id: sessionId,
+      name: "session_save_email",
+      props: { sent: result.sent, reason: result.reason ?? null, source: "remote" },
+    });
+
+    return { saved: true, sent: result.sent };
   });
+
 
 
 export const startInvite = createServerFn({ method: "POST" })
