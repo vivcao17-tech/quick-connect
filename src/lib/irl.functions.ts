@@ -2,15 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import {
-  QUESTION_SELECT,
-  candidateQuestions,
   memberOf,
-  
-  pickImpressionQuestion,
   roomCode,
-  snapshotRow,
+  seedQuestions,
 } from "@/lib/irl-helpers";
-import type { QuestionRow } from "@/lib/irl-helpers";
 import type { OptionKey, Snapshot } from "@/lib/remote-shared";
 
 const guest = z.string().uuid();
@@ -173,11 +168,6 @@ export const getRoomState = createServerFn({ method: "POST" })
       .filter((row) => row.participant_id === me.id)
       .map((row) => row.topic_id);
 
-    const candidates =
-      session.status === "question_select"
-        ? await candidateQuestions(supabaseAdmin, data.sessionId, session.spice_max)
-        : [];
-
     const { data: votes } = await supabaseAdmin
       .from("session_question_votes")
       .select("participant_id, question_id")
@@ -238,41 +228,49 @@ export const getRoomState = createServerFn({ method: "POST" })
       const labelOf = (key: string | null | undefined) =>
         snap.options.find((o) => o.key === key)?.label ?? "—";
 
-      // Impression reveal: two paired comparisons, not four flat rows.
+      // Impression reveal: plain sentences with real names, one per direction.
       let impression: {
-        lead: string;
-        pairs: { title: string; selfLabel: string; otherLabel: string; match: boolean }[];
+        lines: { leadIn: string; answer: string; tail: string; tailAnswer: string; match: boolean }[];
+        summary: string;
       } | null = null;
 
       if (questionType === "impression" && revealed && otherPerson) {
+        const them = otherPerson.name;
         const mySelf = latest.get(me.id) ?? null;
         const theirSelf = latest.get(otherPerson.participantId) ?? null;
         const theirReadOfMe = latestAboutOther.get(otherPerson.participantId) ?? null;
         const myReadOfThem = myAboutOther;
 
-        const pairs = [
+        const theyGotMe = Boolean(mySelf && theirReadOfMe && mySelf === theirReadOfMe);
+        const iGotThem = Boolean(theirSelf && myReadOfThem && theirSelf === myReadOfThem);
+
+        const lines = [
           {
-            title: `You, and how ${otherPerson.name} sees you`,
-            selfLabel: labelOf(mySelf),
-            otherLabel: labelOf(theirReadOfMe),
-            match: Boolean(mySelf && theirReadOfMe && mySelf === theirReadOfMe),
+            leadIn: `${them} read you as`,
+            answer: labelOf(theirReadOfMe),
+            tail: "You said",
+            tailAnswer: labelOf(mySelf),
+            match: theyGotMe,
           },
           {
-            title: `${otherPerson.name}, and how you see ${otherPerson.name}`,
-            selfLabel: labelOf(theirSelf),
-            otherLabel: labelOf(myReadOfThem),
-            match: Boolean(theirSelf && myReadOfThem && theirSelf === myReadOfThem),
+            leadIn: `You read ${them} as`,
+            answer: labelOf(myReadOfThem),
+            tail: `${them} said`,
+            tailAnswer: labelOf(theirSelf),
+            match: iGotThem,
           },
         ];
 
-        const first = pairs.find((p) => !p.match);
-        const lead = !first
-          ? `You two read each other exactly the way you read yourselves.`
-          : first === pairs[0]
-            ? `${otherPerson.name} thinks you're ${first.otherLabel.toLowerCase()} — you'd say ${first.selfLabel.toLowerCase()}.`
-            : `You think ${otherPerson.name} is ${first.otherLabel.toLowerCase()} — ${otherPerson.name} would say ${first.selfLabel.toLowerCase()}.`;
+        const summary =
+          theyGotMe && iGotThem
+            ? "You both called it."
+            : !theyGotMe && !iGotThem
+              ? "Neither of you saw it coming."
+              : theyGotMe
+                ? `${them} had you figured out. You didn't.`
+                : `You had ${them} figured out. ${them} didn't.`;
 
-        impression = { lead, pairs };
+        impression = { lines, summary };
       }
 
       return {
@@ -325,7 +323,6 @@ export const getRoomState = createServerFn({ method: "POST" })
       myTopicIds,
       myTopicsDone: myTopicIds.length >= 2,
       myVotesDone: (voteCount.get(me.id) ?? 0) >= 1,
-      candidates: candidates.map((q) => ({ id: q.id, text: q.text })),
       questions,
       differing,
     };
@@ -381,107 +378,22 @@ export const pickTopics = createServerFn({ method: "POST" })
       (participants ?? []).every((p) => (done.get(p.id) ?? 0) >= 2);
 
     if (everyone) {
-      await supabaseAdmin
+      // No question voting step: draw straight away and start on the first one.
+      const { data: session } = await supabaseAdmin
         .from("sessions")
-        .update({ status: "question_select" })
+        .select("spice_max, status")
         .eq("id", data.sessionId)
-        .eq("status", "topic_select");
-    }
-    return { advanced: everyone };
-  });
-
-export const voteQuestions = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        guestToken: guest,
-        sessionId: z.string().uuid(),
-        questionIds: z.array(z.string().uuid()).min(1).max(3),
-      })
-      .parse(input),
-  )
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const me = await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
-
-    await supabaseAdmin.from("session_question_votes").delete().eq("participant_id", me.id);
-    const { error } = await supabaseAdmin.from("session_question_votes").insert(
-      data.questionIds.map((questionId) => ({
-        session_id: data.sessionId,
-        participant_id: me.id,
-        question_id: questionId,
-      })),
-    );
-    if (error) throw error;
-
-    const { data: participants } = await supabaseAdmin
-      .from("session_participants")
-      .select("id")
-      .eq("session_id", data.sessionId);
-    const { data: votes } = await supabaseAdmin
-      .from("session_question_votes")
-      .select("participant_id, question_id")
-      .eq("session_id", data.sessionId);
-
-    const voters = new Set((votes ?? []).map((v) => v.participant_id));
-    const everyone =
-      (participants ?? []).length >= 2 && (participants ?? []).every((p) => voters.has(p.id));
-    if (!everyone) return { advanced: false };
-
-    const { data: session } = await supabaseAdmin
-      .from("sessions")
-      .select("status")
-      .eq("id", data.sessionId)
-      .maybeSingle();
-    if (session?.status !== "question_select") return { advanced: true };
-
-    const tally = new Map<string, number>();
-    for (const v of votes ?? []) tally.set(v.question_id, (tally.get(v.question_id) ?? 0) + 1);
-    const ordered = [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
-    const chosen = ordered.slice(0, 3);
-
-    // A second round appends after the questions already played.
-    const { count: existing } = await supabaseAdmin
-      .from("session_questions")
-      .select("id", { count: "exact", head: true })
-      .eq("session_id", data.sessionId);
-    const offset = existing ?? 0;
-
-    // The third question is always an impression question, first pairing or not.
-    if (offset === 0) {
-      const impression = await pickImpressionQuestion(supabaseAdmin, chosen);
-      if (impression) {
-        chosen.splice(2, chosen.length - 2, impression.id);
+        .maybeSingle();
+      if (session?.status === "topic_select") {
+        await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 3);
+        await supabaseAdmin
+          .from("sessions")
+          .update({ status: "answering", current_index: 0 })
+          .eq("id", data.sessionId)
+          .eq("status", "topic_select");
       }
     }
-
-    const { data: rows } = await supabaseAdmin
-      .from("questions")
-      .select(QUESTION_SELECT)
-      .in("id", chosen);
-    const bank = (rows as QuestionRow[] | null) ?? [];
-
-
-    await supabaseAdmin.from("session_questions").insert(
-      chosen.map((id, index) => {
-        const q = bank.find((row) => row.id === id)!;
-        return {
-          session_id: data.sessionId,
-          question_id: id,
-          order_index: offset + index,
-          snapshot: snapshotRow(q) as never,
-        };
-      }),
-    );
-
-    await supabaseAdmin
-      .from("sessions")
-      .update({ status: "answering", current_index: offset })
-      .eq("id", data.sessionId)
-      .eq("status", "question_select");
-
-
-    return { advanced: true };
+    return { advanced: everyone };
   });
 
 export const answerInRoom = createServerFn({ method: "POST" })
@@ -606,19 +518,14 @@ export const advanceRoom = createServerFn({ method: "POST" })
     }
 
     if (data.action === "more") {
+      // Adds one more question from the same topics and jumps straight to it.
+      const added = await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 1);
+      if (added === 0) return { status: "answering" as const };
       await supabaseAdmin
         .from("sessions")
-        .update({ status: "topic_select" })
+        .update({ status: "answering", current_index: total })
         .eq("id", data.sessionId);
-      await supabaseAdmin
-        .from("session_participant_topics")
-        .delete()
-        .eq("session_id", data.sessionId);
-      await supabaseAdmin
-        .from("session_question_votes")
-        .delete()
-        .eq("session_id", data.sessionId);
-      return { status: "topic_select" as const };
+      return { status: "answering" as const };
     }
 
     if (data.action === "skip") {

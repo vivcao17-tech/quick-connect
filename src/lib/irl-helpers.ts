@@ -138,3 +138,45 @@ export async function pickImpressionQuestion(admin: Admin, excludeIds: string[])
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)]!;
 }
+
+/**
+ * Draws questions straight from both people's topics and appends them to the room.
+ * The very first draw always ends on an impression question.
+ */
+export async function seedQuestions(
+  admin: Admin,
+  sessionId: string,
+  spiceMax: number,
+  want: number,
+) {
+  const { data: existingRows, count } = await admin
+    .from("session_questions")
+    .select("question_id", { count: "exact" })
+    .eq("session_id", sessionId);
+  const offset = count ?? 0;
+  const alreadyPlayed = (existingRows ?? []).map((row) => row.question_id);
+
+  const pool = await candidateQuestions(admin, sessionId, spiceMax);
+  let chosen = pool.filter((q) => !alreadyPlayed.includes(q.id)).slice(0, want);
+
+  if (offset === 0 && chosen.length > 0) {
+    const impression = await pickImpressionQuestion(
+      admin,
+      chosen.map((q) => q.id),
+    );
+    if (impression) chosen = [...chosen.slice(0, Math.max(0, want - 1)), impression];
+  }
+
+  if (chosen.length === 0) return 0;
+
+  await admin.from("session_questions").insert(
+    chosen.map((q, index) => ({
+      session_id: sessionId,
+      question_id: q.id,
+      order_index: offset + index,
+      snapshot: snapshotRow(q) as never,
+    })),
+  );
+  return chosen.length;
+}
+

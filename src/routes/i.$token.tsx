@@ -319,25 +319,32 @@ function InvitePage() {
                   </div>
                   {reveal.impression && (
                     <div className="mt-8 border-t border-border pt-6">
-                      <p className="text-lg leading-snug">
-                        {reveal.impression.match
-                          ? `You read ${reveal.senderName} exactly the way they read themselves.`
-                          : `${reveal.senderName} sees themselves differently than you see them.`}
-                      </p>
-                      <p className="mt-4 text-base">
-                        <span className="text-muted-foreground">
-                          How {reveal.senderName} sees themselves:{" "}
-                        </span>
-                        {labelOf(reveal.impression.theirSelf)}
-                      </p>
-                      <p className="mt-1 text-base">
-                        <span className="text-muted-foreground">How you read them: </span>
-                        <span className={reveal.impression.match ? "" : "text-primary"}>
+                      <p className="text-2xl leading-snug">
+                        <span
+                          className={reveal.impression.match ? "text-foreground" : "text-primary"}
+                        >
+                          {reveal.impression.match ? "\u2713" : "\u2717"}
+                        </span>{" "}
+                        You read {reveal.senderName} as{" "}
+                        <strong className="font-semibold">
                           {labelOf(reveal.impression.myReadOfThem)}
-                        </span>
+                        </strong>
+                        . {reveal.senderName} said{" "}
+                        <strong
+                          className={`font-semibold ${reveal.impression.match ? "" : "text-primary"}`}
+                        >
+                          {labelOf(reveal.impression.theirSelf)}
+                        </strong>
+                        .
+                      </p>
+                      <p className="mt-4 text-lg text-muted-foreground">
+                        {reveal.impression.match
+                          ? `You had ${reveal.senderName} figured out.`
+                          : `You didn't see that one coming.`}
                       </p>
                     </div>
                   )}
+
                   {ai.observation && (
                     <p className="mt-6 text-lg leading-snug">{ai.observation}</p>
                   )}
