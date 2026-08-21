@@ -48,7 +48,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [busy, setBusy] = useState(false);
   const [topicDraft, setTopicDraft] = useState<string[]>([]);
   const [email, setEmail] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "sent" | "failed">("idle");
   const [qr, setQr] = useState("");
   const [openSq, setOpenSq] = useState("");
   const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
