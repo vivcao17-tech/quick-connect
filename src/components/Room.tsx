@@ -182,14 +182,22 @@ export function Room({ sessionId }: { sessionId: string }) {
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-14">
         {state.status === "lobby" && (
-          <div>
+          <div className="flex flex-col items-center text-center">
             <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Room open</p>
-            <h1 className="mt-6 text-5xl leading-tight">
+            <h1 className="mt-3 text-3xl leading-tight">
               {other ? `${other.name} is here.` : "Waiting for someone to join."}
             </h1>
-            <p className="mt-8 text-7xl tracking-[0.2em]">{state.roomCode}</p>
-            {qr && <img src={qr} alt={`QR code to join room ${state.roomCode}`} className="mt-6 h-48 w-48" />}
-            <p className="mt-6 text-lg text-muted-foreground">
+            {qr && (
+              <img
+                src={qr}
+                alt={`QR code to join room ${state.roomCode}`}
+                className="mt-6 h-[min(60vw,20rem)] w-[min(60vw,20rem)]"
+              />
+            )}
+            <p className="mt-4 text-lg text-muted-foreground">
+              or enter <span className="tracking-[0.2em] text-foreground">{state.roomCode}</span>
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
               They scan the code on your screen. Nothing to download.
             </p>
           </div>
