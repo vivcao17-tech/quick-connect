@@ -1,29 +1,34 @@
-# Save-session confirmation email: what I found, and the fix
+# Per-room breakdown on the admin dashboard
 
-## What I found
+Add a session-level view to `/admin` so you can pull up any room and see, question by question, how the vote split and how long each one took.
 
-**1. There are two different "leave your email" screens, and only one of them sends.**
+## What you'll see
 
-- In-person / room save (the end-of-room screen): saves the address **and** sends the confirmation email with a `/s/<token>` link back into the session. This path is wired correctly.
-- Remote invite screen (`/i/<token>`, "Want to know what they say back? Leave your email"): writes the address to the email table and **returns immediately — no send call at all**. No link is created, no email is attempted. This is almost certainly the screen the repeated tests went through.
+**1. A room list** (new section on `/admin`, respecting the existing 7/30/90-day window)
 
-**2. There is no dedupe or "already sent" guard anywhere.** Nothing suppresses repeat sends for the same address or session. The address row is upserted per participant, but that upsert does not gate the send.
+One row per session: date and time, mode (group / in-person / remote), number of people, questions revealed, and whether it finished. Rows are clickable.
 
-**3. No suppression, and no failed-send evidence.** The opt-out table is empty (0 rows), so nothing is being blocked as unsubscribed. Save events are recorded for every attempt, but the save flow never records whether a send succeeded or failed, so there is no trail to inspect after the fact — and server logs only retain the last hour, which is why nothing shows for earlier tests.
+**2. A room detail view** at `/admin/s/<sessionId>`
 
-So: the send path is fine (replies prove it), the in-person trigger fires, and the remote trigger does not exist.
+Header: date, mode, participant names, total duration.
 
-## The fix
+Then one block per question, in play order:
 
-1. **Send on the remote save too.** When an email is submitted on `/i/<token>`, after storing the address: create (or reuse) that recipient's permanent session link and send the same confirmation email — who they answered with, how many questions, and a sign-in-free link straight back to that session.
-2. **Send on every save, always.** No first-time check, no per-address or per-session guard, no time window. A repeat save by the same address on the same session re-sends, since the point is handing them the link again.
-3. **Record the outcome.** Each save writes an event noting whether the send succeeded and, if not, the reason (missing key, opted out, provider error) so repeat failures are diagnosable without live logs.
-4. **Surface it in the UI.** Both save screens confirm "Sent — check your inbox" on success, and show a plain retry message if the send did not go through, instead of silently showing success.
+- The question text and both (or three) option labels
+- Vote counts per option, plus a bar showing the split
+- A split label: `even` (50/50 or off by one), `leaning` (roughly 2:1), or `lopsided` (3:1 or unanimous)
+- Time on question — from the previous question's reveal (or room open, for Q1) to this question's reveal
+- Answer window — first to last answer submitted
+- Skipped questions marked as such (never revealed, no answers)
+
+Above the list, two quick counts: how many questions landed even and how many landed lopsided.
+
+Sorted in play order by default, with a toggle to sort by closeness so the near-50/50 ones come to the top.
 
 ## Technical notes
 
-- `saveRecipientEmail` in `src/lib/remote.functions.ts` gains the `ensureSessionLink` + `describeSessionForParticipant` + `sendSessionSavedEmail` sequence already used by `saveSessionEmail` in `src/lib/irl.functions.ts`, and returns `{ saved, sent }`.
-- The one respected block stays the unsubscribe opt-out check inside `sendSessionSavedEmail` — that is a legal requirement, not a dedupe.
-- Both handlers insert a `session_save_email` event with `{ sent, reason }`.
-- `src/routes/i.$token.tsx` awaits the call (it currently fires and forgets) so it can show the sent/failed state; `Room.tsx` and `GroupRoom.tsx` use the returned `sent` flag.
-- No schema changes.
+- New read function in `src/lib/admin.server.ts`: `readSessions(admin, windowDays)` and `readSessionDetail(admin, sessionId)`. `readSessionDetail` joins `session_questions` → `questions` → `answers`, groups by `option_key`, and derives timings from `sessions.created_at`, each `session_questions.revealed_at`, and answer `created_at` values.
+- Two new server functions in `src/lib/admin.functions.ts` (`getAdminSessions`, `getAdminSessionDetail`), both reusing the existing `requireSupabaseAuth` + `ADMIN_EMAILS` gate and the admin client, exactly like `getAdminMetrics`.
+- New route `src/routes/admin.s.$sessionId.tsx` (`noindex`), plus a room-list section added to `src/routes/admin.tsx` linking to it.
+- Impression questions store two rows per person (`answer_role`), so the detail view splits those into "guess about the other" and "about self" counts rather than summing them into one misleading total.
+- Read-only: no schema changes, no migrations, nothing written.
