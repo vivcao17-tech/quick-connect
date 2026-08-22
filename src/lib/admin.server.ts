@@ -14,6 +14,16 @@ export type AdminMetrics = {
   daily: { day: string; sessions: number; answers: number }[];
 };
 
+/** Only the addresses listed in ADMIN_EMAILS can read the dashboard. */
+export function assertAdmin(claims: unknown) {
+  const allowed = (process.env["ADMIN_EMAILS"] ?? "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  const email = String((claims as { email?: string } | null)?.email ?? "").toLowerCase();
+  if (!email || !allowed.includes(email)) throw new Error("Not allowed");
+}
+
 function dayKey(iso: string) {
   return iso.slice(0, 10);
 }
