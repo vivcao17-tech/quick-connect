@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getAdminMetrics } from "@/lib/admin.functions";
+import { getAdminMetrics, getAdminSessions } from "@/lib/admin.functions";
+
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -38,13 +39,20 @@ function pct(part: number, whole: number) {
 function AdminPage() {
   const [windowDays, setWindowDays] = useState(30);
   const load = useServerFn(getAdminMetrics);
+  const loadSessions = useServerFn(getAdminSessions);
   const query = useQuery({
     queryKey: ["admin-metrics", windowDays],
     queryFn: () => load({ data: { windowDays } }),
     retry: false,
   });
+  const sessions = useQuery({
+    queryKey: ["admin-sessions", windowDays],
+    queryFn: () => loadSessions({ data: { windowDays } }),
+    retry: false,
+  });
 
   const m = query.data;
+
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -142,8 +150,33 @@ function AdminPage() {
                 </div>
               ))}
             </div>
+
+            <h2 className="mt-12 text-2xl">Rooms</h2>
+            <div className="mt-4 flex flex-col">
+              {(sessions.data ?? []).map((row) => (
+                <Link
+                  key={row.id}
+                  to="/admin/s/$sessionId"
+                  params={{ sessionId: row.id }}
+                  className="flex items-baseline justify-between gap-4 border-b border-border py-3 hover:text-primary"
+                >
+                  <span>
+                    {new Date(row.createdAt).toLocaleString()}{" "}
+                    <span className="text-muted-foreground">· {row.kind}</span>
+                  </span>
+                  <span className="shrink-0 text-sm text-muted-foreground">
+                    {row.people} {row.people === 1 ? "person" : "people"} · {row.revealed}/
+                    {row.total} revealed · {row.endedAt ? "finished" : "open"}
+                  </span>
+                </Link>
+              ))}
+              {sessions.isSuccess && (sessions.data ?? []).length === 0 && (
+                <p className="text-muted-foreground">No rooms in this window.</p>
+              )}
+            </div>
           </>
         )}
+
       </section>
     </main>
   );
