@@ -4,6 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { getAdminSessionDetail } from "@/lib/admin.functions";
+import {
+  downloadFile,
+  exportFileName,
+  sessionToCsv,
+  sessionToJson,
+  type ExportableSession,
+} from "@/lib/admin-export";
+
 
 export const Route = createFileRoute("/admin_/s/$sessionId")({
   component: SessionDetailPage,
