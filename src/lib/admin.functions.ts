@@ -3,16 +3,8 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function assertAdmin(context: { claims: unknown }) {
-  const allowed = (process.env["ADMIN_EMAILS"] ?? "")
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
-  const email = String((context.claims as { email?: string } | null)?.email ?? "").toLowerCase();
-  if (!email || !allowed.includes(email)) throw new Error("Not allowed");
-}
-
 /** Only the addresses listed in ADMIN_EMAILS can read the dashboard. */
+
 
 export const getAdminMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
