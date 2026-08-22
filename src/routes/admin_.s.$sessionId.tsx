@@ -125,7 +125,30 @@ function SessionDetailPage() {
               >
                 {byCloseness ? "Sort in play order" : "Sort by closeness"}
               </button>
+              <button
+                onClick={() => {
+                  const record = detail as unknown as ExportableSession;
+                  downloadFile(exportFileName(record, "csv"), sessionToCsv(record), "text/csv");
+                }}
+                className="rounded-full border border-border px-3 py-1"
+              >
+                Download CSV
+              </button>
+              <button
+                onClick={() => {
+                  const record = detail as unknown as ExportableSession;
+                  downloadFile(
+                    exportFileName(record, "json"),
+                    sessionToJson(record),
+                    "application/json",
+                  );
+                }}
+                className="rounded-full border border-border px-3 py-1"
+              >
+                Download JSON
+              </button>
             </div>
+
 
             <div className="mt-10 flex flex-col gap-4">
               {questions.map((question) => (
