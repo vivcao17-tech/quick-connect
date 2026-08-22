@@ -39,13 +39,20 @@ function pct(part: number, whole: number) {
 function AdminPage() {
   const [windowDays, setWindowDays] = useState(30);
   const load = useServerFn(getAdminMetrics);
+  const loadSessions = useServerFn(getAdminSessions);
   const query = useQuery({
     queryKey: ["admin-metrics", windowDays],
     queryFn: () => load({ data: { windowDays } }),
     retry: false,
   });
+  const sessions = useQuery({
+    queryKey: ["admin-sessions", windowDays],
+    queryFn: () => loadSessions({ data: { windowDays } }),
+    retry: false,
+  });
 
   const m = query.data;
+
 
   return (
     <main className="paper min-h-screen bg-background">
