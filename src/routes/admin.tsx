@@ -150,8 +150,33 @@ function AdminPage() {
                 </div>
               ))}
             </div>
+
+            <h2 className="mt-12 text-2xl">Rooms</h2>
+            <div className="mt-4 flex flex-col">
+              {(sessions.data ?? []).map((row) => (
+                <Link
+                  key={row.id}
+                  to="/admin/s/$sessionId"
+                  params={{ sessionId: row.id }}
+                  className="flex items-baseline justify-between gap-4 border-b border-border py-3 hover:text-primary"
+                >
+                  <span>
+                    {new Date(row.createdAt).toLocaleString()}{" "}
+                    <span className="text-muted-foreground">· {row.kind}</span>
+                  </span>
+                  <span className="shrink-0 text-sm text-muted-foreground">
+                    {row.people} {row.people === 1 ? "person" : "people"} · {row.revealed}/
+                    {row.total} revealed · {row.endedAt ? "finished" : "open"}
+                  </span>
+                </Link>
+              ))}
+              {sessions.isSuccess && (sessions.data ?? []).length === 0 && (
+                <p className="text-muted-foreground">No rooms in this window.</p>
+              )}
+            </div>
           </>
         )}
+
       </section>
     </main>
   );
