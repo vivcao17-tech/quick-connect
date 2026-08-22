@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getAdminMetrics } from "@/lib/admin.functions";
+import { getAdminMetrics, getAdminSessions } from "@/lib/admin.functions";
+
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
