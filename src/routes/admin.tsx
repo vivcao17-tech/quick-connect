@@ -41,6 +41,13 @@ function pct(part: number, whole: number) {
   return `${Math.round((part / whole) * 100)}%`;
 }
 
+function secs(value: number | null) {
+  if (value === null) return "—";
+  if (value < 60) return `${value}s`;
+  return `${Math.floor(value / 60)}m ${value % 60}s`;
+}
+
+
 function AdminPage() {
   const [windowDays, setWindowDays] = useState(30);
   const load = useServerFn(getAdminMetrics);
