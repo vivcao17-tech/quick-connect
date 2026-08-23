@@ -331,3 +331,111 @@ export async function readSessionDetail(
     lopsidedCount: questions.filter((q) => q.split === "lopsided").length,
   };
 }
+
+export type AdminQuestionAverage = {
+  questionId: string;
+  text: string;
+  questionType: string;
+  /** How many rooms have revealed or collected answers for this question. */
+  timesAsked: number;
+  totalAnswers: number;
+  /** Lifetime tally across every room, primary answer role. */
+  options: { key: string; label: string; votes: number }[];
+  /** 0 = dead even, 1 = unanimous, pooled across all rooms. */
+  imbalance: number | null;
+  split: "even" | "leaning" | "lopsided" | null;
+  /** Mean seconds between first and last answer, averaged over rooms. */
+  avgAnswerWindowSeconds: number | null;
+};
+
+/** Lifetime per-question record across every session — no window. */
+export async function readQuestionAverages(admin: Admin): Promise<AdminQuestionAverage[]> {
+  const [sqs, questions] = await Promise.all([
+    admin.from("session_questions").select("id, question_id"),
+    admin.from("questions").select("id, text, option_a, option_b, option_c, question_type"),
+  ]);
+
+  const sqRows = sqs.data ?? [];
+  const questionBySq = new Map(sqRows.map((row) => [row.id, row.question_id]));
+
+  const { data: answers } = await admin
+    .from("answers")
+    .select("session_question_id, option_key, answer_role, created_at");
+
+  // Per session_question: tallies + timestamps, so windows average per room.
+  const perSq = new Map<
+    string,
+    { about: Map<string, number>; self: Map<string, number>; times: string[] }
+  >();
+  for (const row of answers ?? []) {
+    const entry =
+      perSq.get(row.session_question_id) ??
+      { about: new Map<string, number>(), self: new Map<string, number>(), times: [] };
+    const bucket = row.answer_role === "about_other" ? entry.about : entry.self;
+    bucket.set(row.option_key, (bucket.get(row.option_key) ?? 0) + 1);
+    entry.times.push(row.created_at);
+    perSq.set(row.session_question_id, entry);
+  }
+
+  const agg = new Map<
+    string,
+    { asked: Set<string>; counts: Map<string, number>; total: number; windows: number[] }
+  >();
+  for (const [sqId, entry] of perSq) {
+    const questionId = questionBySq.get(sqId);
+    if (!questionId) continue;
+    const q = (questions.data ?? []).find((row) => row.id === questionId);
+    const isImpression = (q?.question_type ?? "") === "impression";
+    const primary = isImpression ? entry.about : entry.self;
+
+    const bucket =
+      agg.get(questionId) ??
+      { asked: new Set<string>(), counts: new Map<string, number>(), total: 0, windows: [] };
+    bucket.asked.add(sqId);
+    for (const [key, votes] of primary) {
+      bucket.counts.set(key, (bucket.counts.get(key) ?? 0) + votes);
+      bucket.total += votes;
+    }
+    const times = entry.times.slice().sort();
+    if (times.length > 1) {
+      bucket.windows.push(
+        Math.round(
+          (new Date(times[times.length - 1]!).getTime() - new Date(times[0]!).getTime()) / 1000,
+        ),
+      );
+    } else if (times.length === 1) {
+      bucket.windows.push(0);
+    }
+    agg.set(questionId, bucket);
+  }
+
+  const rows: AdminQuestionAverage[] = [];
+  for (const [questionId, bucket] of agg) {
+    const q = (questions.data ?? []).find((row) => row.id === questionId);
+    if (!q) continue;
+    const labels: [string, string | null][] = [
+      ["a", q.option_a],
+      ["b", q.option_b],
+      ["c", q.option_c],
+    ];
+    const options = labels
+      .filter(([, label]) => label)
+      .map(([key, label]) => ({ key, label: label!, votes: bucket.counts.get(key) ?? 0 }));
+    const { imbalance, split } = classify(options.map((o) => o.votes));
+    rows.push({
+      questionId,
+      text: q.text,
+      questionType: q.question_type,
+      timesAsked: bucket.asked.size,
+      totalAnswers: bucket.total,
+      options,
+      imbalance: bucket.total ? imbalance : null,
+      split: bucket.total ? split : null,
+      avgAnswerWindowSeconds: bucket.windows.length
+        ? Math.round(bucket.windows.reduce((a, b) => a + b, 0) / bucket.windows.length)
+        : null,
+    });
+  }
+
+  return rows.sort((a, b) => b.timesAsked - a.timesAsked || b.totalAnswers - a.totalAnswers);
+}

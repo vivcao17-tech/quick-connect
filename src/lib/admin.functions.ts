@@ -51,3 +51,14 @@ export const getAdminSessionDetail = createServerFn({ method: "GET" })
     const { readSessionDetail } = await import("@/lib/admin.server");
     return readSessionDetail(supabaseAdmin, data.sessionId);
   });
+
+/** Lifetime per-question averages across every room. */
+export const getAdminQuestionAverages = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertAdmin } = await import("@/lib/admin.server");
+    assertAdmin(context.claims);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { readQuestionAverages } = await import("@/lib/admin.server");
+    return readQuestionAverages(supabaseAdmin);
+  });
