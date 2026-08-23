@@ -67,7 +67,7 @@ function Bar({ options }: { options: { key: string; label: string; votes: number
 
 function SessionDetailPage() {
   const { sessionId } = Route.useParams();
-  const [byCloseness, setByCloseness] = useState(false);
+  const [sortBy, setSortBy] = useState<"order" | "closeness" | "window">("order");
   const load = useServerFn(getAdminSessionDetail);
   const query = useQuery({
     queryKey: ["admin-session", sessionId],
@@ -77,12 +77,18 @@ function SessionDetailPage() {
 
   const detail = query.data;
   const questions = detail
-    ? byCloseness
-      ? [...detail.questions].sort(
-          (a, b) => (a.imbalance ?? 2) - (b.imbalance ?? 2) || a.orderIndex - b.orderIndex,
-        )
-      : [...detail.questions].sort((a, b) => a.orderIndex - b.orderIndex)
+    ? [...detail.questions].sort((a, b) => {
+        if (sortBy === "closeness")
+          return (a.imbalance ?? 2) - (b.imbalance ?? 2) || a.orderIndex - b.orderIndex;
+        if (sortBy === "window")
+          return (
+            (b.answerWindowSeconds ?? -1) - (a.answerWindowSeconds ?? -1) ||
+            a.orderIndex - b.orderIndex
+          );
+        return a.orderIndex - b.orderIndex;
+      })
     : [];
+
 
   return (
     <main className="paper min-h-screen bg-background">
