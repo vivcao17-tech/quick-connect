@@ -176,11 +176,12 @@ function SessionDetailPage() {
                       <span className="text-muted-foreground">Q{question.orderIndex + 1}. </span>
                       {question.text}
                     </p>
-                    {question.split && (
-                      <span className="shrink-0 text-sm text-muted-foreground">
-                        {SPLIT_LABEL[question.split]}
-                      </span>
-                    )}
+                    <span className="shrink-0 text-right text-sm text-muted-foreground">
+                      {question.split ? SPLIT_LABEL[question.split] : "—"}
+                      <br />
+                      {secs(question.answerWindowSeconds)} window
+                    </span>
+
                   </div>
 
                   {question.skipped ? (
