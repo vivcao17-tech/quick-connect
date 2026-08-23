@@ -172,7 +172,55 @@ function AdminPage() {
               ))}
             </div>
 
+            <h2 className="mt-12 text-2xl">Questions, all time</h2>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm">
+              {(
+                [
+                  ["asked", "Most asked"],
+                  ["split", "Closest split"],
+                  ["window", "Longest answer window"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setQuestionSort(key)}
+                  className={`rounded-full border px-3 py-1 ${
+                    questionSort === key ? "border-primary text-primary" : "border-border"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-col">
+              {questionRows.map((row) => {
+                const total = row.options.reduce((a, o) => a + o.votes, 0);
+                return (
+                  <div key={row.questionId} className="border-b border-border py-3">
+                    <p>{row.text}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {row.options
+                        .map(
+                          (o) =>
+                            `${o.label} ${o.votes}${total ? ` (${Math.round((o.votes / total) * 100)}%)` : ""}`,
+                        )
+                        .join(" · ")}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {row.split ?? "—"} · avg window {secs(row.avgAnswerWindowSeconds)} · asked in{" "}
+                      {row.timesAsked} {row.timesAsked === 1 ? "room" : "rooms"} · {row.totalAnswers}{" "}
+                      answers
+                    </p>
+                  </div>
+                );
+              })}
+              {questionAverages.isSuccess && questionRows.length === 0 && (
+                <p className="text-muted-foreground">No answers yet.</p>
+              )}
+            </div>
+
             <h2 className="mt-12 text-2xl">Rooms</h2>
+
             <div className="mt-4 flex flex-col">
               {(sessions.data ?? []).map((row) => (
                 <Link
