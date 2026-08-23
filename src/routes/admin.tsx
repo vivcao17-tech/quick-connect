@@ -3,7 +3,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getAdminMetrics, getAdminSessions } from "@/lib/admin.functions";
+import {
+  getAdminMetrics,
+  getAdminQuestionAverages,
+  getAdminSessions,
+} from "@/lib/admin.functions";
+
 
 
 export const Route = createFileRoute("/admin")({
@@ -36,6 +41,13 @@ function pct(part: number, whole: number) {
   return `${Math.round((part / whole) * 100)}%`;
 }
 
+function secs(value: number | null) {
+  if (value === null) return "—";
+  if (value < 60) return `${value}s`;
+  return `${Math.floor(value / 60)}m ${value % 60}s`;
+}
+
+
 function AdminPage() {
   const [windowDays, setWindowDays] = useState(30);
   const load = useServerFn(getAdminMetrics);
@@ -50,8 +62,24 @@ function AdminPage() {
     queryFn: () => loadSessions({ data: { windowDays } }),
     retry: false,
   });
+  const loadQuestions = useServerFn(getAdminQuestionAverages);
+  const questionAverages = useQuery({
+    queryKey: ["admin-question-averages"],
+    queryFn: () => loadQuestions(),
+    retry: false,
+  });
+
+  const [questionSort, setQuestionSort] = useState<"split" | "window" | "asked">("asked");
+  const questionRows = [...(questionAverages.data ?? [])].sort((a, b) => {
+    if (questionSort === "split") return (a.imbalance ?? 2) - (b.imbalance ?? 2);
+    if (questionSort === "window")
+      return (b.avgAnswerWindowSeconds ?? -1) - (a.avgAnswerWindowSeconds ?? -1);
+    return b.timesAsked - a.timesAsked;
+  });
 
   const m = query.data;
+
+
 
 
   return (
@@ -151,7 +179,55 @@ function AdminPage() {
               ))}
             </div>
 
+            <h2 className="mt-12 text-2xl">Questions, all time</h2>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm">
+              {(
+                [
+                  ["asked", "Most asked"],
+                  ["split", "Closest split"],
+                  ["window", "Longest answer window"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setQuestionSort(key)}
+                  className={`rounded-full border px-3 py-1 ${
+                    questionSort === key ? "border-primary text-primary" : "border-border"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-col">
+              {questionRows.map((row) => {
+                const total = row.options.reduce((a, o) => a + o.votes, 0);
+                return (
+                  <div key={row.questionId} className="border-b border-border py-3">
+                    <p>{row.text}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {row.options
+                        .map(
+                          (o) =>
+                            `${o.label} ${o.votes}${total ? ` (${Math.round((o.votes / total) * 100)}%)` : ""}`,
+                        )
+                        .join(" · ")}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {row.split ?? "—"} · avg window {secs(row.avgAnswerWindowSeconds)} · asked in{" "}
+                      {row.timesAsked} {row.timesAsked === 1 ? "room" : "rooms"} · {row.totalAnswers}{" "}
+                      answers
+                    </p>
+                  </div>
+                );
+              })}
+              {questionAverages.isSuccess && questionRows.length === 0 && (
+                <p className="text-muted-foreground">No answers yet.</p>
+              )}
+            </div>
+
             <h2 className="mt-12 text-2xl">Rooms</h2>
+
             <div className="mt-4 flex flex-col">
               {(sessions.data ?? []).map((row) => (
                 <Link

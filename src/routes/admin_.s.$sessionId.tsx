@@ -67,7 +67,7 @@ function Bar({ options }: { options: { key: string; label: string; votes: number
 
 function SessionDetailPage() {
   const { sessionId } = Route.useParams();
-  const [byCloseness, setByCloseness] = useState(false);
+  const [sortBy, setSortBy] = useState<"order" | "closeness" | "window">("order");
   const load = useServerFn(getAdminSessionDetail);
   const query = useQuery({
     queryKey: ["admin-session", sessionId],
@@ -77,12 +77,18 @@ function SessionDetailPage() {
 
   const detail = query.data;
   const questions = detail
-    ? byCloseness
-      ? [...detail.questions].sort(
-          (a, b) => (a.imbalance ?? 2) - (b.imbalance ?? 2) || a.orderIndex - b.orderIndex,
-        )
-      : [...detail.questions].sort((a, b) => a.orderIndex - b.orderIndex)
+    ? [...detail.questions].sort((a, b) => {
+        if (sortBy === "closeness")
+          return (a.imbalance ?? 2) - (b.imbalance ?? 2) || a.orderIndex - b.orderIndex;
+        if (sortBy === "window")
+          return (
+            (b.answerWindowSeconds ?? -1) - (a.answerWindowSeconds ?? -1) ||
+            a.orderIndex - b.orderIndex
+          );
+        return a.orderIndex - b.orderIndex;
+      })
     : [];
+
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -119,12 +125,24 @@ function SessionDetailPage() {
               <span className="rounded-full border border-border px-3 py-1">
                 {detail.lopsidedCount} lopsided
               </span>
-              <button
-                onClick={() => setByCloseness((value) => !value)}
-                className="rounded-full border border-primary px-3 py-1 text-primary"
-              >
-                {byCloseness ? "Sort in play order" : "Sort by closeness"}
-              </button>
+              {(
+                [
+                  ["order", "Play order"],
+                  ["closeness", "Closest split"],
+                  ["window", "Longest answer window"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setSortBy(key)}
+                  className={`rounded-full border px-3 py-1 ${
+                    sortBy === key ? "border-primary text-primary" : "border-border"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+
               <button
                 onClick={() => {
                   const record = detail as unknown as ExportableSession;
@@ -158,11 +176,12 @@ function SessionDetailPage() {
                       <span className="text-muted-foreground">Q{question.orderIndex + 1}. </span>
                       {question.text}
                     </p>
-                    {question.split && (
-                      <span className="shrink-0 text-sm text-muted-foreground">
-                        {SPLIT_LABEL[question.split]}
-                      </span>
-                    )}
+                    <span className="shrink-0 text-right text-sm text-muted-foreground">
+                      {question.split ? SPLIT_LABEL[question.split] : "—"}
+                      <br />
+                      {secs(question.answerWindowSeconds)} window
+                    </span>
+
                   </div>
 
                   {question.skipped ? (
