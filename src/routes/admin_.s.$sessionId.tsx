@@ -125,12 +125,24 @@ function SessionDetailPage() {
               <span className="rounded-full border border-border px-3 py-1">
                 {detail.lopsidedCount} lopsided
               </span>
-              <button
-                onClick={() => setByCloseness((value) => !value)}
-                className="rounded-full border border-primary px-3 py-1 text-primary"
-              >
-                {byCloseness ? "Sort in play order" : "Sort by closeness"}
-              </button>
+              {(
+                [
+                  ["order", "Play order"],
+                  ["closeness", "Closest split"],
+                  ["window", "Longest answer window"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setSortBy(key)}
+                  className={`rounded-full border px-3 py-1 ${
+                    sortBy === key ? "border-primary text-primary" : "border-border"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+
               <button
                 onClick={() => {
                   const record = detail as unknown as ExportableSession;
