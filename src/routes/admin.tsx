@@ -55,8 +55,24 @@ function AdminPage() {
     queryFn: () => loadSessions({ data: { windowDays } }),
     retry: false,
   });
+  const loadQuestions = useServerFn(getAdminQuestionAverages);
+  const questionAverages = useQuery({
+    queryKey: ["admin-question-averages"],
+    queryFn: () => loadQuestions(),
+    retry: false,
+  });
+
+  const [questionSort, setQuestionSort] = useState<"split" | "window" | "asked">("asked");
+  const questionRows = [...(questionAverages.data ?? [])].sort((a, b) => {
+    if (questionSort === "split") return (a.imbalance ?? 2) - (b.imbalance ?? 2);
+    if (questionSort === "window")
+      return (b.avgAnswerWindowSeconds ?? -1) - (a.avgAnswerWindowSeconds ?? -1);
+    return b.timesAsked - a.timesAsked;
+  });
 
   const m = query.data;
+
+
 
 
   return (
