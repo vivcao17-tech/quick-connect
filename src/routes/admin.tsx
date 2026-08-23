@@ -3,7 +3,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getAdminMetrics, getAdminSessions } from "@/lib/admin.functions";
+import {
+  getAdminMetrics,
+  getAdminQuestionAverages,
+  getAdminSessions,
+} from "@/lib/admin.functions";
+
 
 
 export const Route = createFileRoute("/admin")({
