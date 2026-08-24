@@ -33,7 +33,14 @@ export const Route = createFileRoute("/with/$participantId/")({
   }),
 });
 
-type Data = Awaited<ReturnType<typeof getPersonSessions>>;
+type Data = {
+  name: string;
+  realName: string;
+  note: { nickname: string; contact: string; note: string };
+  met: string;
+  sessions: Awaited<ReturnType<typeof getPersonSessions>>["sessions"];
+};
+
 
 export function ago(iso: string) {
   if (!iso) return "";
