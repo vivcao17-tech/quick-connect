@@ -283,7 +283,9 @@ export async function loadRelationships(
       person.sessions.find((s) => s.sessionId === sq.session_id) ??
       ({
         sessionId: sq.session_id,
+        kind: kindOf.get(sq.session_id) ?? "remote",
         topic: topicOf.get(sq.question_id) ?? "",
+
         total: 0,
         different: 0,
         messageCount: 0,
