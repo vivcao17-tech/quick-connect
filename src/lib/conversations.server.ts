@@ -149,6 +149,16 @@ export async function loadRelationships(
     .in("session_id", sessionIds);
   const others = ((everyone ?? []) as Participant[]).filter((p) => !myIds.has(p.id));
 
+  // How the two of you were together — remote invite, in person, group room.
+  const { data: sessionRows } = await admin
+    .from("sessions")
+    .select("id, kind")
+    .in("id", sessionIds);
+  const kindOf = new Map<string, string>(
+    ((sessionRows ?? []) as { id: string; kind: string }[]).map((row) => [row.id, row.kind]),
+  );
+
+
   const { data: sqRows } = await admin
     .from("session_questions")
     .select("id, session_id, question_id, revealed_at, order_index, snapshot")
