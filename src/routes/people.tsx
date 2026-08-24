@@ -3,7 +3,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { listPeople } from "@/lib/conversations.functions";
+import { ago } from "@/routes/with.$participantId.index";
 import { useViewer } from "@/lib/viewer";
+
 
 export const Route = createFileRoute("/people")({
   component: PeoplePage,
