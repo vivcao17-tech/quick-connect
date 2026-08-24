@@ -885,6 +885,21 @@ export const getThread = createServerFn({ method: "POST" })
       .eq("session_question_id", sq.id)
       .is("read_at", null);
 
+    // Names the reader sees are their own aliases when they set one.
+    const { loadNotes } = await import("@/lib/notes.server");
+    const { personKeyOf } = await import("@/lib/conversations.server");
+    const notes = await loadNotes(supabaseAdmin as never, { guestToken: data.guestToken });
+    const nameOf = (participantId: string) => {
+      const person = (participants ?? []).find((p) => p.id === participantId);
+      if (!person) return "Someone";
+      const key = personKeyOf({
+        profile_id: (person as { profile_id?: string | null }).profile_id ?? null,
+        guest_token: person.guest_token,
+        id: person.id,
+      });
+      return notes.get(key)?.nickname || person.display_name || "Someone";
+    };
+
     return {
       firstUnreadId: firstUnread?.id ?? "",
       messages: (rows ?? []).map((row) => ({
@@ -892,11 +907,11 @@ export const getThread = createServerFn({ method: "POST" })
         kind: row.kind,
         body: row.body ?? "",
         mine: row.participant_id === me.id,
-        who:
-          (participants ?? []).find((p) => p.id === row.participant_id)?.display_name ?? "Someone",
+        who: nameOf(row.participant_id),
       })),
     };
   });
+
 
 export const getSenderResults = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
