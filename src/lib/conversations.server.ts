@@ -37,6 +37,8 @@ export type QuestionBlock = {
 /** A "block" is one session: the set of questions sent together. */
 export type SessionBlock = {
   sessionId: string;
+  /** How the two of you were together: remote, irl_pair, group. */
+  kind: string;
   topic: string;
   total: number;
   different: number;
@@ -46,6 +48,7 @@ export type SessionBlock = {
   lastActivity: string;
   questions: QuestionBlock[];
 };
+
 
 export type Person = {
   personKey: string;
