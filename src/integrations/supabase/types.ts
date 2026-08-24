@@ -404,6 +404,39 @@ export type Database = {
           },
         ]
       }
+      person_notes: {
+        Row: {
+          contact: string | null
+          created_at: string
+          id: string
+          nickname: string | null
+          note: string | null
+          owner_key: string
+          target_key: string
+          updated_at: string
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string
+          id?: string
+          nickname?: string | null
+          note?: string | null
+          owner_key: string
+          target_key: string
+          updated_at?: string
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string
+          id?: string
+          nickname?: string | null
+          note?: string | null
+          owner_key?: string
+          target_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
