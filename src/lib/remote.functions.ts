@@ -841,8 +841,9 @@ export const getThread = createServerFn({ method: "POST" })
 
     const { data: participants } = await supabaseAdmin
       .from("session_participants")
-      .select("id, display_name, guest_token")
+      .select("id, display_name, guest_token, profile_id")
       .eq("session_id", sq.session_id);
+
     const me = (participants ?? []).find((p) => p.guest_token === data.guestToken);
     if (!me) return { messages: [] };
 
