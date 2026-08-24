@@ -3,6 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { getPersonSessions } from "@/lib/conversations.functions";
+import { savePersonNote } from "@/lib/notes.functions";
+import { contactLink } from "@/lib/contact-link";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/with/$participantId/")({
@@ -31,7 +33,14 @@ export const Route = createFileRoute("/with/$participantId/")({
   }),
 });
 
-type Data = Awaited<ReturnType<typeof getPersonSessions>>;
+type Data = {
+  name: string;
+  realName: string;
+  note: { nickname: string; contact: string; note: string };
+  met: string;
+  sessions: Awaited<ReturnType<typeof getPersonSessions>>["sessions"];
+};
+
 
 export function ago(iso: string) {
   if (!iso) return "";
@@ -45,13 +54,22 @@ export function ago(iso: string) {
   return `${Math.round(days / 7)}w ago`;
 }
 
+const field =
+  "w-full rounded-xl border border-border bg-card px-4 py-3 text-base outline-none focus:border-primary";
+
 function WithPersonPage() {
   const { participantId } = Route.useParams();
   const viewer = useViewer();
   const [data, setData] = useState<Data | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [contact, setContact] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const load = useServerFn(getPersonSessions);
+  const save = useServerFn(savePersonNote);
 
   useEffect(() => {
     if (!viewer.ready || !viewer.guestToken) return;
@@ -62,24 +80,154 @@ function WithPersonPage() {
         personKey: participantId,
       },
     })
-      .then(setData)
-      .catch(() => setData({ name: "", sessions: [] }));
+      .then((result) => {
+        setData(result);
+        setNickname(result.note.nickname);
+        setContact(result.note.contact);
+        setNote(result.note.note);
+      })
+      .catch(() =>
+        setData({
+          name: "",
+          realName: "",
+          note: { nickname: "", contact: "", note: "" },
+          met: "",
+          sessions: [],
+        }),
+      );
   }, [load, participantId, viewer.ready, viewer.guestToken, viewer.profileId]);
+
+  async function submit() {
+    if (!viewer.guestToken || saving) return;
+    setSaving(true);
+    try {
+      const saved = await save({
+        data: {
+          guestToken: viewer.guestToken,
+          ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+          personKey: participantId,
+          nickname,
+          contact,
+          note,
+        },
+      });
+      setData((current) =>
+        current
+          ? { ...current, note: saved, name: saved.nickname || current.realName }
+          : current,
+      );
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const sessions = data?.sessions ?? [];
   const name = data?.name || "them";
   const visible = showAll ? sessions : sessions.slice(0, 3);
+  const link = contactLink(data?.note.contact ?? "");
+  const lastTalked = sessions[0]?.lastActivity ?? "";
 
   return (
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
         <Link
-          to="/conversations"
+          to="/people"
           className="text-sm text-muted-foreground underline underline-offset-4"
         >
           People
         </Link>
         <h1 className="mt-6 text-4xl leading-tight">You and {name}</h1>
+        {data?.note.nickname && data.realName && (
+          <p className="mt-2 text-sm text-muted-foreground">Their name: {data.realName}</p>
+        )}
+        <p className="mt-3 text-sm text-muted-foreground">
+          {[
+            data?.met,
+            sessions.length === 1
+              ? "1 session together"
+              : `${sessions.length} sessions together`,
+            lastTalked ? `Last talked ${ago(lastTalked)}` : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+
+        {/* Private annotations — only ever shown to whoever wrote them. */}
+        <div className="card-soft mt-8 px-6 py-5">
+          <div className="flex items-baseline justify-between gap-4">
+            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+              Just for you
+            </p>
+            <button
+              onClick={() => setEditing((open) => !open)}
+              className="text-sm text-muted-foreground underline underline-offset-4"
+            >
+              {editing ? "Cancel" : data?.note.nickname || data?.note.contact || data?.note.note ? "Edit" : "Add"}
+            </button>
+          </div>
+
+          {!editing && (
+            <div className="mt-4 flex flex-col gap-2 text-base">
+              {data?.note.contact ? (
+                link ? (
+                  <a
+                    href={link.href}
+                    target={link.href.startsWith("http") ? "_blank" : undefined}
+                    rel="noreferrer"
+                    className="text-primary underline underline-offset-4"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <p>{data.note.contact}</p>
+                )
+              ) : null}
+              {data?.note.note && <p className="text-muted-foreground">{data.note.note}</p>}
+              {!data?.note.contact && !data?.note.note && !data?.note.nickname && (
+                <p className="text-muted-foreground">
+                  Nickname, where you talk, and one line to remember them by.
+                </p>
+              )}
+            </div>
+          )}
+
+          {editing && (
+            <form
+              className="mt-4 flex flex-col gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              <input
+                value={nickname}
+                onChange={(event) => setNickname(event.target.value)}
+                placeholder="Nickname (only you see it)"
+                className={field}
+              />
+              <input
+                value={contact}
+                onChange={(event) => setContact(event.target.value)}
+                placeholder="@instagram, phone, or a link"
+                className={field}
+              />
+              <input
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Note — e.g. orientation group, sat next to me"
+                className={field}
+              />
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-quiet self-start hover:bg-secondary disabled:opacity-40"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </form>
+          )}
+        </div>
 
         {data && sessions.length === 0 && (
           <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>

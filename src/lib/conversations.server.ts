@@ -37,6 +37,8 @@ export type QuestionBlock = {
 /** A "block" is one session: the set of questions sent together. */
 export type SessionBlock = {
   sessionId: string;
+  /** How the two of you were together: remote, irl_pair, group. */
+  kind: string;
   topic: string;
   total: number;
   different: number;
@@ -46,6 +48,7 @@ export type SessionBlock = {
   lastActivity: string;
   questions: QuestionBlock[];
 };
+
 
 export type Person = {
   personKey: string;
@@ -145,6 +148,16 @@ export async function loadRelationships(
     .select("id, session_id, profile_id, guest_token, display_name")
     .in("session_id", sessionIds);
   const others = ((everyone ?? []) as Participant[]).filter((p) => !myIds.has(p.id));
+
+  // How the two of you were together — remote invite, in person, group room.
+  const { data: sessionRows } = await admin
+    .from("sessions")
+    .select("id, kind")
+    .in("id", sessionIds);
+  const kindOf = new Map<string, string>(
+    ((sessionRows ?? []) as { id: string; kind: string }[]).map((row) => [row.id, row.kind]),
+  );
+
 
   const { data: sqRows } = await admin
     .from("session_questions")
@@ -270,7 +283,9 @@ export async function loadRelationships(
       person.sessions.find((s) => s.sessionId === sq.session_id) ??
       ({
         sessionId: sq.session_id,
+        kind: kindOf.get(sq.session_id) ?? "remote",
         topic: topicOf.get(sq.question_id) ?? "",
+
         total: 0,
         different: 0,
         messageCount: 0,
