@@ -918,6 +918,10 @@ export type Database = {
       current_guest_token: { Args: never; Returns: string }
       is_my_participant: { Args: { _participant_id: string }; Returns: boolean }
       is_session_member: { Args: { _session_id: string }; Returns: boolean }
+      people_overview: {
+        Args: { _guest_token: string; _profile_id: string }
+        Returns: Json
+      }
       question_tally: {
         Args: { _question_id: string }
         Returns: {
