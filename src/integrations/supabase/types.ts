@@ -929,6 +929,10 @@ export type Database = {
           votes: number
         }[]
       }
+      relationships_detail: {
+        Args: { _guest_token: string; _profile_id: string }
+        Returns: Json
+      }
       session_question_revealed: {
         Args: { _session_question_id: string }
         Returns: boolean
