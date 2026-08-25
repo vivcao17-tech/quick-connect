@@ -11,36 +11,35 @@ const identity = {
  * Every person you've shared a revealed block with, plus the links that are
  * still out there waiting. Waiting comes first in the UI — it is the window
  * where people come back to check.
+ *
+ * One round trip: relationships_detail() does the identity matching, answer
+ * pairing and unread counting inside Postgres. The old loadRelationships loop
+ * ran ~12 sequential PostgREST calls at 150–600ms of network each.
  */
 export const listConversations = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object(identity).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { loadRelationships, loadPendingInvites } = await import("@/lib/conversations.server");
+    const { loadDetail } = await import("@/lib/relationships.server");
     const { linkProfileToGuestRows } = await import("@/lib/identity.server");
 
-    await linkProfileToGuestRows(supabaseAdmin as never, {
+    // Stamps profile ids onto old guest rows; the detail matches either key,
+    // so it doesn't need to wait for the write.
+    const linking = linkProfileToGuestRows(supabaseAdmin as never, {
       guestToken: data.guestToken,
       profileId: data.profileId,
     });
 
-    const { loadNotes } = await import("@/lib/notes.server");
-    const [people, waiting, notes] = await Promise.all([
-      loadRelationships(supabaseAdmin as never, data.guestToken, data.profileId),
-      loadPendingInvites(supabaseAdmin as never, data.guestToken, data.profileId),
-      loadNotes(supabaseAdmin as never, {
-        guestToken: data.guestToken,
-        profileId: data.profileId,
-      }),
-    ]);
+    const detail = await loadDetail(supabaseAdmin as never, data.guestToken, data.profileId);
+    await linking;
 
     return {
-      waiting,
-      people: people
+      waiting: detail.waiting,
+      people: detail.people
         .filter((person) => person.sessions.some((session) => session.revealed))
         .map((person) => ({
           personKey: person.personKey,
-          name: notes.get(person.personKey)?.nickname || person.name,
+          name: person.nickname || person.name,
           latestQuestion: person.sessions[0]?.questions[0]?.text ?? "",
           lastActivity: person.sessions[0]?.lastActivity ?? "",
           unread: person.sessions.reduce((sum, session) => sum + session.unread, 0),
@@ -55,30 +54,19 @@ export const getPersonSessions = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { loadRelationships } = await import("@/lib/conversations.server");
-    const { loadNote } = await import("@/lib/notes.server");
-    const [people, note] = await Promise.all([
-      loadRelationships(supabaseAdmin as never, data.guestToken, data.profileId),
-      loadNote(
-        supabaseAdmin as never,
-        { guestToken: data.guestToken, profileId: data.profileId },
-        data.personKey,
-      ),
-    ]);
-    const person = people.find((p) => p.personKey === data.personKey);
-    if (!person) return { name: "", realName: "", note, met: "", sessions: [] };
+    const { loadDetail, metLabel } = await import("@/lib/relationships.server");
+
+    const detail = await loadDetail(supabaseAdmin as never, data.guestToken, data.profileId);
+    const person = detail.people.find((p) => p.personKey === data.personKey);
+    if (!person) {
+      return { name: "", realName: "", note: { nickname: "", contact: "", note: "" }, met: "", sessions: [] };
+    }
     const oldest = person.sessions[person.sessions.length - 1];
-    const met =
-      oldest?.kind === "irl_pair"
-        ? "Met in person"
-        : oldest?.kind === "group"
-          ? "Met in a group session"
-          : "Met through a remote invite";
     return {
-      name: note.nickname || person.name,
+      name: person.nickname || person.name,
       realName: person.name,
-      note,
-      met,
+      note: { nickname: person.nickname, contact: person.contact, note: person.note },
+      met: oldest ? metLabel(oldest.kind) : "",
       sessions: person.sessions.map((session) => ({
         sessionId: session.sessionId,
         topic: session.topic,
@@ -100,21 +88,14 @@ export const getSessionBlock = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { loadRelationships } = await import("@/lib/conversations.server");
-    const { loadNote } = await import("@/lib/notes.server");
-    const [people, note] = await Promise.all([
-      loadRelationships(supabaseAdmin as never, data.guestToken, data.profileId),
-      loadNote(
-        supabaseAdmin as never,
-        { guestToken: data.guestToken, profileId: data.profileId },
-        data.personKey,
-      ),
-    ]);
-    const person = people.find((p) => p.personKey === data.personKey);
+    const { loadDetail } = await import("@/lib/relationships.server");
+
+    const detail = await loadDetail(supabaseAdmin as never, data.guestToken, data.profileId);
+    const person = detail.people.find((p) => p.personKey === data.personKey);
     const session = person?.sessions.find((s) => s.sessionId === data.sessionId);
     if (!person || !session) return { name: "", topic: "", questions: [] };
     return {
-      name: note.nickname || person.name,
+      name: person.nickname || person.name,
       topic: session.topic,
       questions: session.questions,
     };
@@ -134,6 +115,7 @@ export const listPeople = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { linkProfileToGuestRows } = await import("@/lib/identity.server");
+    const { metLabel } = await import("@/lib/relationships.server");
 
     // Stamps profile ids onto old guest rows; the overview matches either key,
     // so it doesn't need to wait for the write.
@@ -168,13 +150,6 @@ export const listPeople = createServerFn({ method: "POST" })
     await linking;
     if (error) throw new Error(error.message);
 
-    /** Plain words for where the two of you first ended up together. */
-    const metLabel = (kind: string) => {
-      if (kind === "irl_pair") return "Met in person";
-      if (kind === "group") return "Met in a group session";
-      return "Met through a remote invite";
-    };
-
     return {
       people: (overview?.people ?? []).map((row) => ({
         personKey: row.personKey,
@@ -195,4 +170,3 @@ export const listPeople = createServerFn({ method: "POST" })
       })),
     };
   });
-
