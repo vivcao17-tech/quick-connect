@@ -51,8 +51,24 @@ function secs(value: number | null) {
 
 function AdminPage() {
   const [windowDays, setWindowDays] = useState(30);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const load = useServerFn(getAdminMetrics);
   const loadSessions = useServerFn(getAdminSessions);
+
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (alive) setSignedIn(Boolean(data.user));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") setSignedIn(true);
+      if (event === "SIGNED_OUT") setSignedIn(false);
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
   const query = useQuery({
     queryKey: ["admin-metrics", windowDays],
     queryFn: () => load({ data: { windowDays } }),
