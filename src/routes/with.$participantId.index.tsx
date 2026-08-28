@@ -239,6 +239,8 @@ function WithPersonPage() {
               key={session.sessionId}
               to="/with/$participantId/$sessionId"
               params={{ participantId, sessionId: session.sessionId }}
+              search={{}}
+
               className="card-soft block px-6 py-5"
             >
               <p className="text-lg">{session.topic || "Three questions"}</p>

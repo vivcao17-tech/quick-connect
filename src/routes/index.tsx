@@ -1,5 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
+
+import { listUnreadThreads } from "@/lib/conversations.functions";
+import { useViewer } from "@/lib/viewer";
+
+
 
 
 export const Route = createFileRoute("/")({
@@ -30,9 +36,28 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+type Unread = Awaited<ReturnType<typeof listUnreadThreads>>;
+
 function Home() {
   const navigate = useNavigate();
+  const viewer = useViewer();
   const [code, setCode] = useState("");
+  const [unread, setUnread] = useState<Unread>({ items: [], total: 0 });
+  const [listOpen, setListOpen] = useState(false);
+
+  const loadUnread = useServerFn(listUnreadThreads);
+
+  useEffect(() => {
+    if (!viewer.ready || !viewer.guestToken) return;
+    void loadUnread({
+      data: {
+        guestToken: viewer.guestToken,
+        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+      },
+    })
+      .then(setUnread)
+      .catch(() => undefined);
+  }, [viewer.ready, viewer.guestToken, viewer.profileId, loadUnread]);
 
   function onCode(value: string) {
     const next = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 4);
@@ -41,6 +66,16 @@ function Home() {
       void navigate({ to: "/join/$code", params: { code: next } });
     }
   }
+
+  function openThread(item: Unread["items"][number]) {
+    void navigate({
+      to: "/with/$participantId/$sessionId",
+      params: { participantId: item.personKey, sessionId: item.sessionId },
+      search: { q: item.sessionQuestionId },
+    });
+  }
+
+  const single = unread.items.length === 1 ? unread.items[0] : undefined;
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -54,6 +89,48 @@ function Home() {
           <br />
           <em className="italic text-primary">Then you talk.</em>
         </h1>
+
+        {/* One tap from home into the thread that has something new in it. */}
+        {unread.items.length > 0 && (
+          <div className="mt-10">
+            {single ? (
+              <button
+                onClick={() => openThread(single)}
+                className="card-soft w-full border-primary px-6 py-5 text-left hover:opacity-90"
+              >
+                <p className="text-xs tracking-[0.18em] text-primary uppercase">New reply</p>
+                <p className="mt-2 text-2xl">{single.name}</p>
+                <p className="mt-1 text-base text-muted-foreground">{single.question}</p>
+              </button>
+            ) : (
+              <button
+                onClick={() => setListOpen((open) => !open)}
+                className="card-soft w-full border-primary px-6 py-5 text-left hover:opacity-90"
+              >
+                <p className="text-xs tracking-[0.18em] text-primary uppercase">New replies</p>
+                <p className="mt-2 text-2xl">
+                  {unread.total} unread from {unread.items.length} conversations
+                </p>
+              </button>
+            )}
+
+            {listOpen && !single && (
+              <div className="mt-3 flex flex-col gap-2">
+                {unread.items.map((item) => (
+                  <button
+                    key={item.sessionQuestionId}
+                    onClick={() => openThread(item)}
+                    className="card-soft px-6 py-4 text-left hover:border-primary"
+                  >
+                    <p className="text-lg">{item.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{item.question}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
 
         <div className="mt-12">
           <button className="btn-ink hover:opacity-90" onClick={() => void navigate({ to: "/start" })}>

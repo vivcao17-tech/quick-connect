@@ -8,7 +8,11 @@ import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/with/$participantId/$sessionId")({
+  validateSearch: (search: Record<string, unknown>): { q?: string } =>
+    typeof search["q"] === "string" ? { q: search["q"] as string } : {},
+
   component: SessionBlockPage,
+
   head: () => ({
     meta: [
       { title: "The three questions — NoSure" },
@@ -38,9 +42,11 @@ type Question = Data["questions"][number];
 
 function SessionBlockPage() {
   const { participantId, sessionId } = Route.useParams();
+  const { q } = Route.useSearch();
   const viewer = useViewer();
   const [data, setData] = useState<Data | null>(null);
-  const [openId, setOpenId] = useState("");
+  const [openId, setOpenId] = useState(q ?? "");
+
 
   const load = useServerFn(getSessionBlock);
 
