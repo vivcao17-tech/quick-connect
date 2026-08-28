@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { supabase } from "@/integrations/supabase/client";
 import {
   getAdminMetrics,
   getAdminQuestionAverages,
@@ -50,23 +51,42 @@ function secs(value: number | null) {
 
 function AdminPage() {
   const [windowDays, setWindowDays] = useState(30);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const load = useServerFn(getAdminMetrics);
   const loadSessions = useServerFn(getAdminSessions);
+
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (alive) setSignedIn(Boolean(data.user));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") setSignedIn(true);
+      if (event === "SIGNED_OUT") setSignedIn(false);
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
   const query = useQuery({
     queryKey: ["admin-metrics", windowDays],
     queryFn: () => load({ data: { windowDays } }),
     retry: false,
+    enabled: signedIn === true,
   });
   const sessions = useQuery({
     queryKey: ["admin-sessions", windowDays],
     queryFn: () => loadSessions({ data: { windowDays } }),
     retry: false,
+    enabled: signedIn === true,
   });
   const loadQuestions = useServerFn(getAdminQuestionAverages);
   const questionAverages = useQuery({
     queryKey: ["admin-question-averages"],
     queryFn: () => loadQuestions(),
     retry: false,
+    enabled: signedIn === true,
   });
 
   const [questionSort, setQuestionSort] = useState<"split" | "window" | "asked">("asked");
@@ -100,10 +120,27 @@ function AdminPage() {
           ))}
         </div>
 
-        {query.isLoading && <p className="mt-10 text-muted-foreground">Loading…</p>}
-        {query.isError && (
+        {signedIn === false && (
+          <div className="card-soft mt-10 px-6 py-5">
+            <p>You're not signed in.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Sign in with the address listed in ADMIN_EMAILS, then you'll land back here.
+            </p>
+            <Link
+              to="/auth"
+              search={{ redirect: "/admin" }}
+              className="btn-ink mt-4 inline-block hover:opacity-90"
+            >
+              Sign in
+            </Link>
+          </div>
+        )}
+        {signedIn === true && query.isLoading && (
+          <p className="mt-10 text-muted-foreground">Loading…</p>
+        )}
+        {signedIn === true && query.isError && (
           <p className="mt-10 text-muted-foreground">
-            This page is for the account listed in ADMIN_EMAILS. Sign in with that address.
+            You're signed in, but this address isn't the one listed in ADMIN_EMAILS.
           </p>
         )}
 

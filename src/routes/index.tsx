@@ -159,12 +159,16 @@ function Home() {
         </div>
 
 
-        <Link
-          to="/people"
-          className="mt-16 self-start text-sm text-muted-foreground underline underline-offset-4"
-        >
-          People
-        </Link>
+        <div className="mt-16 flex items-center gap-6 self-start text-sm text-muted-foreground">
+          <Link to="/people" className="underline underline-offset-4">
+            People
+          </Link>
+          {viewer.ready && !viewer.profileId && (
+            <Link to="/auth" search={{ redirect: "/" }} className="underline underline-offset-4">
+              Sign in
+            </Link>
+          )}
+        </div>
       </section>
     </main>
   );
