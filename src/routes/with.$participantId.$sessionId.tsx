@@ -8,9 +8,9 @@ import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/with/$participantId/$sessionId")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: typeof search["q"] === "string" ? (search["q"] as string) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { q?: string } =>
+    typeof search["q"] === "string" ? { q: search["q"] as string } : {},
+
   component: SessionBlockPage,
 
   head: () => ({
