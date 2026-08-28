@@ -73,17 +73,20 @@ function AdminPage() {
     queryKey: ["admin-metrics", windowDays],
     queryFn: () => load({ data: { windowDays } }),
     retry: false,
+    enabled: signedIn === true,
   });
   const sessions = useQuery({
     queryKey: ["admin-sessions", windowDays],
     queryFn: () => loadSessions({ data: { windowDays } }),
     retry: false,
+    enabled: signedIn === true,
   });
   const loadQuestions = useServerFn(getAdminQuestionAverages);
   const questionAverages = useQuery({
     queryKey: ["admin-question-averages"],
     queryFn: () => loadQuestions(),
     retry: false,
+    enabled: signedIn === true,
   });
 
   const [questionSort, setQuestionSort] = useState<"split" | "window" | "asked">("asked");
