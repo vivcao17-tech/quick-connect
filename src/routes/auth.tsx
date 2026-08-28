@@ -12,7 +12,7 @@ function safeRedirect(value: unknown): string {
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
-    redirect: safeRedirect(search.redirect),
+    redirect: safeRedirect(search["redirect"]),
   }),
   component: AuthPage,
   head: () => ({
