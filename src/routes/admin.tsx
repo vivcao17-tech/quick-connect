@@ -117,10 +117,27 @@ function AdminPage() {
           ))}
         </div>
 
-        {query.isLoading && <p className="mt-10 text-muted-foreground">Loading…</p>}
-        {query.isError && (
+        {signedIn === false && (
+          <div className="card-soft mt-10 px-6 py-5">
+            <p>You're not signed in.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Sign in with the address listed in ADMIN_EMAILS, then you'll land back here.
+            </p>
+            <Link
+              to="/auth"
+              search={{ redirect: "/admin" }}
+              className="btn-ink mt-4 inline-block hover:opacity-90"
+            >
+              Sign in
+            </Link>
+          </div>
+        )}
+        {signedIn === true && query.isLoading && (
+          <p className="mt-10 text-muted-foreground">Loading…</p>
+        )}
+        {signedIn === true && query.isError && (
           <p className="mt-10 text-muted-foreground">
-            This page is for the account listed in ADMIN_EMAILS. Sign in with that address.
+            You're signed in, but this address isn't the one listed in ADMIN_EMAILS.
           </p>
         )}
 
