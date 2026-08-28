@@ -101,6 +101,41 @@ export const getSessionBlock = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Unread thread replies, flattened to one row per question so the home page can
+ * deep-link straight into the thread that has something new in it.
+ */
+export const listUnreadThreads = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object(identity).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { loadDetail } = await import("@/lib/relationships.server");
+
+    const detail = await loadDetail(supabaseAdmin as never, data.guestToken, data.profileId);
+    const items = detail.people.flatMap((person) =>
+      person.sessions.flatMap((session) =>
+        session.questions
+          .filter((question) => question.unread > 0)
+          .map((question) => ({
+            personKey: person.personKey,
+            name: person.nickname || person.name,
+            sessionId: session.sessionId,
+            sessionQuestionId: question.sessionQuestionId,
+            question: question.text,
+            unread: question.unread,
+            lastActivity: question.lastActivity,
+          })),
+      ),
+    );
+    items.sort((a, b) => (a.lastActivity < b.lastActivity ? 1 : -1));
+    return {
+      items,
+      total: items.reduce((sum, item) => sum + item.unread, 0),
+    };
+  });
+
+
+
 
 /**
  * Everyone the person has any tie to, whatever the origin: a remote block, an
