@@ -42,9 +42,11 @@ type Question = Data["questions"][number];
 
 function SessionBlockPage() {
   const { participantId, sessionId } = Route.useParams();
+  const { q } = Route.useSearch();
   const viewer = useViewer();
   const [data, setData] = useState<Data | null>(null);
-  const [openId, setOpenId] = useState("");
+  const [openId, setOpenId] = useState(q ?? "");
+
 
   const load = useServerFn(getSessionBlock);
 
