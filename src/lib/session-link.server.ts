@@ -59,7 +59,16 @@ export async function describeSessionForParticipant(
     .eq("session_id", opts.sessionId);
 
   const others = (people ?? []).filter((p) => p.id !== opts.participantId);
-  const isGroup = session?.kind === "group" || others.length > 1;
+  const isGroup = session?.kind === "group" || session?.kind === "group_async" || others.length > 1;
+
+  if (session?.kind === "group_async") {
+    return {
+      path: `/ga/${opts.sessionId}`,
+      withName: "your group",
+      isGroup: true,
+      questionCount: count ?? 0,
+    };
+  }
 
   if (isGroup) {
     return {

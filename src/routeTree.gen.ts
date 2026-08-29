@@ -13,12 +13,16 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConversationsRouteImport } from './routes/conversations'
+import { Route as GremoteRouteImport } from './routes/gremote'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
+import { Route as GaSessionIdRouteImport } from './routes/ga.$sessionId'
+import { Route as GiTokenRouteImport } from './routes/gi.$token'
+import { Route as GsendSessionIdRouteImport } from './routes/gsend.$sessionId'
 import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as JCodeRouteImport } from './routes/j.$code'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
@@ -52,6 +56,11 @@ const ConversationsRoute = ConversationsRouteImport.update({
   path: '/conversations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GremoteRoute = GremoteRouteImport.update({
+  id: '/gremote',
+  path: '/gremote',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GroupRoute = GroupRouteImport.update({
   id: '/group',
   path: '/group',
@@ -80,6 +89,21 @@ const StartRoute = StartRouteImport.update({
 const GSessionIdRoute = GSessionIdRouteImport.update({
   id: '/g/$sessionId',
   path: '/g/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GaSessionIdRoute = GaSessionIdRouteImport.update({
+  id: '/ga/$sessionId',
+  path: '/ga/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GiTokenRoute = GiTokenRouteImport.update({
+  id: '/gi/$token',
+  path: '/gi/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GsendSessionIdRoute = GsendSessionIdRouteImport.update({
+  id: '/gsend/$sessionId',
+  path: '/gsend/$sessionId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ITokenRoute = ITokenRouteImport.update({
@@ -150,12 +174,16 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/conversations': typeof ConversationsRoute
+  '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/g/$sessionId': typeof GSessionIdRoute
+  '/ga/$sessionId': typeof GaSessionIdRoute
+  '/gi/$token': typeof GiTokenRoute
+  '/gsend/$sessionId': typeof GsendSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
@@ -174,12 +202,16 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/conversations': typeof ConversationsRoute
+  '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/g/$sessionId': typeof GSessionIdRoute
+  '/ga/$sessionId': typeof GaSessionIdRoute
+  '/gi/$token': typeof GiTokenRoute
+  '/gsend/$sessionId': typeof GsendSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
@@ -199,12 +231,16 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/conversations': typeof ConversationsRoute
+  '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/g/$sessionId': typeof GSessionIdRoute
+  '/ga/$sessionId': typeof GaSessionIdRoute
+  '/gi/$token': typeof GiTokenRoute
+  '/gsend/$sessionId': typeof GsendSessionIdRoute
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
@@ -225,12 +261,16 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/conversations'
+    | '/gremote'
     | '/group'
     | '/inbox'
     | '/people'
     | '/remote'
     | '/start'
     | '/g/$sessionId'
+    | '/ga/$sessionId'
+    | '/gi/$token'
+    | '/gsend/$sessionId'
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
@@ -249,12 +289,16 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/conversations'
+    | '/gremote'
     | '/group'
     | '/inbox'
     | '/people'
     | '/remote'
     | '/start'
     | '/g/$sessionId'
+    | '/ga/$sessionId'
+    | '/gi/$token'
+    | '/gsend/$sessionId'
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
@@ -273,12 +317,16 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/conversations'
+    | '/gremote'
     | '/group'
     | '/inbox'
     | '/people'
     | '/remote'
     | '/start'
     | '/g/$sessionId'
+    | '/ga/$sessionId'
+    | '/gi/$token'
+    | '/gsend/$sessionId'
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
@@ -298,12 +346,16 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   ConversationsRoute: typeof ConversationsRoute
+  GremoteRoute: typeof GremoteRoute
   GroupRoute: typeof GroupRoute
   InboxRoute: typeof InboxRoute
   PeopleRoute: typeof PeopleRoute
   RemoteRoute: typeof RemoteRoute
   StartRoute: typeof StartRoute
   GSessionIdRoute: typeof GSessionIdRoute
+  GaSessionIdRoute: typeof GaSessionIdRoute
+  GiTokenRoute: typeof GiTokenRoute
+  GsendSessionIdRoute: typeof GsendSessionIdRoute
   ITokenRoute: typeof ITokenRoute
   JCodeRoute: typeof JCodeRoute
   JoinCodeRoute: typeof JoinCodeRoute
@@ -348,6 +400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConversationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gremote': {
+      id: '/gremote'
+      path: '/gremote'
+      fullPath: '/gremote'
+      preLoaderRoute: typeof GremoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/group': {
       id: '/group'
       path: '/group'
@@ -388,6 +447,27 @@ declare module '@tanstack/react-router' {
       path: '/g/$sessionId'
       fullPath: '/g/$sessionId'
       preLoaderRoute: typeof GSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ga/$sessionId': {
+      id: '/ga/$sessionId'
+      path: '/ga/$sessionId'
+      fullPath: '/ga/$sessionId'
+      preLoaderRoute: typeof GaSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gi/$token': {
+      id: '/gi/$token'
+      path: '/gi/$token'
+      fullPath: '/gi/$token'
+      preLoaderRoute: typeof GiTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gsend/$sessionId': {
+      id: '/gsend/$sessionId'
+      path: '/gsend/$sessionId'
+      fullPath: '/gsend/$sessionId'
+      preLoaderRoute: typeof GsendSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/i/$token': {
@@ -482,12 +562,16 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   ConversationsRoute: ConversationsRoute,
+  GremoteRoute: GremoteRoute,
   GroupRoute: GroupRoute,
   InboxRoute: InboxRoute,
   PeopleRoute: PeopleRoute,
   RemoteRoute: RemoteRoute,
   StartRoute: StartRoute,
   GSessionIdRoute: GSessionIdRoute,
+  GaSessionIdRoute: GaSessionIdRoute,
+  GiTokenRoute: GiTokenRoute,
+  GsendSessionIdRoute: GsendSessionIdRoute,
   ITokenRoute: ITokenRoute,
   JCodeRoute: JCodeRoute,
   JoinCodeRoute: JoinCodeRoute,

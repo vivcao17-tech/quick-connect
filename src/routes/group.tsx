@@ -31,6 +31,7 @@ export const Route = createFileRoute("/group")({
 function GroupSetup() {
   const navigate = useNavigate();
   const create = useServerFn(createGroupRoom);
+  const [here, setHere] = useState<boolean | null>(null);
   const [guestToken, setGuestToken] = useState("");
   const [name, setName] = useState("");
   const [playing, setPlaying] = useState(true);
@@ -55,6 +56,37 @@ function GroupSetup() {
       setError("Couldn't open the room. Try again.");
       setBusy(false);
     }
+  }
+
+  if (here === null) {
+    return (
+      <main className="paper min-h-screen bg-background">
+        <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
+          <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Group</p>
+          <h1 className="mt-6 text-4xl leading-tight">Where is everyone?</h1>
+          <div className="mt-10 flex flex-col gap-3">
+            <button
+              onClick={() => setHere(true)}
+              className="card-soft px-6 py-6 text-left text-2xl hover:border-primary"
+            >
+              They're here with me
+              <span className="mt-1 block text-base text-muted-foreground">
+                One code, everyone joins now
+              </span>
+            </button>
+            <button
+              onClick={() => void navigate({ to: "/gremote" })}
+              className="card-soft px-6 py-6 text-left text-2xl hover:border-primary"
+            >
+              They're not here
+              <span className="mt-1 block text-base text-muted-foreground">
+                You answer first, then send each person a link
+              </span>
+            </button>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
