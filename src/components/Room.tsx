@@ -507,7 +507,9 @@ export function Room({ sessionId }: { sessionId: string }) {
               {saveState === "sent" ? (
                 <p className="text-lg text-muted-foreground">Sent. Check your inbox.</p>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex max-w-sm flex-col gap-3">
+                  <GoogleSignIn label="Continue with Google" redirectPath="/people" />
+                  <p className="text-sm text-muted-foreground">or leave an email</p>
                   <input
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
