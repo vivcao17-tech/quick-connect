@@ -95,7 +95,13 @@ function AuthPage() {
         </p>
         <h1 className="mt-6 text-4xl">{mode === "signin" ? "Sign in" : "Create an account"}</h1>
 
-        <form onSubmit={(event) => void submit(event)} className="mt-8 flex flex-col gap-3">
+        <div className="mt-8">
+          <GoogleSignIn redirectPath={redirect} onError={setMessage} />
+        </div>
+
+        <p className="mt-6 text-sm text-muted-foreground">or use an email and password</p>
+
+        <form onSubmit={(event) => void submit(event)} className="mt-3 flex flex-col gap-3">
           <input
             type="email"
             required
