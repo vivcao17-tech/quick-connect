@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
+import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { PairSummary } from "@/components/PairSummary";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
 import { Thread } from "@/components/Thread";
@@ -386,11 +387,14 @@ function InvitePage() {
           {emailState === "ask" && (
             <div className="card-soft mt-8 px-6 py-5">
               <p className="text-lg leading-snug">
-                Want to know what {intro?.senderName ?? "they"} says back? Leave your email and
-                we'll send you a link back to this.
+                Want to know what {intro?.senderName ?? "they"} says back? Keep this conversation.
               </p>
+              <div className="mt-4 max-w-sm">
+                <GoogleSignIn label="Continue with Google" />
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">or leave an email</p>
               <form
-                className="mt-4 flex gap-2"
+                className="mt-2 flex gap-2"
                 onSubmit={(event) => {
                   event.preventDefault();
                   const clean = email.trim();
