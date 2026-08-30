@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
+import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { supabase } from "@/integrations/supabase/client";
 
 function safeRedirect(value: unknown): string {
