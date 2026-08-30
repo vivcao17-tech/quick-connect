@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import QRCode from "qrcode";
 
+import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { Thread } from "@/components/Thread";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
 import { TopicCloud } from "@/components/TopicCloud";
