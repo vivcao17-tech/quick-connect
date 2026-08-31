@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { getGuestToken } from "@/lib/guest";
+import { track } from "@/lib/track";
 import { joinRoom } from "@/lib/irl.functions";
 
 export const Route = createFileRoute("/join/$code")({
@@ -47,6 +48,11 @@ function JoinPage() {
       const result = await join({
         data: { guestToken: token, displayName: name.trim(), roomCode: code.toUpperCase() },
       });
+      track(
+        "name_entered",
+        { where: "room_code_join", kind: result.kind, room_code: code.toUpperCase() },
+        { sessionId: result.sessionId },
+      );
       await navigate({
         to: result.kind === "group" ? "/g/$sessionId" : "/room/$sessionId",
         params: { sessionId: result.sessionId },

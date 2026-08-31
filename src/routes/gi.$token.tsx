@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getAsyncInvite, joinAsyncGroup } from "@/lib/async-group.functions";
 import { getGuestToken } from "@/lib/guest";
+import { track } from "@/lib/track";
 
 export const Route = createFileRoute("/gi/$token")({
   component: GroupInvitePage,
@@ -45,7 +46,10 @@ function GroupInvitePage() {
   useEffect(() => {
     setName(window.localStorage.getItem("beside.name") ?? "");
     void load({ data: { token } })
-      .then(setInvite)
+      .then((result) => {
+        setInvite(result);
+        track("invite_opened", { token, kind: "group_async" });
+      })
       .catch(() => setFailed(true));
   }, [load, token]);
 
@@ -57,6 +61,11 @@ function GroupInvitePage() {
       const result = await join({
         data: { token, guestToken: getGuestToken(), displayName: name.trim() },
       });
+      track(
+        "name_entered",
+        { where: "group_invite", kind: "group_async" },
+        { sessionId: result.sessionId },
+      );
       await navigate({ to: "/ga/$sessionId", params: { sessionId: result.sessionId } });
     } catch {
       setFailed(true);
