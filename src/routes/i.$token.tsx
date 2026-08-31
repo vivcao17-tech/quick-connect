@@ -6,6 +6,7 @@ import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { PairSummary } from "@/components/PairSummary";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
 import { Thread } from "@/components/Thread";
+import { track } from "@/lib/track";
 import { getGuestToken } from "@/lib/guest";
 import {
   answerAsRecipient,
@@ -89,7 +90,15 @@ function InvitePage() {
   useEffect(() => {
     setGuestToken(getGuestToken());
     load({ data: { token } })
-      .then((result) => setIntro(result))
+      .then((result) => {
+        setIntro(result);
+        track("invite_opened", {
+          token,
+          has_note: Boolean(result.note),
+          question_count: result.questionCount,
+          kind: "remote",
+        });
+      })
       .catch(() => setError("This link doesn't exist."));
   }, [token, load]);
 
@@ -104,6 +113,11 @@ function InvitePage() {
       setSessionId(result.childSessionId);
       setIndex(0);
       setStage("play");
+      track(
+        "session_started",
+        { kind: "remote", question_count: result.questions.length, from_invite: true },
+        { sessionId: result.childSessionId },
+      );
     } catch {
       setError("That didn't go through. Try again.");
     } finally {
@@ -112,6 +126,35 @@ function InvitePage() {
   }
 
   const impressionHalf = current?.kind === "impression" ? half : null;
+
+  /* Timing: when this question first appeared, so answer_submitted can carry
+     how long it actually took to decide. */
+  const shownAt = useRef(Date.now());
+  useEffect(() => {
+    if (stage !== "play" || !current) return;
+    shownAt.current = Date.now();
+    track(
+      "question_shown",
+      {
+        session_question_id: current.sessionQuestionId,
+        order_index: index,
+        kind: current.kind,
+        half: current.kind === "impression" ? half : null,
+      },
+      { sessionId },
+    );
+  }, [stage, current?.sessionQuestionId, half, index, sessionId]);
+
+  const revealShownAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (!reveal?.revealed || !current) return;
+    revealShownAt.current = Date.now();
+    track(
+      "reveal_shown",
+      { session_question_id: current.sessionQuestionId, order_index: index, kind: "remote" },
+      { sessionId },
+    );
+  }, [reveal?.revealed, current?.sessionQuestionId, index, sessionId]);
 
   async function choose(optionKey: OptionKey, chipText?: string) {
     if (!current || busy) return;
@@ -132,6 +175,18 @@ function InvitePage() {
           ...(text ? { reasonText: text } : {}),
         },
       });
+      track(
+        "answer_submitted",
+        {
+          session_question_id: current.sessionQuestionId,
+          order_index: index,
+          option_key: optionKey,
+          answer_role: answerRole,
+          has_reason: Boolean(text),
+          seconds: Math.round((Date.now() - shownAt.current) / 1000),
+        },
+        { sessionId },
+      );
       // The impression question is answered in two halves before anything is revealed.
       if (result.needsSecondHalf) {
         setReason("");
@@ -155,6 +210,17 @@ function InvitePage() {
 
 
   function next() {
+    if (revealShownAt.current && current) {
+      track(
+        "reveal_dwell",
+        {
+          session_question_id: current.sessionQuestionId,
+          seconds: Math.round((Date.now() - revealShownAt.current) / 1000),
+        },
+        { sessionId },
+      );
+      revealShownAt.current = null;
+    }
     setReason("");
     setReveal(null);
     setHalf("other");
@@ -362,6 +428,8 @@ function InvitePage() {
                     sessionQuestionId={current.sessionQuestionId}
                     prompts={ai.prompts}
                     extraPrompts={current.chips.map((chip) => chip.text)}
+                    sessionId={sessionId}
+                    promptSource={ai.prompts?.length ? "ai" : "template"}
                   />
                 </>
               ) : (
@@ -405,6 +473,11 @@ function InvitePage() {
                     .then((result) => {
                       if (result.sent) setEmailState("done");
                       else setEmailFailed(true);
+                      track(
+                        result.sent ? "email_captured" : "email_capture_failed",
+                        { where: "remote_summary" },
+                        { sessionId },
+                      );
                     })
                     .catch(() => setEmailFailed(true))
                     .finally(() => setEmailBusy(false));
@@ -431,7 +504,10 @@ function InvitePage() {
                 </p>
               )}
               <button
-                onClick={() => setEmailState("skipped")}
+                onClick={() => {
+                  setEmailState("skipped");
+                  track("email_skipped", { where: "remote_summary" }, { sessionId });
+                }}
                 className="mt-3 text-sm text-muted-foreground underline underline-offset-4"
               >
                 Not now
