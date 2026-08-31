@@ -126,6 +126,7 @@ export async function sendSessionSavedEmail(
     path: string;
   },
 ): Promise<{ sent: boolean; reason?: string; id?: string | undefined }> {
+  const KIND = "session_saved";
   const apiKey = process.env["RESEND_API_KEY"];
   if (!apiKey) return logDelivery(admin, KIND, { sent: false, reason: "no_api_key" });
 
