@@ -1,6 +1,8 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { track } from "@/lib/track";
+
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import QRCode from "qrcode";
 
@@ -112,6 +114,41 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
   }
 
   const current = state.current;
+
+  /* Timing + play-by-play, group room. */
+  const shownAt = useRef(Date.now());
+  const revealAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (!current || current.revealed) return;
+    shownAt.current = Date.now();
+    track(
+      "question_shown",
+      { session_question_id: current.sessionQuestionId, kind: "group" },
+      { sessionId },
+    );
+  }, [current?.sessionQuestionId, current?.revealed, sessionId]);
+  useEffect(() => {
+    if (!current?.revealed) {
+      if (revealAt.current && current) {
+        track(
+          "reveal_dwell",
+          {
+            session_question_id: current.sessionQuestionId,
+            seconds: Math.round((Date.now() - revealAt.current) / 1000),
+          },
+          { sessionId },
+        );
+      }
+      revealAt.current = null;
+      return;
+    }
+    revealAt.current = Date.now();
+    track(
+      "reveal_shown",
+      { session_question_id: current.sessionQuestionId, kind: "group" },
+      { sessionId },
+    );
+  }, [current?.revealed, current?.sessionQuestionId, sessionId]);
   const top = state.differences[0];
 
   const host = state.participants.find((p) => p.isHost);
@@ -331,7 +368,18 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                   <button
                     key={option.key}
                     disabled={busy}
-                    onClick={() =>
+                    onClick={() => {
+                      track(
+                        "answer_submitted",
+                        {
+                          session_question_id: current.sessionQuestionId,
+                          option_key: option.key,
+                          answer_role: "about_self",
+                          kind: "group",
+                          seconds: Math.round((Date.now() - shownAt.current) / 1000),
+                        },
+                        { sessionId },
+                      );
                       void run(() =>
                         answer({
                           data: {
@@ -340,8 +388,8 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                             optionKey: option.key,
                           },
                         }),
-                      )
-                    }
+                      );
+                    }}
                     className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
                   >
                     {option.label}
@@ -360,7 +408,19 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                   {current.answeredCount} of {state.playerCount} answered
                 </p>
                 <button
-                  onClick={() => void run(() => reveal({ data: { guestToken, sessionId } }))}
+                  onClick={() => {
+                    track(
+                      "reveal_triggered",
+                      {
+                        session_question_id: current.sessionQuestionId,
+                        answered: current.answeredCount,
+                        players: state.playerCount,
+                        kind: "group",
+                      },
+                      { sessionId },
+                    );
+                    void run(() => reveal({ data: { guestToken, sessionId } }));
+                  }}
                   className="btn-ink mt-4 self-start"
                 >
                   Reveal
@@ -451,7 +511,12 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                 ) : (
                   <button
                     disabled={busy}
-                    onClick={() =>
+                    onClick={() => {
+                      track(
+                        "bridge_tapped",
+                        { with_name: top.name, session_question_id: top.topSessionQuestionId },
+                        { sessionId },
+                      );
                       void run(async () => {
                         const result = await oneOnOne({
                           data: {
@@ -462,8 +527,8 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                           },
                         });
                         setLink(`${window.location.origin}/i/${result.token}`);
-                      })
-                    }
+                      });
+                    }}
                     className="btn-ink self-start disabled:opacity-30"
                   >
                     Keep going with {top.name}
@@ -521,6 +586,11 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                       void run(async () => {
                         const result = await saveEmail({ data: { guestToken, sessionId, email } });
                         setSaveState(result.sent ? "sent" : "failed");
+                        track(
+                          result.sent ? "email_captured" : "email_capture_failed",
+                          { where: "group_end" },
+                          { sessionId },
+                        );
                       })
                     }
                     className="btn-ink self-start disabled:opacity-30"
