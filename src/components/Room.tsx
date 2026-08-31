@@ -1,7 +1,7 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { track as logEvent } from "@/lib/track";
+import { track as trackEvent } from "@/lib/track";
 
 import QRCode from "qrcode";
 
@@ -127,7 +127,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!current || current.revealed) return;
     shownAt.current = Date.now();
-    logEvent(
+    trackEvent(
       "question_shown",
       {
         session_question_id: current.sessionQuestionId,
@@ -142,7 +142,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!current?.revealed) {
       if (revealShownAt.current && current) {
-        logEvent(
+        trackEvent(
           "reveal_dwell",
           {
             session_question_id: current.sessionQuestionId,
@@ -155,7 +155,7 @@ export function Room({ sessionId }: { sessionId: string }) {
       return;
     }
     revealShownAt.current = Date.now();
-    logEvent(
+    trackEvent(
       "reveal_shown",
       { session_question_id: current.sessionQuestionId, kind: "irl_pair" },
       { sessionId },
@@ -363,7 +363,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                             key={`${answerRole}-${option.key}`}
                             disabled={busy}
                             onClick={() => {
-                              logEvent(
+                              trackEvent(
                                 "answer_submitted",
                                 {
                                   session_question_id: current.sessionQuestionId,
@@ -582,7 +582,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                       run(async () => {
                         const result = await saveEmail({ data: { guestToken, sessionId, email } });
                         setSaveState(result.sent ? "sent" : "failed");
-                        logEvent(
+                        trackEvent(
                           result.sent ? "email_captured" : "email_capture_failed",
                           { where: "irl_end" },
                           { sessionId },
