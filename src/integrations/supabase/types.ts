@@ -928,6 +928,50 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_cohorts: {
+        Args: { _activity?: string; _include_test?: boolean; _weeks?: number }
+        Returns: Json
+      }
+      admin_funnel: {
+        Args: {
+          _from: string
+          _include_test?: boolean
+          _segment?: string
+          _to: string
+        }
+        Returns: Json
+      }
+      admin_invites: {
+        Args: { _from: string; _include_test?: boolean; _to: string }
+        Returns: Json
+      }
+      admin_median: { Args: { _values: number[] }; Returns: number }
+      admin_notifications: {
+        Args: { _from: string; _include_test?: boolean; _to: string }
+        Returns: Json
+      }
+      admin_overview: {
+        Args: { _from: string; _include_test?: boolean; _to: string }
+        Returns: Json
+      }
+      admin_overview_window: {
+        Args: { _from: string; _include_test: boolean; _to: string }
+        Returns: Json
+      }
+      admin_people: {
+        Args: { _include_test?: boolean; _q?: string }
+        Returns: Json
+      }
+      admin_person_key: { Args: { _participant_id: string }; Returns: string }
+      admin_person_timeline: { Args: { _person_key: string }; Returns: Json }
+      admin_question_performance: {
+        Args: { _include_test?: boolean }
+        Returns: Json
+      }
+      admin_session_rows: {
+        Args: { _from: string; _include_test?: boolean; _to: string }
+        Returns: Json
+      }
       current_guest_token: { Args: never; Returns: string }
       is_my_participant: { Args: { _participant_id: string }; Returns: boolean }
       is_session_member: { Args: { _session_id: string }; Returns: boolean }
