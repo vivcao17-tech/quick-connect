@@ -1,6 +1,8 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { track as logEvent } from "@/lib/track";
+
 import QRCode from "qrcode";
 
 import { GoogleSignIn } from "@/components/GoogleSignIn";
@@ -115,6 +117,50 @@ export function Room({ sessionId }: { sessionId: string }) {
 
   const other = state?.others[0];
   const current = state?.questions[state.currentIndex];
+
+  /* Play-by-play analytics. Timing is measured from when a question first
+     appeared on this screen, which is the only honest place to measure it. */
+  const shownAt = useRef(Date.now());
+  const revealShownAt = useRef<number | null>(null);
+  const impressionStepKey =
+    current?.questionType === "impression" ? (current.myAnswerAboutOther ? "self" : "other") : null;
+  useEffect(() => {
+    if (!current || current.revealed) return;
+    shownAt.current = Date.now();
+    logEvent(
+      "question_shown",
+      {
+        session_question_id: current.sessionQuestionId,
+        order_index: state?.currentIndex ?? null,
+        kind: current.questionType,
+        half: impressionStepKey,
+      },
+      { sessionId },
+    );
+  }, [current?.sessionQuestionId, impressionStepKey, current?.revealed, sessionId]);
+
+  useEffect(() => {
+    if (!current?.revealed) {
+      if (revealShownAt.current && current) {
+        logEvent(
+          "reveal_dwell",
+          {
+            session_question_id: current.sessionQuestionId,
+            seconds: Math.round((Date.now() - revealShownAt.current) / 1000),
+          },
+          { sessionId },
+        );
+      }
+      revealShownAt.current = null;
+      return;
+    }
+    revealShownAt.current = Date.now();
+    logEvent(
+      "reveal_shown",
+      { session_question_id: current.sessionQuestionId, kind: "irl_pair" },
+      { sessionId },
+    );
+  }, [current?.revealed, current?.sessionQuestionId, sessionId]);
   const total = state?.questions.length ?? 0;
   const openQuestion = state?.questions.find((q) => q.sessionQuestionId === openSq);
 
@@ -316,8 +362,19 @@ export function Room({ sessionId }: { sessionId: string }) {
                           <button
                             key={`${answerRole}-${option.key}`}
                             disabled={busy}
-                            onClick={() =>
-                              run(() =>
+                            onClick={() => {
+                              logEvent(
+                                "answer_submitted",
+                                {
+                                  session_question_id: current.sessionQuestionId,
+                                  order_index: state.currentIndex,
+                                  option_key: option.key,
+                                  answer_role: answerRole,
+                                  seconds: Math.round((Date.now() - shownAt.current) / 1000),
+                                },
+                                { sessionId },
+                              );
+                              return run(() =>
                                 submitAnswer({
                                   data: {
                                     guestToken,
@@ -326,8 +383,8 @@ export function Room({ sessionId }: { sessionId: string }) {
                                     answerRole,
                                   },
                                 }),
-                              )
-                            }
+                              );
+                            }}
                             className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
                           >
                             {option.label}
@@ -394,6 +451,8 @@ export function Room({ sessionId }: { sessionId: string }) {
                   guestToken={guestToken}
                   sessionQuestionId={current.sessionQuestionId}
                   prompts={reveal?.prompts ?? []}
+                  sessionId={sessionId}
+                  promptSource={reveal?.prompts?.length ? "ai" : "template"}
                   onPrompt={(prompt: string) =>
                     void track({
                       data: {
@@ -523,6 +582,11 @@ export function Room({ sessionId }: { sessionId: string }) {
                       run(async () => {
                         const result = await saveEmail({ data: { guestToken, sessionId, email } });
                         setSaveState(result.sent ? "sent" : "failed");
+                        logEvent(
+                          result.sent ? "email_captured" : "email_capture_failed",
+                          { where: "irl_end" },
+                          { sessionId },
+                        );
                       })
                     }
                     className="btn-ink self-start disabled:opacity-30"
