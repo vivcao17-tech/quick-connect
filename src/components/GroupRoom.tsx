@@ -109,7 +109,7 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
   const shownAt = useRef(Date.now());
   const revealAt = useRef<number | null>(null);
   useEffect(() => {
-    if (!currentQ || current.revealed) return;
+    if (!currentQ || currentQ.revealed) return;
     shownAt.current = Date.now();
     track(
       "question_shown",
@@ -118,7 +118,7 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
     );
   }, [currentQ?.sessionQuestionId, currentQ?.revealed, sessionId]);
   useEffect(() => {
-    if (!currentQQ?.revealed) {
+    if (!currentQ?.revealed) {
       if (revealAt.current && currentQ) {
         track(
           "reveal_dwell",
