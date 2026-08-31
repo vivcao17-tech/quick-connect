@@ -103,6 +103,42 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
     }
   }
 
+  // Play-by-play analytics must sit above the early return so hook order is stable.
+  const currentQ = state?.current ?? null;
+  /* Timing + play-by-play, group room. */
+  const shownAt = useRef(Date.now());
+  const revealAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (!currentQ || current.revealed) return;
+    shownAt.current = Date.now();
+    track(
+      "question_shown",
+      { session_question_id: currentQ.sessionQuestionId, kind: "group" },
+      { sessionId },
+    );
+  }, [currentQ?.sessionQuestionId, currentQ?.revealed, sessionId]);
+  useEffect(() => {
+    if (!currentQQ?.revealed) {
+      if (revealAt.current && currentQ) {
+        track(
+          "reveal_dwell",
+          {
+            session_question_id: currentQ.sessionQuestionId,
+            seconds: Math.round((Date.now() - revealAt.current) / 1000),
+          },
+          { sessionId },
+        );
+      }
+      revealAt.current = null;
+      return;
+    }
+    revealAt.current = Date.now();
+    track(
+      "reveal_shown",
+      { session_question_id: currentQ.sessionQuestionId, kind: "group" },
+      { sessionId },
+    );
+  }, [currentQ?.revealed, currentQ?.sessionQuestionId, sessionId]);
   if (!state) {
     return (
       <main className="paper flex min-h-screen items-center justify-center bg-background px-6">
@@ -115,40 +151,6 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
 
   const current = state.current;
 
-  /* Timing + play-by-play, group room. */
-  const shownAt = useRef(Date.now());
-  const revealAt = useRef<number | null>(null);
-  useEffect(() => {
-    if (!current || current.revealed) return;
-    shownAt.current = Date.now();
-    track(
-      "question_shown",
-      { session_question_id: current.sessionQuestionId, kind: "group" },
-      { sessionId },
-    );
-  }, [current?.sessionQuestionId, current?.revealed, sessionId]);
-  useEffect(() => {
-    if (!current?.revealed) {
-      if (revealAt.current && current) {
-        track(
-          "reveal_dwell",
-          {
-            session_question_id: current.sessionQuestionId,
-            seconds: Math.round((Date.now() - revealAt.current) / 1000),
-          },
-          { sessionId },
-        );
-      }
-      revealAt.current = null;
-      return;
-    }
-    revealAt.current = Date.now();
-    track(
-      "reveal_shown",
-      { session_question_id: current.sessionQuestionId, kind: "group" },
-      { sessionId },
-    );
-  }, [current?.revealed, current?.sessionQuestionId, sessionId]);
   const top = state.differences[0];
 
   const host = state.participants.find((p) => p.isHost);
