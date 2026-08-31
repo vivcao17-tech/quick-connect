@@ -162,6 +162,7 @@ export type Database = {
           guest_token: string | null
           id: string
           name: string
+          participant_id: string | null
           profile_id: string | null
           props: Json
           session_id: string | null
@@ -171,6 +172,7 @@ export type Database = {
           guest_token?: string | null
           id?: string
           name: string
+          participant_id?: string | null
           profile_id?: string | null
           props?: Json
           session_id?: string | null
@@ -180,11 +182,19 @@ export type Database = {
           guest_token?: string | null
           id?: string
           name?: string
+          participant_id?: string | null
           profile_id?: string | null
           props?: Json
           session_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "events_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_profile_id_fkey"
             columns: ["profile_id"]
@@ -771,6 +781,7 @@ export type Database = {
           ended_at: string | null
           host_profile_id: string | null
           id: string
+          is_test: boolean
           kind: string
           room_code: string | null
           spice_max: number
@@ -782,6 +793,7 @@ export type Database = {
           ended_at?: string | null
           host_profile_id?: string | null
           id?: string
+          is_test?: boolean
           kind?: string
           room_code?: string | null
           spice_max?: number
@@ -793,6 +805,7 @@ export type Database = {
           ended_at?: string | null
           host_profile_id?: string | null
           id?: string
+          is_test?: boolean
           kind?: string
           room_code?: string | null
           spice_max?: number
