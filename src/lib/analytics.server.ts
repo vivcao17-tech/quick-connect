@@ -124,7 +124,7 @@ export type PersonTimeline = {
     }[];
     messages: { at: string; mine: boolean; chars: number; kind: string; body: string | null }[];
   }[];
-  events: { name: string; at: string; sessionId: string | null; props: Record<string, unknown> }[];
+  events: { name: string; at: string; sessionId: string | null; props: Record<string, string | number | boolean | null> }[];
 };
 
 export const readPersonTimeline = (admin: Admin, personKey: string) =>
