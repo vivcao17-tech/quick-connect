@@ -2,6 +2,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getThread, postThreadMessage } from "@/lib/remote.functions";
+import { track } from "@/lib/track";
 
 /** Closing reactions: tapping one posts instantly, because the point is that
     nothing more is required. */
@@ -20,9 +21,18 @@ export function Thread({
   prompts,
   extraPrompts,
   onPrompt,
+  sessionId,
+  revealedAt,
+  promptSource,
 }: {
   guestToken: string;
   sessionQuestionId: string;
+  /** Analytics only: which room this thread belongs to. */
+  sessionId?: string | undefined;
+  /** Analytics only: lets us measure reveal → first message. */
+  revealedAt?: string | undefined;
+  /** Analytics only: were these prompts written by the model or the template? */
+  promptSource?: "ai" | "template" | undefined;
   prompts?: string[];
   /** Reason chips for this question: conversation starters, shown behind "More". */
   extraPrompts?: string[];
@@ -102,6 +112,19 @@ export function Thread({
     return out;
   }, [prompts, extraPrompts]);
 
+  const shownRef = useRef("");
+  useEffect(() => {
+    if (allPrompts.length === 0) return;
+    const key = `${sessionQuestionId}:${allPrompts.join("|")}`;
+    if (shownRef.current === key) return;
+    shownRef.current = key;
+    track(
+      "prompt_shown",
+      { prompts: allPrompts.join(" | "), count: allPrompts.length, source: promptSource ?? "template" },
+      { sessionId: sessionId ?? null },
+    );
+  }, [allPrompts, sessionQuestionId, promptSource, sessionId]);
+
   // Reactions ride in the right-hand gutter of the message they answer.
   const rows = useMemo(() => {
     const out: Row[] = [];
@@ -126,6 +149,18 @@ export function Thread({
     setBusy(true);
     try {
       await post({ data: { guestToken, sessionQuestionId, kind, body: clean } });
+      track(
+        kind === "reaction" ? "reaction_sent" : "thread_message_sent",
+        {
+          kind,
+          chars: clean.length,
+          session_question_id: sessionQuestionId,
+          seconds_since_reveal: revealedAt
+            ? Math.round((Date.now() - new Date(revealedAt).getTime()) / 1000)
+            : null,
+        },
+        { sessionId: sessionId ?? null },
+      );
       sentRef.current = true;
       const result = await load({ data: { guestToken, sessionQuestionId } });
       setMessages(result.messages as Message[]);
@@ -222,6 +257,11 @@ export function Thread({
               <button
                 key={prompt}
                 onClick={() => {
+                  track(
+                    "prompt_tapped",
+                    { prompt, source: promptSource ?? "template", session_question_id: sessionQuestionId },
+                    { sessionId: sessionId ?? null },
+                  );
                   onPrompt?.(prompt);
                   fillDraft(prompt);
                 }}

@@ -162,6 +162,7 @@ export type Database = {
           guest_token: string | null
           id: string
           name: string
+          participant_id: string | null
           profile_id: string | null
           props: Json
           session_id: string | null
@@ -171,6 +172,7 @@ export type Database = {
           guest_token?: string | null
           id?: string
           name: string
+          participant_id?: string | null
           profile_id?: string | null
           props?: Json
           session_id?: string | null
@@ -180,11 +182,19 @@ export type Database = {
           guest_token?: string | null
           id?: string
           name?: string
+          participant_id?: string | null
           profile_id?: string | null
           props?: Json
           session_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "events_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_profile_id_fkey"
             columns: ["profile_id"]
@@ -771,6 +781,7 @@ export type Database = {
           ended_at: string | null
           host_profile_id: string | null
           id: string
+          is_test: boolean
           kind: string
           room_code: string | null
           spice_max: number
@@ -782,6 +793,7 @@ export type Database = {
           ended_at?: string | null
           host_profile_id?: string | null
           id?: string
+          is_test?: boolean
           kind?: string
           room_code?: string | null
           spice_max?: number
@@ -793,6 +805,7 @@ export type Database = {
           ended_at?: string | null
           host_profile_id?: string | null
           id?: string
+          is_test?: boolean
           kind?: string
           room_code?: string | null
           spice_max?: number
@@ -915,6 +928,50 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_cohorts: {
+        Args: { _activity?: string; _include_test?: boolean; _weeks?: number }
+        Returns: Json
+      }
+      admin_funnel: {
+        Args: {
+          _from: string
+          _include_test?: boolean
+          _segment?: string
+          _to: string
+        }
+        Returns: Json
+      }
+      admin_invites: {
+        Args: { _from: string; _include_test?: boolean; _to: string }
+        Returns: Json
+      }
+      admin_median: { Args: { _values: number[] }; Returns: number }
+      admin_notifications: {
+        Args: { _from: string; _include_test?: boolean; _to: string }
+        Returns: Json
+      }
+      admin_overview: {
+        Args: { _from: string; _include_test?: boolean; _to: string }
+        Returns: Json
+      }
+      admin_overview_window: {
+        Args: { _from: string; _include_test: boolean; _to: string }
+        Returns: Json
+      }
+      admin_people: {
+        Args: { _include_test?: boolean; _q?: string }
+        Returns: Json
+      }
+      admin_person_key: { Args: { _participant_id: string }; Returns: string }
+      admin_person_timeline: { Args: { _person_key: string }; Returns: Json }
+      admin_question_performance: {
+        Args: { _include_test?: boolean }
+        Returns: Json
+      }
+      admin_session_rows: {
+        Args: { _from: string; _include_test?: boolean; _to: string }
+        Returns: Json
+      }
       current_guest_token: { Args: never; Returns: string }
       is_my_participant: { Args: { _participant_id: string }; Returns: boolean }
       is_session_member: { Args: { _session_id: string }; Returns: boolean }
