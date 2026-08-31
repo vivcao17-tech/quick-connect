@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
+import { trackVisit } from "@/lib/track";
+
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { listUnreadThreads } from "@/lib/conversations.functions";
 import { useViewer } from "@/lib/viewer";
@@ -47,6 +49,12 @@ function Home() {
   const [listOpen, setListOpen] = useState(false);
 
   const loadUnread = useServerFn(listUnreadThreads);
+
+  // Return visits: the gap since this browser last opened the app.
+  useEffect(() => {
+    if (!viewer.ready) return;
+    trackVisit("home", viewer.profileId ? { profileId: viewer.profileId } : {});
+  }, [viewer.ready, viewer.profileId]);
 
   useEffect(() => {
     if (!viewer.ready || !viewer.guestToken) return;

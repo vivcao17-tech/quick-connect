@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+
+import { track } from "@/lib/track";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
@@ -57,6 +59,11 @@ function InboxPage() {
   }, [refresh, viewer.ready, viewer.profileId, guestToken]);
 
   // A notification link points at one question — open that pair straight away.
+  useEffect(() => {
+    if (!q) return;
+    track("notification_clicked", { session_question_id: q, surface: "inbox" });
+  }, [q]);
+
   useEffect(() => {
     if (!q || !inbox || open) return;
     for (const set of inbox.sets) {

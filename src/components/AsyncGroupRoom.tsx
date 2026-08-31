@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
+import { track } from "@/lib/track";
+
 import { Thread } from "@/components/Thread";
 import {
   answerInAsyncGroup,
@@ -45,6 +47,13 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // One reveal per async room, so log it the first time it comes back open.
+  const revealedNow = Boolean(state?.revealed);
+  useEffect(() => {
+    if (!revealedNow) return;
+    track("reveal_shown", { kind: "group_async" }, { sessionId });
+  }, [revealedNow, sessionId]);
 
   // While waiting, the only thing that can change is whether it's revealed yet.
   useEffect(() => {
@@ -98,7 +107,19 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
             <button
               key={option.key}
               disabled={busy}
-              onClick={() => void pick(next.sessionQuestionId, option.key)}
+              onClick={() => {
+                track(
+                  "answer_submitted",
+                  {
+                    session_question_id: next.sessionQuestionId,
+                    option_key: option.key,
+                    answer_role: "about_self",
+                    kind: "group_async",
+                  },
+                  { sessionId },
+                );
+                void pick(next.sessionQuestionId, option.key);
+              }}
               className="card-soft px-6 py-6 text-left text-2xl hover:border-primary disabled:opacity-40"
             >
               {option.label}
@@ -132,6 +153,7 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
               <button
                 disabled={!email.includes("@")}
                 onClick={() => {
+                  track("email_captured", { where: "group_async_waiting" }, { sessionId });
                   void saveEmail({ data: { guestToken, sessionId, email } })
                     .then(() => setEmailDone(true))
                     .catch(() => undefined);
@@ -159,6 +181,15 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
             <button
               onClick={() => {
                 setBusy(true);
+                track(
+                  "reveal_triggered",
+                  {
+                    kind: "group_async",
+                    answered: state.answeredPeople,
+                    players: state.totalPeople,
+                  },
+                  { sessionId },
+                );
                 void reveal({ data: { guestToken, sessionId } })
                   .then(refresh)
                   .finally(() => setBusy(false));
@@ -207,6 +238,8 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
             guestToken={guestToken}
             sessionQuestionId={open.sessionQuestionId}
             prompts={open.prompts}
+            sessionId={sessionId}
+            promptSource={open.prompts?.length ? "ai" : "template"}
           />
         </div>
       </main>
