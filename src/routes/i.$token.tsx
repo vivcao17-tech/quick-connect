@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { PairSummary } from "@/components/PairSummary";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
+import { FollowUp } from "@/components/FollowUp";
 import { Thread } from "@/components/Thread";
 import { track } from "@/lib/track";
 import { getGuestToken } from "@/lib/guest";
@@ -78,6 +79,8 @@ function InvitePage() {
   const [reason, setReason] = useState("");
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const [half, setHalf] = useState<"other" | "self">("other");
+  /** True once "Spill the tea" is tapped: the follow-up takes over the screen. */
+  const [spill, setSpill] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -205,6 +208,7 @@ function InvitePage() {
     setReason("");
     setReveal(null);
     setHalf("other");
+    setSpill(false);
     setStage("summary");
   }
 
@@ -224,6 +228,7 @@ function InvitePage() {
     setReason("");
     setReveal(null);
     setHalf("other");
+    setSpill(false);
     if (index + 1 < questions.length) setIndex(index + 1);
     else void openSummary();
   }
@@ -288,7 +293,26 @@ function InvitePage() {
       )}
 
 
-      {stage === "play" && current && (
+      {/* Spill the tea: the follow-up question and the composer, nothing else. */}
+      {stage === "play" && current && spill && current.followUp && (
+        <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-10">
+          <div className="sticky top-0 z-20 bg-background pt-4 pb-6">
+            <h1 className="text-4xl leading-tight">{current.followUp}</h1>
+          </div>
+          <Thread
+            guestToken={guestToken}
+            sessionQuestionId={current.sessionQuestionId}
+            sessionId={sessionId}
+            autoFocus
+            followUp={{ questionId: current.questionId, text: current.followUp }}
+          />
+          <button onClick={next} className="btn-quiet mt-10 self-start hover:bg-secondary">
+            {index + 1 < questions.length ? "Next" : "That's the last one"}
+          </button>
+        </section>
+      )}
+
+      {stage === "play" && current && !spill && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
           <div
             className={
@@ -423,14 +447,26 @@ function InvitePage() {
                   {ai.observation && (
                     <p className="mt-6 text-lg leading-snug">{ai.observation}</p>
                   )}
-                  <Thread
-                    guestToken={guestToken}
-                    sessionQuestionId={current.sessionQuestionId}
-                    prompts={ai.prompts}
-                    extraPrompts={current.chips.map((chip) => chip.text)}
-                    sessionId={sessionId}
-                    promptSource={ai.prompts?.length ? "ai" : "template"}
-                  />
+                  {current.followUp ? (
+                    <FollowUp
+                      text={current.followUp}
+                      questionId={current.questionId}
+                      sessionQuestionId={current.sessionQuestionId}
+                      sessionId={sessionId}
+                      nextLabel={index + 1 < questions.length ? "Next" : "That's the last one"}
+                      onSpill={() => setSpill(true)}
+                      onNext={next}
+                    />
+                  ) : (
+                    <Thread
+                      guestToken={guestToken}
+                      sessionQuestionId={current.sessionQuestionId}
+                      prompts={ai.prompts}
+                      extraPrompts={current.chips.map((chip) => chip.text)}
+                      sessionId={sessionId}
+                      promptSource={ai.prompts?.length ? "ai" : "template"}
+                    />
+                  )}
                 </>
               ) : (
                 <p className="mt-10 text-lg text-muted-foreground italic">
@@ -438,9 +474,11 @@ function InvitePage() {
                 </p>
               )}
 
-              <button onClick={next} className="btn-quiet mt-10 hover:bg-secondary">
-                {index + 1 < questions.length ? "Next" : "That's the last one"}
-              </button>
+              {!(reveal.revealed && current.followUp) && (
+                <button onClick={next} className="btn-quiet mt-10 hover:bg-secondary">
+                  {index + 1 < questions.length ? "Next" : "That's the last one"}
+                </button>
+              )}
             </div>
           )}
 
