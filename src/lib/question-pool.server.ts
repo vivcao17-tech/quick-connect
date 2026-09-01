@@ -17,6 +17,7 @@ type QuestionRow = {
   question_type?: string | null;
   stem_other?: string | null;
   stem_self?: string | null;
+  follow_up?: string | null;
   reason_chips: { id: string; option_key: string; text: string }[] | null;
 };
 
