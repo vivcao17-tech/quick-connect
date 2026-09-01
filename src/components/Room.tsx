@@ -6,6 +6,7 @@ import { track as trackEvent } from "@/lib/track";
 import QRCode from "qrcode";
 
 import { GoogleSignIn } from "@/components/GoogleSignIn";
+import { FollowUp } from "@/components/FollowUp";
 import { Thread } from "@/components/Thread";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
 import { TopicCloud } from "@/components/TopicCloud";
@@ -54,6 +55,8 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [saveState, setSaveState] = useState<"idle" | "sent" | "failed">("idle");
   const [qr, setQr] = useState("");
   const [openSq, setOpenSq] = useState("");
+  /** Which question's follow-up the composer was opened for, in person. */
+  const [spillSq, setSpillSq] = useState("");
   const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
   const pending = useRef(false);
   const fetchPrompts = useServerFn(getRevealPrompts);
@@ -443,6 +446,18 @@ export function Room({ sessionId }: { sessionId: string }) {
 
             {current.revealed && (
               <div>
+                <FollowUp
+                  text={current.followUp}
+                  questionId={current.questionId}
+                  sessionQuestionId={current.sessionQuestionId}
+                  sessionId={sessionId}
+                  nextLabel="Next"
+                  onSpill={() => setSpillSq(current.sessionQuestionId)}
+                  onNext={() => {
+                    void run(() => advance({ data: { guestToken, sessionId, action: "next" } }));
+                  }}
+                />
+
                 {reveal?.observation && (
                   <p className="mt-6 text-lg leading-snug">{reveal.observation}</p>
                 )}
@@ -450,6 +465,10 @@ export function Room({ sessionId }: { sessionId: string }) {
                 <Thread
                   guestToken={guestToken}
                   sessionQuestionId={current.sessionQuestionId}
+                  autoFocus={spillSq === current.sessionQuestionId}
+                  {...(current.followUp
+                    ? { followUp: { questionId: current.questionId, text: current.followUp } }
+                    : {})}
                   prompts={reveal?.prompts ?? []}
                   sessionId={sessionId}
                   promptSource={reveal?.prompts?.length ? "ai" : "template"}
