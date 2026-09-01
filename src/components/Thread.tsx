@@ -26,6 +26,7 @@ export function Thread({
   promptSource,
   followUp,
   autoFocus,
+  bare,
 }: {
   guestToken: string;
   sessionQuestionId: string;
@@ -43,6 +44,8 @@ export function Thread({
   followUp?: { questionId: string; text: string } | undefined;
   /** Put the cursor in the composer as soon as the thread appears. */
   autoFocus?: boolean | undefined;
+  /** Question + messages + composer only: used by the follow-up screen. */
+  bare?: boolean | undefined;
   onPrompt?: (prompt: string) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -256,7 +259,7 @@ export function Thread({
       )}
 
       {/* Closing reactions sit with the messages, not with the composer. */}
-      <div className="mb-8">
+      <div className={`mb-8 ${bare ? "hidden" : ""}`}>
         <p className="mb-2 text-xs tracking-[0.18em] text-muted-foreground uppercase">
           No reply needed
         </p>
@@ -275,7 +278,7 @@ export function Thread({
       </div>
 
       {/* Continuation prompts: specific to this question, tapped into the box. */}
-      {allPrompts.length > 0 && (
+      {!bare && allPrompts.length > 0 && (
         <div className="rounded-2xl bg-secondary/40 px-4 py-4">
           <p className="mb-3 text-xs tracking-[0.18em] text-muted-foreground uppercase">
             {rows.length === 0 ? "Want to ask why?" : "Tap to start a reply"}

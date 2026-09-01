@@ -304,6 +304,7 @@ function InvitePage() {
             sessionQuestionId={current.sessionQuestionId}
             sessionId={sessionId}
             autoFocus
+            bare
             followUp={{ questionId: current.questionId, text: current.followUp }}
           />
           <button onClick={next} className="btn-quiet mt-10 self-start hover:bg-secondary">
