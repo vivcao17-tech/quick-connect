@@ -24,7 +24,7 @@ export const listTopicQuestions = createServerFn({ method: "POST" })
 
     const { data: questions, error } = await supabaseAdmin
       .from("questions")
-      .select("id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, reason_chips(id, option_key, text)")
+      .select("id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, follow_up, reason_chips(id, option_key, text)")
       .eq("topic_id", topic.id)
       .eq("active", true)
       .in("question_type", ["ab", "ab_reason"])
@@ -63,7 +63,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
 
     const { data: questions, error: qError } = await supabaseAdmin
       .from("questions")
-      .select("id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, reason_chips(id, option_key, text)")
+      .select("id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, follow_up, reason_chips(id, option_key, text)")
       .in("id", questionIds);
     if (qError) throw qError;
     if (!questions || questions.length !== questionIds.length) {

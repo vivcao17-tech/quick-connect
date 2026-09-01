@@ -149,6 +149,10 @@ export type QuestionRow = {
   medianMessagesPerThread: number | null;
   bridgeTaps: number;
   mindChanged: number;
+  followUp: string | null;
+  followUpShown: number;
+  followUpAnswered: number;
+  followUpAnswerRate: number | null;
 };
 
 export const readQuestionPerformance = (admin: Admin, includeTest: boolean) =>

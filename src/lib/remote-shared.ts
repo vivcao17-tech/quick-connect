@@ -12,6 +12,8 @@ export function kindOf(questionType?: string | null): QuestionKind {
 }
 export type Snapshot = {
   text: string;
+  /** Open-ended question shown after reveal; null when the bank row has none. */
+  followUp?: string | null;
   stemOther?: string | null;
   stemSelf?: string | null;
   kind?: QuestionKind;
@@ -22,6 +24,7 @@ export type PlayQuestion = {
   sessionQuestionId: string;
   questionId: string;
   text: string;
+  followUp?: string | null;
   stemOther?: string | null;
   stemSelf?: string | null;
   kind: QuestionKind;
@@ -46,10 +49,12 @@ export function snapshotOf(row: {
   question_type?: string | null;
   stem_other?: string | null;
   stem_self?: string | null;
+  follow_up?: string | null;
   chips: { id: string; option_key: string; text: string }[];
 }): Snapshot {
   return {
     text: row.text,
+    followUp: row.follow_up ?? null,
     stemOther: row.stem_other ?? null,
     stemSelf: row.stem_self ?? null,
     kind: kindOf(row.question_type),
@@ -76,6 +81,7 @@ export function toPlay(sq: {
     sessionQuestionId: sq.id,
     questionId: sq.question_id,
     text: snap.text,
+    followUp: snap.followUp ?? null,
     stemOther: snap.stemOther ?? null,
     stemSelf: snap.stemSelf ?? null,
     kind: snap.kind ?? "standard",

@@ -731,7 +731,8 @@ type QuestionSortKey =
   | "answered"
   | "skip"
   | "pass"
-  | "bridge";
+  | "bridge"
+  | "followUp";
 
 function QuestionsTab({ includeTest }: { includeTest: boolean }) {
   const [sort, setSort] = useState<QuestionSortKey>("threads");
@@ -750,6 +751,7 @@ function QuestionsTab({ includeTest }: { includeTest: boolean }) {
     if (key === "answered") return row.timesAnswered;
     if (key === "skip") return row.skipRate ?? -1;
     if (key === "pass") return row.passRate ?? -1;
+    if (key === "followUp") return row.followUpAnswerRate ?? -1;
     return row.bridgeTaps;
   };
   const rows = [...(query.data ?? [])].sort((a, b) => value(b, sort) - value(a, sort));
@@ -767,6 +769,7 @@ function QuestionsTab({ includeTest }: { includeTest: boolean }) {
             ["skip", "Skip rate"],
             ["pass", "Pass rate"],
             ["bridge", "Bridge taps"],
+            ["followUp", "Follow-up answered"],
           ] as const
         ).map(([key, label]) => (
           <Pill key={key} active={sort === key} onClick={() => setSort(key)}>
@@ -796,6 +799,10 @@ function QuestionsTab({ includeTest }: { includeTest: boolean }) {
                   "median_messages_per_thread",
                   "bridge_taps",
                   "mind_changed",
+                  "follow_up",
+                  "follow_up_shown",
+                  "follow_up_answered",
+                  "follow_up_answer_rate",
                 ],
                 rows.map((row) => [
                   row.text,
@@ -815,6 +822,10 @@ function QuestionsTab({ includeTest }: { includeTest: boolean }) {
                   row.medianMessagesPerThread ?? "",
                   row.bridgeTaps,
                   row.mindChanged,
+                  row.followUp ?? "",
+                  row.followUpShown,
+                  row.followUpAnswered,
+                  row.followUpAnswerRate ?? "",
                 ]),
               )
             }
@@ -846,6 +857,12 @@ function QuestionsTab({ includeTest }: { includeTest: boolean }) {
                 {row.threads} threads (median {num(row.medianMessagesPerThread, 1)} msgs) ·{" "}
                 {row.bridgeTaps} bridge · {row.mindChanged} changed mind
               </p>
+              {row.followUp && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  follow-up: "{row.followUp}" — shown {row.followUpShown} · answered{" "}
+                  {row.followUpAnswered} ({pct(row.followUpAnswerRate)})
+                </p>
+              )}
             </div>
           );
         })}
