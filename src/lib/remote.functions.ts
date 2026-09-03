@@ -11,9 +11,14 @@ export type { Chip, OptionKey, PlayQuestion };
 const guest = z.string().uuid();
 
 export const listTopicQuestions = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ topicSlug: z.string().min(1) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ topicSlug: z.string().min(1), guestToken: guest.optional() }).parse(input),
+  )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { answeredByPerson, fetchPool, rankByHistory, spreadAcrossTopics } = await import(
+      "@/lib/selection.server"
+    );
     const { data: topic } = await supabaseAdmin
       .from("topics")
       .select("id, slug, label")
@@ -22,25 +27,44 @@ export const listTopicQuestions = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!topic) throw new Error("Unknown topic");
 
-    const { data: questions, error } = await supabaseAdmin
-      .from("questions")
-      .select("id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, follow_up, reason_chips(id, option_key, text)")
-      .eq("topic_id", topic.id)
-      .eq("active", true)
-      .in("question_type", ["ab", "ab_reason"])
-      .in("mode", ["pair", "both"])
-      .lte("spice_level", 2)
-      .limit(5);
-    if (error) throw error;
+    const answered = data.guestToken
+      ? await answeredByPerson(supabaseAdmin, { guestTokens: [data.guestToken] })
+      : new Set<string>();
+    const answeredSets = answered.size > 0 ? [answered] : [];
+
+    // Q1 wants spice 1, Q2 spice 2 — every session gets one genuinely dividing question.
+    const inTopic = await fetchPool(supabaseAdmin, {
+      modes: ["pair", "both"],
+      spiceMax: 2,
+      topicIds: [topic.id],
+    });
+    let pool = inTopic;
+    if (pool.length < 5) {
+      const wider = await fetchPool(supabaseAdmin, { modes: ["pair", "both"], spiceMax: 2 });
+      const seen = new Set(pool.map((q) => q.id));
+      pool = [...pool, ...wider.filter((q) => !seen.has(q.id))];
+    }
+
+    const ranked = rankByHistory(pool, answeredSets);
+    const mild = ranked.filter((q) => q.spice_level <= 1);
+    const sharp = ranked.filter((q) => q.spice_level >= 2);
+    const lead = [mild[0], sharp[0]].filter(Boolean) as typeof ranked;
+    const leadIds = new Set(lead.map((q) => q.id));
+    const rest = spreadAcrossTopics(
+      ranked.filter((q) => !leadIds.has(q.id)),
+      Math.max(0, 5 - lead.length),
+    );
+    const questions = [...lead, ...rest].slice(0, 5);
 
     return {
       topic: { slug: topic.slug, label: topic.label },
-      questions: (questions ?? []).map((q) => ({
+      questions: questions.map((q) => ({
         id: q.id,
         ...snapshotOf({ ...q, chips: q.reason_chips ?? [] }),
       })),
     };
   });
+
 
 export const createRemoteSession = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
