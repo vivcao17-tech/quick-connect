@@ -74,8 +74,8 @@ export async function fetchPool(
   opts: {
     modes: string[];
     spiceMax: number;
-    spiceExact?: number;
-    topicIds?: string[];
+    spiceExact?: number | undefined;
+    topicIds?: string[] | undefined;
   },
 ): Promise<SelectableRow[]> {
   let query = admin
@@ -115,7 +115,7 @@ function shuffle<T>(items: T[]): T[] {
 export function rankByHistory(
   rows: SelectableRow[],
   answeredSets: Set<string>[],
-  opts?: { bonusTopicIds?: Set<string> },
+  opts?: { bonusTopicIds?: Set<string> | undefined },
 ): SelectableRow[] {
   const scored = shuffle(rows).map((row) => {
     const seenBy = answeredSets.filter((set) => set.has(row.id)).length;
@@ -175,11 +175,11 @@ export async function pickAtSpice(
     spice: number;
     answeredSets: Set<string>[];
     exclude: Set<string>;
-    topicIds?: string[];
-    bonusTopicIds?: Set<string>;
+    topicIds?: string[] | undefined;
+    bonusTopicIds?: Set<string> | undefined;
   },
 ): Promise<SelectableRow | null> {
-  const tries: { spiceExact?: number; topicIds?: string[] }[] = [
+  const tries: { spiceExact?: number | undefined; topicIds?: string[] | undefined }[] = [
     { spiceExact: opts.spice, topicIds: opts.topicIds },
     { spiceExact: opts.spice },
     { topicIds: opts.topicIds },
