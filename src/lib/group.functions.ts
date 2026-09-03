@@ -59,7 +59,7 @@ export const createGroupRoom = createServerFn({ method: "POST" })
     });
     if (pError) throw pError;
 
-    const questions = await pickGroupQuestions(supabaseAdmin, data.length);
+    const questions = await pickGroupQuestions(supabaseAdmin, data.length, 1, data.guestToken);
     if (questions.length === 0) throw new Error("No questions available");
 
     const { error: sqError } = await supabaseAdmin.from("session_questions").insert(
