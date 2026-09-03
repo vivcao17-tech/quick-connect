@@ -1,6 +1,5 @@
-import { QUESTION_SELECT, snapshotRow } from "@/lib/irl-helpers";
+import { snapshotRow } from "@/lib/irl-helpers";
 import type { QuestionRow } from "@/lib/irl-helpers";
-import { AB_TYPES } from "@/lib/remote-shared";
 import type { OptionKey, Snapshot } from "@/lib/remote-shared";
 
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
@@ -26,28 +25,29 @@ export async function asyncMember(admin: Admin, sessionId: string, guestToken: s
  *
  * Selection favours questions that historically produce a *clear minority*
  * rather than an even split: "only one person thinks that" is the hook.
+ * Exclusion is limited to what the creator has already used in a group room.
  */
-export async function pickAsyncGroupQuestions(admin: Admin, topicId: string | null, count = ASYNC_QUESTION_COUNT) {
-  async function fetchPool(scopedToTopic: boolean) {
-    let query = admin
-      .from("questions")
-      .select(QUESTION_SELECT)
-      .eq("active", true)
-      .in("question_type", AB_TYPES as unknown as string[])
-      .in("mode", ["group", "both"])
-      .lte("spice_level", 2);
-    if (scopedToTopic && topicId) query = query.eq("topic_id", topicId);
-    const { data } = await query;
-    return ((data as QuestionRow[] | null) ?? []).filter(Boolean);
-  }
+export async function pickAsyncGroupQuestions(
+  admin: Admin,
+  topicId: string | null,
+  count = ASYNC_QUESTION_COUNT,
+  creatorGuestToken?: string,
+) {
+  const { fetchPool, rankByHistory, spreadAcrossTopics, usedInGroupsBy } = await import(
+    "@/lib/selection.server"
+  );
 
-  let pool = topicId ? await fetchPool(true) : [];
+  let pool = topicId
+    ? await fetchPool(admin, { modes: ["group", "both"], spiceMax: 2, topicIds: [topicId] })
+    : [];
   if (pool.length < count) {
-    const wider = await fetchPool(false);
+    const wider = await fetchPool(admin, { modes: ["group", "both"], spiceMax: 2 });
     const seen = new Set(pool.map((q) => q.id));
     pool = [...pool, ...wider.filter((q) => !seen.has(q.id))];
   }
   if (pool.length === 0) return [] as QuestionRow[];
+
+  const used = creatorGuestToken ? await usedInGroupsBy(admin, creatorGuestToken) : new Set<string>();
 
   // How lopsided each question has been across every session so far.
   const { data: history } = await admin
@@ -70,25 +70,24 @@ export async function pickAsyncGroupQuestions(admin: Admin, topicId: string | nu
     // Sweet spot: roughly three-quarters one way, so one or two people stand out.
     const lopsided = total >= 6 ? 1 - Math.abs(Math.max(...votes) / total - 0.78) * 2 : 0.55;
     const spiceBonus = q.spice_level >= 2 ? 0.12 : 0;
-    return { q, score: lopsided + spiceBonus + Math.random() * 0.12 };
+    const featured = q.is_featured ? 0.3 : 0;
+    return { q, score: lopsided + spiceBonus + featured + Math.random() * 0.12 };
   });
-
   scored.sort((a, b) => b.score - a.score);
 
-  // Spread the shortlist across topics so five questions aren't all one word.
-  const seenTopic = new Set<string>();
-  const spread: QuestionRow[] = [];
-  const rest: QuestionRow[] = [];
-  for (const item of scored) {
-    const key = item.q.topic_id ?? "none";
-    if (seenTopic.has(key) && spread.length < count) rest.push(item.q);
-    else {
-      seenTopic.add(key);
-      spread.push(item.q);
-    }
-  }
-  return [...spread, ...rest].slice(0, count);
+  // Fresh-for-the-creator first, then the rest; no more than two from one topic.
+  const ordered = rankByHistory(scored.map((s) => s.q), used.size > 0 ? [used] : []);
+  const byScore = new Map(scored.map((s, index) => [s.q.id, index]));
+  const stable = [...ordered].sort((a, b) => {
+    const aUsed = used.has(a.id) ? 1 : 0;
+    const bUsed = used.has(b.id) ? 1 : 0;
+    if (aUsed !== bUsed) return aUsed - bUsed;
+    return (byScore.get(a.id) ?? 0) - (byScore.get(b.id) ?? 0);
+  });
+
+  return spreadAcrossTopics(stable, count) as QuestionRow[];
 }
+
 
 export function asyncSnapshot(q: QuestionRow) {
   return snapshotRow(q);

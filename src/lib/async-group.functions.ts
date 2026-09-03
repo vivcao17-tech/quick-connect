@@ -39,7 +39,7 @@ export const createAsyncGroup = createServerFn({ method: "POST" })
       topicId = topic?.id ?? null;
     }
 
-    const questions = await pickAsyncGroupQuestions(supabaseAdmin, topicId, ASYNC_QUESTION_COUNT);
+    const questions = await pickAsyncGroupQuestions(supabaseAdmin, topicId, ASYNC_QUESTION_COUNT, data.guestToken);
     if (questions.length === 0) throw new Error("No questions available");
 
     const { data: session, error } = await supabaseAdmin

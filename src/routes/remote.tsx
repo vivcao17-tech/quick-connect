@@ -86,7 +86,7 @@ function RemotePage() {
     setBusy(true);
     setError("");
     try {
-      const result = await loadQuestions({ data: { topicSlug: topic.slug } });
+      const result = await loadQuestions({ data: { topicSlug: topic.slug, ...(guestToken ? { guestToken } : {}) } });
       setTopicLabel(result.topic.label);
       setTopicSlug(result.topic.slug);
       setCandidates(result.questions);

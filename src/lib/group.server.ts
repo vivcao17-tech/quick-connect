@@ -1,6 +1,5 @@
-import { QUESTION_SELECT, snapshotRow } from "@/lib/irl-helpers";
+import { snapshotRow } from "@/lib/irl-helpers";
 import type { QuestionRow } from "@/lib/irl-helpers";
-import { AB_TYPES } from "@/lib/remote-shared";
 
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
@@ -23,36 +22,26 @@ export function isHostRole(role: string) {
   return role === "host" || role === OBSERVER_ROLE;
 }
 
-/** A spread of ordinary A/B questions — group mode has no topic step. */
-export async function pickGroupQuestions(admin: Admin, count: number, spiceMax = 1) {
-  const { data: rows } = await admin
-    .from("questions")
-    .select(QUESTION_SELECT)
-    .eq("active", true)
-    .in("question_type", AB_TYPES as unknown as string[])
-    .in("mode", ["group", "both"])
-    .lte("spice_level", spiceMax);
-
-  const pool = ((rows as QuestionRow[] | null) ?? []).filter(Boolean);
-  for (let i = pool.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
-  }
-
-  // Spread across topics first so eight questions don't all come from one word.
-  const seen = new Set<string>();
-  const spread: QuestionRow[] = [];
-  const rest: QuestionRow[] = [];
-  for (const q of pool) {
-    const key = q.topic_id ?? "none";
-    if (seen.has(key)) rest.push(q);
-    else {
-      seen.add(key);
-      spread.push(q);
-    }
-  }
-  return [...spread, ...rest].slice(0, count);
+/**
+ * A spread of ordinary A/B questions — group mode has no topic step.
+ * Exclusion here is only what the room's creator has already used in a group:
+ * repetition matters less when the comparison set is different every time.
+ */
+export async function pickGroupQuestions(
+  admin: Admin,
+  count: number,
+  spiceMax = 1,
+  creatorGuestToken?: string,
+) {
+  const { fetchPool, rankByHistory, spreadAcrossTopics, usedInGroupsBy } = await import(
+    "@/lib/selection.server"
+  );
+  const pool = await fetchPool(admin, { modes: ["group", "both"], spiceMax });
+  const used = creatorGuestToken ? await usedInGroupsBy(admin, creatorGuestToken) : new Set<string>();
+  const ranked = rankByHistory(pool, used.size > 0 ? [used] : []);
+  return spreadAcrossTopics(ranked, count) as QuestionRow[];
 }
+
 
 export function questionSnapshot(q: QuestionRow) {
   return snapshotRow(q);

@@ -474,6 +474,7 @@ export type Database = {
           created_at: string
           follow_up: string | null
           id: string
+          is_featured: boolean
           mode: string
           option_a: string
           option_b: string
@@ -490,6 +491,7 @@ export type Database = {
           created_at?: string
           follow_up?: string | null
           id?: string
+          is_featured?: boolean
           mode?: string
           option_a: string
           option_b: string
@@ -506,6 +508,7 @@ export type Database = {
           created_at?: string
           follow_up?: string | null
           id?: string
+          is_featured?: boolean
           mode?: string
           option_a?: string
           option_b?: string
