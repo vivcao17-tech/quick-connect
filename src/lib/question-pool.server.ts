@@ -61,25 +61,6 @@ export async function historyOf(admin: Admin, guestTokens: string[]) {
   return { questionIds, topicIds };
 }
 
-function weightedSample(pool: { row: QuestionRow; weight: number }[], count: number) {
-  const remaining = [...pool];
-  const picked: QuestionRow[] = [];
-  while (picked.length < count && remaining.length > 0) {
-    const total = remaining.reduce((sum, entry) => sum + entry.weight, 0);
-    let roll = Math.random() * total;
-    let index = remaining.length - 1;
-    for (let i = 0; i < remaining.length; i += 1) {
-      roll -= remaining[i]!.weight;
-      if (roll <= 0) {
-        index = i;
-        break;
-      }
-    }
-    picked.push(remaining.splice(index, 1)[0]!.row);
-  }
-  return picked;
-}
-
 /**
  * Draw questions for a pair. Exclusion is per person — anything either of them has
  * answered with anyone drops a tier — and featured questions neither has seen come
