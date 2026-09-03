@@ -167,7 +167,11 @@ export async function pairPlayedBefore(admin: Admin, sessionId: string, guestTok
 }
 
 /** One impression question from the bank, avoiding anything already in play. */
-export async function pickImpressionQuestion(admin: Admin, excludeIds: string[]) {
+export async function pickImpressionQuestion(
+  admin: Admin,
+  excludeIds: string[],
+  answeredSets?: Set<string>[],
+) {
   const { data: rows } = await admin
     .from("questions")
     .select(QUESTION_SELECT)
@@ -176,6 +180,10 @@ export async function pickImpressionQuestion(admin: Admin, excludeIds: string[])
     .in("mode", PAIR_MODES);
   const pool = ((rows as QuestionRow[] | null) ?? []).filter((q) => !excludeIds.includes(q.id));
   if (pool.length === 0) return null;
+  if (answeredSets && answeredSets.length > 0) {
+    const fresh = pool.filter((q) => !answeredSets.some((set) => set.has(q.id)));
+    if (fresh.length > 0) return fresh[Math.floor(Math.random() * fresh.length)]!;
+  }
   return pool[Math.floor(Math.random() * pool.length)]!;
 }
 
@@ -197,34 +205,57 @@ export async function seedQuestions(
   const alreadyPlayed = (existingRows ?? []).map((row) => row.question_id);
 
   let chosen: QuestionRow[] = [];
+  const taken = new Set(alreadyPlayed);
+  const perTopic = new Map<string, number>();
+  const capReached = (q: QuestionRow) => (perTopic.get(q.topic_id ?? "none") ?? 0) >= 2;
+  const keep = (q: QuestionRow) => {
+    taken.add(q.id);
+    perTopic.set(q.topic_id ?? "none", (perTopic.get(q.topic_id ?? "none") ?? 0) + 1);
+    chosen.push(q);
+  };
 
   if (offset === 0) {
-    const taken = new Set(alreadyPlayed);
     // Q1 and Q2 get an exact spice level each, so every room has one dividing question.
     for (const spice of [1, Math.min(2, Math.max(1, spiceMax))]) {
       if (chosen.length >= want) break;
       const exact = await candidateQuestions(admin, sessionId, spiceMax, {
         spiceExact: spice,
-        limit: 4,
+        limit: 6,
+        exclude: taken,
       });
-      let next = exact.find((q) => !taken.has(q.id));
+      let next = exact.find((q) => !taken.has(q.id) && !capReached(q)) ?? exact.find((q) => !taken.has(q.id));
       if (!next) {
-        const fallback = await candidateQuestions(admin, sessionId, spiceMax, { limit: 6 });
-        next = fallback.find((q) => !taken.has(q.id));
+        const fallback = await candidateQuestions(admin, sessionId, spiceMax, {
+          limit: 8,
+          exclude: taken,
+        });
+        next = fallback.find((q) => !taken.has(q.id) && !capReached(q)) ?? fallback.find((q) => !taken.has(q.id));
       }
-      if (next) {
-        taken.add(next.id);
-        chosen.push(next);
-      }
+      if (next) keep(next);
     }
     if (chosen.length > 0 && want >= 3) {
-      const impression = await pickImpressionQuestion(admin, [...taken]);
+      const answeredSets = await answeredSetsFor(admin, sessionId);
+      const impression = await pickImpressionQuestion(admin, [...taken], answeredSets);
       if (impression) chosen = [...chosen.slice(0, want - 1), impression];
     }
   } else {
-    const pool = await candidateQuestions(admin, sessionId, spiceMax, { limit: want + 3 });
-    chosen = pool.filter((q) => !alreadyPlayed.includes(q.id)).slice(0, want);
+    const pool = await candidateQuestions(admin, sessionId, spiceMax, {
+      limit: want + 4,
+      exclude: taken,
+    });
+    for (const q of pool) {
+      if (chosen.length >= want) break;
+      if (taken.has(q.id) || capReached(q)) continue;
+      keep(q);
+    }
+    if (chosen.length < want) {
+      for (const q of pool) {
+        if (chosen.length >= want) break;
+        if (!taken.has(q.id)) keep(q);
+      }
+    }
   }
+
 
 
   if (chosen.length === 0) return 0;
