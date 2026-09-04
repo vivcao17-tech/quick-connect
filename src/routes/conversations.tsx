@@ -157,18 +157,23 @@ function ConversationsPage() {
 
         {sets.length > 0 && (
           <div className="mt-16 border-t border-border pt-10">
-            <h2 className="text-2xl leading-tight">Sets you've answered</h2>
+            <h2 className="text-2xl leading-tight">Ask someone else</h2>
             <div className="mt-6 flex flex-col gap-3">
               {sets.map((set) => (
                 <div key={set.sessionId} className="card-soft px-6 py-5">
-                  <p className="text-lg">{set.topic || "Three questions"}</p>
-                  {set.firstQuestion && (
-                    <p className="mt-2 text-base text-muted-foreground">{set.firstQuestion}</p>
-                  )}
+                  <div className="flex items-baseline justify-between gap-4">
+                    <p className="text-lg">{set.topic || "Three questions"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(set.createdAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {set.sentCount === 0
                       ? "Nobody yet"
-                      : `${set.answeredCount} of ${set.sentCount} answered`}
+                      : `${set.sentCount} sent · ${set.answeredCount} answered`}
                   </p>
                   <Link
                     to="/send/$sessionId"
