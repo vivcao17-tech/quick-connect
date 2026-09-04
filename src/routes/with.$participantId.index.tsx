@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getPersonSessions } from "@/lib/conversations.functions";
 import { savePersonNote } from "@/lib/notes.functions";
+import { listMyAnswerSets } from "@/lib/remote.functions";
 import { contactLink } from "@/lib/contact-link";
 import { useViewer } from "@/lib/viewer";
 
@@ -68,7 +69,10 @@ function WithPersonPage() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [sets, setSets] = useState<Awaited<ReturnType<typeof listMyAnswerSets>>["sets"]>([]);
+
   const load = useServerFn(getPersonSessions);
+  const loadSets = useServerFn(listMyAnswerSets);
   const save = useServerFn(savePersonNote);
 
   useEffect(() => {
@@ -96,6 +100,20 @@ function WithPersonPage() {
         }),
       );
   }, [load, participantId, viewer.ready, viewer.guestToken, viewer.profileId]);
+
+  // Meeting someone new is the usual trigger for reusing a set, so the sets are
+  // ready before the page even knows there is nothing between you two yet.
+  useEffect(() => {
+    if (!viewer.ready || !viewer.guestToken) return;
+    void loadSets({
+      data: {
+        guestToken: viewer.guestToken,
+        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+      },
+    })
+      .then((result) => setSets(result.sets))
+      .catch(() => setSets([]));
+  }, [loadSets, viewer.ready, viewer.guestToken, viewer.profileId]);
 
   async function submit() {
     if (!viewer.guestToken || saving) return;
