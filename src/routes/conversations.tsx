@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { listConversations } from "@/lib/conversations.functions";
+import { listMyAnswerSets } from "@/lib/remote.functions";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/conversations")({
@@ -49,6 +50,8 @@ function ConversationsPage() {
   const [people, setPeople] = useState<People | null>(null);
   const [waiting, setWaiting] = useState<Waiting>([]);
   const [copied, setCopied] = useState("");
+  const [sets, setSets] = useState<Awaited<ReturnType<typeof listMyAnswerSets>>["sets"]>([]);
+  const loadSets = useServerFn(listMyAnswerSets);
   const load = useServerFn(listConversations);
   const viewer = useViewer();
 
@@ -66,6 +69,18 @@ function ConversationsPage() {
       })
       .catch(() => setPeople([]));
   }, [load, viewer.ready, viewer.guestToken, viewer.profileId]);
+
+  useEffect(() => {
+    if (!viewer.ready || !viewer.guestToken) return;
+    void loadSets({
+      data: {
+        guestToken: viewer.guestToken,
+        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+      },
+    })
+      .then((result) => setSets(result.sets))
+      .catch(() => setSets([]));
+  }, [loadSets, viewer.ready, viewer.guestToken, viewer.profileId]);
 
   async function copyLink(token: string, note: string) {
     const message = `${note ? `${note}\n\n` : ""}3 questions · 30 seconds · no signup\n${window.location.origin}/i/${token}`;
@@ -139,6 +154,34 @@ function ConversationsPage() {
             </Link>
           ))}
         </div>
+
+        {sets.length > 0 && (
+          <div className="mt-16 border-t border-border pt-10">
+            <h2 className="text-2xl leading-tight">Sets you've answered</h2>
+            <div className="mt-6 flex flex-col gap-3">
+              {sets.map((set) => (
+                <div key={set.sessionId} className="card-soft px-6 py-5">
+                  <p className="text-lg">{set.topic || "Three questions"}</p>
+                  {set.firstQuestion && (
+                    <p className="mt-2 text-base text-muted-foreground">{set.firstQuestion}</p>
+                  )}
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {set.sentCount === 0
+                      ? "Nobody yet"
+                      : `${set.answeredCount} of ${set.sentCount} answered`}
+                  </p>
+                  <Link
+                    to="/send/$sessionId"
+                    params={{ sessionId: set.sessionId }}
+                    className="btn-quiet mt-4 inline-block hover:bg-secondary"
+                  >
+                    Send to someone else
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <Link
           to="/"

@@ -208,6 +208,7 @@ export const createInvites = createServerFn({ method: "POST" })
     z
       .object({
         guestToken: guest,
+        profileId: z.string().uuid().optional(),
         sessionId: z.string().uuid(),
         recipients: z
           .array(z.object({ label: z.string().min(1).max(40), note: z.string().max(160).optional() }))
@@ -218,14 +219,15 @@ export const createInvites = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipantIn } = await import("@/lib/identity.server");
 
-    const { data: participant } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, display_name")
-      .eq("session_id", data.sessionId)
-      .eq("guest_token", data.guestToken)
-      .maybeSingle();
+    // Either key: a set answered as a guest must stay sendable after signing in.
+    const participant = await myParticipantIn(supabaseAdmin as never, data.sessionId, {
+      guestToken: data.guestToken,
+      profileId: data.profileId,
+    });
     if (!participant) throw new Error("Not your session");
+
 
     const { data: invites, error } = await supabaseAdmin
       .from("invites")
@@ -1251,5 +1253,147 @@ export const getInbox = createServerFn({ method: "POST" })
         sessionId: row.session_id,
         recipients: recipientsFor(row.session_id),
       })),
+    };
+  });
+
+/**
+ * Every answer set this person has already answered and can send again.
+ *
+ * Reusing a set is the normal case, not the exception: you meet someone new and
+ * want them to answer what you already answered. Nothing here surfaces how old
+ * a set is beyond its topic — the send screens deliberately don't age them.
+ */
+export const listMyAnswerSets = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({ guestToken: guest, profileId: z.string().uuid().optional() })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipants, linkProfileToGuestRows } = await import("@/lib/identity.server");
+
+    const identity = { guestToken: data.guestToken, profileId: data.profileId };
+    await linkProfileToGuestRows(supabaseAdmin as never, identity);
+    const mine = (await myParticipants(supabaseAdmin as never, identity)).filter(
+      (row) => row.role === "sender",
+    );
+    if (mine.length === 0) return { sets: [] };
+
+    const { data: sessions } = await supabaseAdmin
+      .from("sessions")
+      .select("id, created_at")
+      .in("id", [...new Set(mine.map((row) => row.session_id))])
+      .eq("kind", "remote");
+    const sessionIds = (sessions ?? []).map((row) => row.id);
+    if (sessionIds.length === 0) return { sets: [] };
+
+    const { data: sqs } = await supabaseAdmin
+      .from("session_questions")
+      .select("id, session_id, question_id, order_index, snapshot")
+      .in("session_id", sessionIds)
+      .order("order_index");
+
+    const questionIds = [...new Set((sqs ?? []).map((row) => row.question_id))];
+    const { data: questions } = await supabaseAdmin
+      .from("questions")
+      .select("id, topic_id")
+      .in("id", questionIds.length ? questionIds : ["00000000-0000-0000-0000-000000000000"]);
+    const topicIds = [...new Set((questions ?? []).map((q) => q.topic_id).filter(Boolean))];
+    const { data: topicRows } = await supabaseAdmin
+      .from("topics")
+      .select("id, label")
+      .in("id", topicIds.length ? (topicIds as string[]) : ["00000000-0000-0000-0000-000000000000"]);
+    const topicOf = new Map((topicRows ?? []).map((t) => [t.id, t.label]));
+    const questionTopic = new Map(
+      (questions ?? []).map((q) => [q.id, q.topic_id ? (topicOf.get(q.topic_id) ?? "") : ""]),
+    );
+
+    const myIds = mine.map((row) => row.id);
+    const { data: myAnswers } = await supabaseAdmin
+      .from("answers")
+      .select("session_question_id, participant_id")
+      .in("participant_id", myIds);
+    const answeredSqIds = new Set((myAnswers ?? []).map((row) => row.session_question_id));
+
+    const { data: invites } = await supabaseAdmin
+      .from("invites")
+      .select("session_id, completed_at")
+      .in("session_id", sessionIds);
+
+    const sets = (sessions ?? [])
+      .map((session) => {
+        const rows = (sqs ?? []).filter((row) => row.session_id === session.id);
+        const answered = rows.filter((row) => answeredSqIds.has(row.id)).length;
+        const sessionInvites = (invites ?? []).filter((row) => row.session_id === session.id);
+        const topics = [
+          ...new Set(rows.map((row) => questionTopic.get(row.question_id) ?? "").filter(Boolean)),
+        ];
+        return {
+          sessionId: session.id,
+          createdAt: session.created_at,
+          topic: topics.slice(0, 2).join(" · "),
+          firstQuestion: (rows[0]?.snapshot as Snapshot | null)?.text ?? "",
+          questionCount: rows.length,
+          sentCount: sessionInvites.length,
+          answeredCount: sessionInvites.filter((row) => row.completed_at).length,
+          ready: rows.length > 0 && answered === rows.length,
+        };
+      })
+      .filter((set) => set.ready)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+
+    return { sets };
+  });
+
+/**
+ * One answer set as its creator sees it on the send screen: the questions and
+ * what they picked, so they can send it again without answering anything.
+ */
+export const getAnswerSet = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        guestToken: guest,
+        profileId: z.string().uuid().optional(),
+        sessionId: z.string().uuid(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipantIn, linkProfileToGuestRows } = await import("@/lib/identity.server");
+
+    const identity = { guestToken: data.guestToken, profileId: data.profileId };
+    await linkProfileToGuestRows(supabaseAdmin as never, identity);
+    const participant = await myParticipantIn(supabaseAdmin as never, data.sessionId, identity);
+    if (!participant) throw new Error("Not your session");
+
+    const { data: sqs } = await supabaseAdmin
+      .from("session_questions")
+      .select("id, order_index, snapshot")
+      .eq("session_id", data.sessionId)
+      .order("order_index");
+
+    const { data: answers } = await supabaseAdmin
+      .from("answers")
+      .select("session_question_id, option_key, reason_text, created_at")
+      .eq("participant_id", participant.id)
+      .order("created_at");
+
+    return {
+      questions: (sqs ?? []).map((row) => {
+        const snap = row.snapshot as Snapshot;
+        const mine = [...(answers ?? [])]
+          .reverse()
+          .find((a) => a.session_question_id === row.id);
+        const key = (mine?.option_key ?? null) as OptionKey | null;
+        return {
+          sessionQuestionId: row.id,
+          text: snap.text,
+          myLabel: key ? (snap.options.find((o) => o.key === key)?.label ?? "") : "",
+          myReason: mine?.reason_text ?? "",
+        };
+      }),
     };
   });

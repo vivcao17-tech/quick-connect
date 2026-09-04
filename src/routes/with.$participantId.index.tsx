@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getPersonSessions } from "@/lib/conversations.functions";
 import { savePersonNote } from "@/lib/notes.functions";
+import { listMyAnswerSets } from "@/lib/remote.functions";
 import { contactLink } from "@/lib/contact-link";
 import { useViewer } from "@/lib/viewer";
 
@@ -68,7 +69,10 @@ function WithPersonPage() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [sets, setSets] = useState<Awaited<ReturnType<typeof listMyAnswerSets>>["sets"]>([]);
+
   const load = useServerFn(getPersonSessions);
+  const loadSets = useServerFn(listMyAnswerSets);
   const save = useServerFn(savePersonNote);
 
   useEffect(() => {
@@ -96,6 +100,20 @@ function WithPersonPage() {
         }),
       );
   }, [load, participantId, viewer.ready, viewer.guestToken, viewer.profileId]);
+
+  // Meeting someone new is the usual trigger for reusing a set, so the sets are
+  // ready before the page even knows there is nothing between you two yet.
+  useEffect(() => {
+    if (!viewer.ready || !viewer.guestToken) return;
+    void loadSets({
+      data: {
+        guestToken: viewer.guestToken,
+        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+      },
+    })
+      .then((result) => setSets(result.sets))
+      .catch(() => setSets([]));
+  }, [loadSets, viewer.ready, viewer.guestToken, viewer.profileId]);
 
   async function submit() {
     if (!viewer.guestToken || saving) return;
@@ -230,7 +248,32 @@ function WithPersonPage() {
         </div>
 
         {data && sessions.length === 0 && (
-          <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
+          <div className="mt-8">
+            <p className="text-lg text-muted-foreground">Nothing between you yet.</p>
+            {sets.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-2xl leading-tight">Send them a set you've already answered</h2>
+                <p className="mt-2 text-muted-foreground">
+                  You won't answer anything again — they just get their own link.
+                </p>
+                <div className="mt-6 flex flex-col gap-3">
+                  {sets.map((set) => (
+                    <Link
+                      key={set.sessionId}
+                      to="/send/$sessionId"
+                      params={{ sessionId: set.sessionId }}
+                      className="card-soft block px-6 py-5"
+                    >
+                      <p className="text-lg">{set.topic || "Three questions"}</p>
+                      {set.firstQuestion && (
+                        <p className="mt-2 text-base text-muted-foreground">{set.firstQuestion}</p>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         <div className="mt-10 flex flex-col gap-3">
