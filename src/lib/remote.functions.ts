@@ -1288,6 +1288,20 @@ export const listMyAnswerSets = createServerFn({ method: "POST" })
     const sessionIds = (sessions ?? []).map((row) => row.id);
     if (sessionIds.length === 0) return { sets: [] };
 
+    // Every sent invite spawns a per-recipient child session holding a copy of
+    // the sender's answers (invites.child_session_id). Those are not new sets —
+    // exclude them so each answer set appears exactly once.
+    const { data: childLinks } = await supabaseAdmin
+      .from("invites")
+      .select("child_session_id")
+      .in("child_session_id", sessionIds);
+    const childIds = new Set(
+      (childLinks ?? []).map((row) => row.child_session_id).filter(Boolean),
+    );
+    const ownSessions = (sessions ?? []).filter((row) => !childIds.has(row.id));
+    const ownIds = ownSessions.map((row) => row.id);
+    if (ownIds.length === 0) return { sets: [] };
+
     const { data: sqs } = await supabaseAdmin
       .from("session_questions")
       .select("id, session_id, question_id, order_index, snapshot")
