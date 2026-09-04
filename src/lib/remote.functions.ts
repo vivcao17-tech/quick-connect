@@ -1333,9 +1333,9 @@ export const listMyAnswerSets = createServerFn({ method: "POST" })
     const { data: invites } = await supabaseAdmin
       .from("invites")
       .select("session_id, completed_at")
-      .in("session_id", sessionIds);
+      .in("session_id", ownIds);
 
-    const sets = (sessions ?? [])
+    const sets = ownSessions
       .map((session) => {
         const rows = (sqs ?? []).filter((row) => row.session_id === session.id);
         const answered = rows.filter((row) => answeredSqIds.has(row.id)).length;
