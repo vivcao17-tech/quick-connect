@@ -47,8 +47,10 @@ function Home() {
   const [code, setCode] = useState("");
   const [unread, setUnread] = useState<Unread>({ items: [], total: 0 });
   const [listOpen, setListOpen] = useState(false);
+  const [sets, setSets] = useState<Awaited<ReturnType<typeof listMyAnswerSets>>["sets"]>([]);
 
   const loadUnread = useServerFn(listUnreadThreads);
+  const loadSets = useServerFn(listMyAnswerSets);
 
   // Return visits: the gap since this browser last opened the app.
   useEffect(() => {
