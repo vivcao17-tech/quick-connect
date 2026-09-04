@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
+import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { listPeople } from "@/lib/conversations.functions";
 import { ago } from "@/routes/with.$participantId.index";
 import { useViewer } from "@/lib/viewer";
@@ -100,6 +101,17 @@ function PeoplePage() {
           ))}
         </div>
 
+        {viewer.ready && !viewer.profileId && (
+          <div className="mt-14 max-w-xs">
+            <GoogleSignIn redirectPath="/people" />
+            <p className="mt-3 text-sm text-muted-foreground">
+              Keeps your answers if you switch phones.{" "}
+              <Link to="/auth" search={{ redirect: "/people" }} className="underline underline-offset-4">
+                or use email
+              </Link>
+            </p>
+          </div>
+        )}
 
         <Link
           to="/"

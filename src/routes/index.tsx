@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 import { trackVisit } from "@/lib/track";
 
-import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { listUnreadThreads } from "@/lib/conversations.functions";
 import { useViewer } from "@/lib/viewer";
 
@@ -167,18 +166,6 @@ function Home() {
           />
         </div>
 
-
-        {viewer.ready && !viewer.profileId && (
-          <div className="mt-14 max-w-xs">
-            <GoogleSignIn redirectPath="/" />
-            <p className="mt-3 text-sm text-muted-foreground">
-              Keeps your answers if you switch phones.{" "}
-              <Link to="/auth" search={{ redirect: "/" }} className="underline underline-offset-4">
-                or use email
-              </Link>
-            </p>
-          </div>
-        )}
 
         <div className="mt-16 flex items-center gap-6 self-start text-sm text-muted-foreground">
           <Link to="/people" className="underline underline-offset-4">
