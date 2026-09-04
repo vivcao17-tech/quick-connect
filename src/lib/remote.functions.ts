@@ -1305,7 +1305,7 @@ export const listMyAnswerSets = createServerFn({ method: "POST" })
     const { data: sqs } = await supabaseAdmin
       .from("session_questions")
       .select("id, session_id, question_id, order_index, snapshot")
-      .in("session_id", sessionIds)
+      .in("session_id", ownIds)
       .order("order_index");
 
     const questionIds = [...new Set((sqs ?? []).map((row) => row.question_id))];
