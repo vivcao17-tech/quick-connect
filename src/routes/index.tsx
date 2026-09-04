@@ -162,6 +162,41 @@ function Home() {
           <p className="mt-3 text-sm text-muted-foreground">30 seconds, no account</p>
         </div>
 
+        {sets.length > 0 && (
+          <div className="mt-10">
+            <p className="text-sm text-muted-foreground">Sets you've already answered</p>
+            <div className="mt-3 flex flex-col gap-2">
+              {sets.slice(0, 2).map((set) => (
+                <Link
+                  key={set.sessionId}
+                  to="/send/$sessionId"
+                  params={{ sessionId: set.sessionId }}
+                  className="card-soft block px-6 py-4 hover:border-primary"
+                >
+                  <div className="flex items-baseline justify-between gap-4">
+                    <p className="text-lg">{set.topic || "Three questions"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(set.createdAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">Send to someone else</p>
+                </Link>
+              ))}
+            </div>
+            {sets.length > 2 && (
+              <Link
+                to="/conversations"
+                className="mt-3 inline-block text-sm text-muted-foreground underline underline-offset-4"
+              >
+                All {sets.length} sets
+              </Link>
+            )}
+          </div>
+        )}
+
         <div className="mt-10 flex items-center gap-4">
           <label htmlFor="room-code" className="text-sm text-muted-foreground">
             Got a code?
