@@ -70,6 +70,18 @@ function Home() {
       .catch(() => undefined);
   }, [viewer.ready, viewer.guestToken, viewer.profileId, loadUnread]);
 
+  useEffect(() => {
+    if (!viewer.ready || !viewer.guestToken) return;
+    void loadSets({
+      data: {
+        guestToken: viewer.guestToken,
+        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+      },
+    })
+      .then((result) => setSets(result.sets))
+      .catch(() => setSets([]));
+  }, [viewer.ready, viewer.guestToken, viewer.profileId, loadSets]);
+
   function onCode(value: string) {
     const next = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 4);
     setCode(next);
