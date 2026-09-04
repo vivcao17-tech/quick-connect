@@ -488,7 +488,7 @@ export const startInvite = createServerFn({ method: "POST" })
 
     const { data: child, error: cError } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "remote_pair", status: "active" })
+      .insert({ kind: "remote", status: "active" })
       .select("id")
       .single();
     if (cError) throw cError;
@@ -1288,10 +1288,24 @@ export const listMyAnswerSets = createServerFn({ method: "POST" })
     const sessionIds = (sessions ?? []).map((row) => row.id);
     if (sessionIds.length === 0) return { sets: [] };
 
+    // Every sent invite spawns a per-recipient child session holding a copy of
+    // the sender's answers (invites.child_session_id). Those are not new sets —
+    // exclude them so each answer set appears exactly once.
+    const { data: childLinks } = await supabaseAdmin
+      .from("invites")
+      .select("child_session_id")
+      .in("child_session_id", sessionIds);
+    const childIds = new Set(
+      (childLinks ?? []).map((row) => row.child_session_id).filter(Boolean),
+    );
+    const ownSessions = (sessions ?? []).filter((row) => !childIds.has(row.id));
+    const ownIds = ownSessions.map((row) => row.id);
+    if (ownIds.length === 0) return { sets: [] };
+
     const { data: sqs } = await supabaseAdmin
       .from("session_questions")
       .select("id, session_id, question_id, order_index, snapshot")
-      .in("session_id", sessionIds)
+      .in("session_id", ownIds)
       .order("order_index");
 
     const questionIds = [...new Set((sqs ?? []).map((row) => row.question_id))];
@@ -1319,9 +1333,9 @@ export const listMyAnswerSets = createServerFn({ method: "POST" })
     const { data: invites } = await supabaseAdmin
       .from("invites")
       .select("session_id, completed_at")
-      .in("session_id", sessionIds);
+      .in("session_id", ownIds);
 
-    const sets = (sessions ?? [])
+    const sets = ownSessions
       .map((session) => {
         const rows = (sqs ?? []).filter((row) => row.session_id === session.id);
         const answered = rows.filter((row) => answeredSqIds.has(row.id)).length;
