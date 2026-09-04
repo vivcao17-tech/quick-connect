@@ -488,7 +488,7 @@ export const startInvite = createServerFn({ method: "POST" })
 
     const { data: child, error: cError } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "remote_pair", status: "active" })
+      .insert({ kind: "remote", status: "active" })
       .select("id")
       .single();
     if (cError) throw cError;
