@@ -208,6 +208,7 @@ export const createInvites = createServerFn({ method: "POST" })
     z
       .object({
         guestToken: guest,
+        profileId: z.string().uuid().optional(),
         sessionId: z.string().uuid(),
         recipients: z
           .array(z.object({ label: z.string().min(1).max(40), note: z.string().max(160).optional() }))
@@ -218,14 +219,15 @@ export const createInvites = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { myParticipantIn } = await import("@/lib/identity.server");
 
-    const { data: participant } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, display_name")
-      .eq("session_id", data.sessionId)
-      .eq("guest_token", data.guestToken)
-      .maybeSingle();
+    // Either key: a set answered as a guest must stay sendable after signing in.
+    const participant = await myParticipantIn(supabaseAdmin as never, data.sessionId, {
+      guestToken: data.guestToken,
+      profileId: data.profileId,
+    });
     if (!participant) throw new Error("Not your session");
+
 
     const { data: invites, error } = await supabaseAdmin
       .from("invites")
