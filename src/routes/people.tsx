@@ -101,6 +101,17 @@ function PeoplePage() {
           ))}
         </div>
 
+        {viewer.ready && !viewer.profileId && (
+          <div className="mt-14 max-w-xs">
+            <GoogleSignIn redirectPath="/people" />
+            <p className="mt-3 text-sm text-muted-foreground">
+              Keeps your answers if you switch phones.{" "}
+              <Link to="/auth" search={{ redirect: "/people" }} className="underline underline-offset-4">
+                or use email
+              </Link>
+            </p>
+          </div>
+        )}
 
         <Link
           to="/"
