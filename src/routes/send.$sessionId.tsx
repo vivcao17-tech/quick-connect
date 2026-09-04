@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
-import { createInvites, listSessionInvites } from "@/lib/remote.functions";
+import { createInvites, getAnswerSet, listSessionInvites } from "@/lib/remote.functions";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/send/$sessionId")({
@@ -32,7 +32,8 @@ export const Route = createFileRoute("/send/$sessionId")({
 });
 
 type Recipient = { label: string; note: string };
-type Invite = { token: string; label: string; note: string };
+type Invite = { token: string; label: string; note: string; answered?: boolean; opened?: boolean };
+type Answers = Awaited<ReturnType<typeof getAnswerSet>>["questions"];
 
 function SendPage() {
   const { sessionId } = Route.useParams();
@@ -40,27 +41,31 @@ function SendPage() {
   const guestToken = viewer.guestToken;
   const [recipients, setRecipients] = useState<Recipient[]>([{ label: "", note: "" }]);
   const [links, setLinks] = useState<Invite[]>([]);
+  const [answers, setAnswers] = useState<Answers>([]);
   const [copied, setCopied] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const send = useServerFn(createInvites);
   const loadExisting = useServerFn(listSessionInvites);
+  const loadAnswers = useServerFn(getAnswerSet);
 
-  // Links live in the database, not in this component's state — a reload must
-  // never lose a link that has already been handed out.
+  // Links live in the database, not in this component's state — coming back to
+  // this screen days later must show the same set and the same links.
   useEffect(() => {
     if (!viewer.ready || !guestToken) return;
-    void loadExisting({
-      data: {
-        guestToken,
-        sessionId,
-        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
-      },
-    })
+    const payload = {
+      guestToken,
+      sessionId,
+      ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+    };
+    void loadExisting({ data: payload })
       .then((result) => setLinks(result.invites))
       .catch(() => undefined);
-  }, [loadExisting, viewer.ready, viewer.profileId, guestToken, sessionId]);
+    void loadAnswers({ data: payload })
+      .then((result) => setAnswers(result.questions))
+      .catch(() => undefined);
+  }, [loadExisting, loadAnswers, viewer.ready, viewer.profileId, guestToken, sessionId]);
 
   function update(i: number, patch: Partial<Recipient>) {
     setRecipients((prev) => prev.map((item, j) => (j === i ? { ...item, ...patch } : item)));
@@ -75,6 +80,7 @@ function SendPage() {
       const result = await send({
         data: {
           guestToken,
+          ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
           sessionId,
           recipients: clean.map((r) => ({ label: r.label.trim(), note: r.note.trim() })),
         },
@@ -108,6 +114,27 @@ function SendPage() {
         <p className="mt-3 text-muted-foreground">
           Each person gets their own private link. They only ever see you and themselves.
         </p>
+
+        {answers.length > 0 && (
+          <div className="card-soft mt-8 px-6 py-5">
+            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+              Your answers
+            </p>
+            <div className="mt-4 flex flex-col gap-4">
+              {answers.map((question) => (
+                <div key={question.sessionQuestionId}>
+                  <p className="text-base text-muted-foreground">{question.text}</p>
+                  <p className="text-lg">{question.myLabel}</p>
+                  {question.myReason && (
+                    <p className="mt-1 text-base italic text-muted-foreground">
+                      "{question.myReason}"
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-8 flex flex-col gap-6">
           {recipients.map((recipient, i) => (
@@ -156,7 +183,12 @@ function SendPage() {
             <div className="mt-8 flex flex-col gap-4">
               {links.map((invite) => (
                 <div key={invite.token} className="card-soft px-6 py-5">
-                  <p className="text-lg">{invite.label}</p>
+                  <p className="text-lg">
+                    {invite.label}
+                    <span className="ml-3 text-base text-muted-foreground">
+                      {invite.answered ? "answered" : invite.opened ? "opened it" : "not yet"}
+                    </span>
+                  </p>
                   {invite.note && (
                     <p className="mt-2 text-base italic text-muted-foreground">"{invite.note}"</p>
                   )}
