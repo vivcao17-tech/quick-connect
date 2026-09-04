@@ -183,10 +183,15 @@ function Home() {
         </div>
 
 
-        <div className="mt-16 flex items-center gap-6 self-start text-sm text-muted-foreground">
+        <div className="mt-16 flex flex-col gap-3 self-start text-sm text-muted-foreground">
           <Link to="/people" className="underline underline-offset-4">
             People
           </Link>
+          {sets.length > 0 && (
+            <Link to="/conversations" className="underline underline-offset-4">
+              Ask someone else ({sets.length})
+            </Link>
+          )}
         </div>
       </section>
     </main>
