@@ -247,6 +247,30 @@ function WithPersonPage() {
           )}
         </div>
 
+        {sets.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-2xl leading-tight">Send {name} a set you've already answered</h2>
+            <p className="mt-2 text-muted-foreground">
+              You won't answer anything again — they just get their own link.
+            </p>
+            <div className="mt-5 flex flex-col gap-3">
+              {sets.map((set) => (
+                <Link
+                  key={set.sessionId}
+                  to="/send/$sessionId"
+                  params={{ sessionId: set.sessionId }}
+                  className="card-soft block px-6 py-5"
+                >
+                  <p className="text-lg">{set.topic || "Three questions"}</p>
+                  {set.firstQuestion && (
+                    <p className="mt-2 text-base text-muted-foreground">{set.firstQuestion}</p>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {data && sessions.length === 0 && (
           <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
         )}
@@ -290,30 +314,6 @@ function WithPersonPage() {
           >
             See earlier
           </button>
-        )}
-
-        {sets.length > 0 && (
-          <div className="mt-14 border-t border-border pt-10">
-            <h2 className="text-2xl leading-tight">Send them a set you've already answered</h2>
-            <p className="mt-2 text-muted-foreground">
-              You won't answer anything again — they just get their own link.
-            </p>
-            <div className="mt-6 flex flex-col gap-3">
-              {sets.map((set) => (
-                <Link
-                  key={set.sessionId}
-                  to="/send/$sessionId"
-                  params={{ sessionId: set.sessionId }}
-                  className="card-soft block px-6 py-5"
-                >
-                  <p className="text-lg">{set.topic || "Three questions"}</p>
-                  {set.firstQuestion && (
-                    <p className="mt-2 text-base text-muted-foreground">{set.firstQuestion}</p>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </div>
         )}
       </section>
     </main>
