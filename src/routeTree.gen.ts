@@ -27,6 +27,7 @@ import { Route as GsendSessionIdRouteImport } from './routes/gsend.$sessionId'
 import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as JCodeRouteImport } from './routes/j.$code'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
+import { Route as PHandleRouteImport } from './routes/p.$handle'
 import { Route as RoomSessionIdRouteImport } from './routes/room.$sessionId'
 import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as SendSessionIdRouteImport } from './routes/send.$sessionId'
@@ -127,6 +128,11 @@ const JoinCodeRoute = JoinCodeRouteImport.update({
   path: '/join/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PHandleRoute = PHandleRouteImport.update({
+  id: '/p/$handle',
+  path: '/p/$handle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoomSessionIdRoute = RoomSessionIdRouteImport.update({
   id: '/room/$sessionId',
   path: '/room/$sessionId',
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
@@ -253,6 +261,7 @@ export interface FileRoutesById {
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
@@ -284,6 +293,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
     | '/send/$sessionId'
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
     | '/send/$sessionId'
@@ -342,6 +353,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
     | '/send/$sessionId'
@@ -372,6 +384,7 @@ export interface RootRouteChildren {
   ITokenRoute: typeof ITokenRoute
   JCodeRoute: typeof JCodeRoute
   JoinCodeRoute: typeof JoinCodeRoute
+  PHandleRoute: typeof PHandleRoute
   RoomSessionIdRoute: typeof RoomSessionIdRoute
   STokenRoute: typeof STokenRoute
   SendSessionIdRoute: typeof SendSessionIdRoute
@@ -511,6 +524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JoinCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/p/$handle': {
+      id: '/p/$handle'
+      path: '/p/$handle'
+      fullPath: '/p/$handle'
+      preLoaderRoute: typeof PHandleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/room/$sessionId': {
       id: '/room/$sessionId'
       path: '/room/$sessionId'
@@ -596,6 +616,7 @@ const rootRouteChildren: RootRouteChildren = {
   ITokenRoute: ITokenRoute,
   JCodeRoute: JCodeRoute,
   JoinCodeRoute: JoinCodeRoute,
+  PHandleRoute: PHandleRoute,
   RoomSessionIdRoute: RoomSessionIdRoute,
   STokenRoute: STokenRoute,
   SendSessionIdRoute: SendSessionIdRoute,

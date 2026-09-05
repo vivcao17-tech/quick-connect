@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { trackVisit } from "@/lib/track";
 
 import { listUnreadThreads } from "@/lib/conversations.functions";
+import { getProfileBadge } from "@/lib/profile.functions";
 import { listMyAnswerSets } from "@/lib/remote.functions";
 import { useViewer } from "@/lib/viewer";
 
@@ -49,7 +50,10 @@ function Home() {
   const [listOpen, setListOpen] = useState(false);
   const [sets, setSets] = useState<Awaited<ReturnType<typeof listMyAnswerSets>>["sets"]>([]);
 
+  const [badge, setBadge] = useState<{ name: string; newSince: number } | null>(null);
+
   const loadUnread = useServerFn(listUnreadThreads);
+  const loadBadge = useServerFn(getProfileBadge);
   const loadSets = useServerFn(listMyAnswerSets);
 
   // Return visits: the gap since this browser last opened the app.
@@ -81,6 +85,14 @@ function Home() {
       .then((result) => setSets(result.sets))
       .catch(() => setSets([]));
   }, [viewer.ready, viewer.guestToken, viewer.profileId, loadSets]);
+
+  // Signed-in people get their own page, with a dot when someone has read them.
+  useEffect(() => {
+    if (!viewer.ready || !viewer.profileId) return;
+    void loadBadge()
+      .then((result) => setBadge({ name: result.displayName, newSince: result.newSince }))
+      .catch(() => setBadge(null));
+  }, [viewer.ready, viewer.profileId, loadBadge]);
 
   function onCode(value: string) {
     const next = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 4);
@@ -184,6 +196,17 @@ function Home() {
 
 
         <div className="mt-16 flex flex-col gap-3 self-start text-sm text-muted-foreground">
+          {badge && (
+            <Link to="/me" className="flex items-center gap-2 underline underline-offset-4">
+              {badge.name ? `${badge.name}'s profile` : "Your profile"}
+              {badge.newSince > 0 && (
+                <span
+                  aria-label="Someone read you"
+                  className="inline-block h-2 w-2 rounded-full bg-primary"
+                />
+              )}
+            </Link>
+          )}
           <Link to="/people" className="underline underline-offset-4">
             People
           </Link>
