@@ -336,6 +336,27 @@ export const pickTopics = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const me = await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
 
+    // Everything that doesn't depend on my picks lands in the same wave.
+    const reads = Promise.all([
+      supabaseAdmin.from("session_participants").select("id").eq("session_id", data.sessionId),
+      supabaseAdmin
+        .from("session_participant_topics")
+        .select("participant_id")
+        .eq("session_id", data.sessionId)
+        .neq("participant_id", me.id),
+      supabaseAdmin
+        .from("sessions")
+        .select("spice_max, status")
+        .eq("id", data.sessionId)
+        .maybeSingle(),
+    ]);
+    void supabaseAdmin.from("events").insert({
+      guest_token: data.guestToken,
+      session_id: data.sessionId,
+      name: "topics_selected",
+      props: { count: data.topicIds.length },
+    });
+
     await supabaseAdmin
       .from("session_participant_topics")
       .delete()
@@ -349,27 +370,9 @@ export const pickTopics = createServerFn({ method: "POST" })
     );
     if (error) throw error;
 
-    await supabaseAdmin.from("events").insert({
-      guest_token: data.guestToken,
-      session_id: data.sessionId,
-      name: "topics_selected",
-      props: { count: data.topicIds.length },
-    });
+    const [{ data: participants }, { data: picks }, { data: session }] = await reads;
 
-    const [{ data: participants }, { data: picks }, { data: session }] = await Promise.all([
-      supabaseAdmin.from("session_participants").select("id").eq("session_id", data.sessionId),
-      supabaseAdmin
-        .from("session_participant_topics")
-        .select("participant_id")
-        .eq("session_id", data.sessionId),
-      supabaseAdmin
-        .from("sessions")
-        .select("spice_max, status")
-        .eq("id", data.sessionId)
-        .maybeSingle(),
-    ]);
-
-    const done = new Map<string, number>();
+    const done = new Map<string, number>([[me.id, data.topicIds.length]]);
     for (const row of picks ?? []) done.set(row.participant_id, (done.get(row.participant_id) ?? 0) + 1);
     const everyone =
       (participants ?? []).length >= 2 &&
@@ -377,7 +380,7 @@ export const pickTopics = createServerFn({ method: "POST" })
 
     if (everyone && session?.status === "topic_select") {
       // Only the first question blocks the tap — the rest are drawn behind it.
-      await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 1);
+      await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 1, 0);
       await supabaseAdmin
         .from("sessions")
         .update({ status: "answering", current_index: 0 })
@@ -386,6 +389,7 @@ export const pickTopics = createServerFn({ method: "POST" })
     }
     return { advanced: everyone };
   });
+
 
 /** Tops the room up to its full set of questions; safe to call repeatedly. */
 export const fillQuestions = createServerFn({ method: "POST" })
