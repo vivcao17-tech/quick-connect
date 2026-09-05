@@ -33,13 +33,15 @@ export async function pickGroupQuestions(
   spiceMax = 1,
   creatorGuestToken?: string,
 ) {
-  const { fetchPool, rankByHistory, spreadAcrossTopics, usedInGroupsBy } = await import(
-    "@/lib/selection.server"
-  );
-  const pool = await fetchPool(admin, { modes: ["group", "both"], spiceMax });
-  const used = creatorGuestToken ? await usedInGroupsBy(admin, creatorGuestToken) : new Set<string>();
-  const ranked = rankByHistory(pool, used.size > 0 ? [used] : []);
-  return spreadAcrossTopics(ranked, count) as QuestionRow[];
+  const { drawQuestions } = await import("@/lib/selection.server");
+  const rows = await drawQuestions(admin, {
+    slots: [{ count }],
+    guestTokens: creatorGuestToken ? [creatorGuestToken] : [],
+    modes: ["group", "both"],
+    spiceMax,
+    history: "group_used",
+  });
+  return rows as QuestionRow[];
 }
 
 

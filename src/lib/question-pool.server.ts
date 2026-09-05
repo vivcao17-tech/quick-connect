@@ -71,30 +71,21 @@ export async function drawQuestions(
   admin: Admin,
   opts: { topicIdsA: string[]; topicIdsB: string[]; guestTokens: string[]; count: number },
 ): Promise<DrawnQuestion[]> {
-  const { answeredByPerson, fetchPool, rankByHistory, spreadAcrossTopics } = await import(
-    "@/lib/selection.server"
-  );
+  const { drawQuestions: draw } = await import("@/lib/selection.server");
 
   const a = new Set(opts.topicIdsA.filter(Boolean));
   const b = new Set(opts.topicIdsB.filter(Boolean));
   const union = [...new Set([...a, ...b])];
-  const shared = new Set([...a].filter((id) => b.has(id)));
+  const shared = [...a].filter((id) => b.has(id));
 
-  const answeredSets = await Promise.all(
-    opts.guestTokens.filter(Boolean).map((token) => answeredByPerson(admin, { guestTokens: [token] })),
-  );
-
-  let pool = union.length
-    ? await fetchPool(admin, { modes: ["pair", "both"], spiceMax: 2, topicIds: union })
-    : [];
-  if (pool.length < opts.count) {
-    const wider = await fetchPool(admin, { modes: ["pair", "both"], spiceMax: 2 });
-    const seen = new Set(pool.map((row) => row.id));
-    pool = [...pool, ...wider.filter((row) => !seen.has(row.id))];
-  }
-
-  const ranked = rankByHistory(pool, answeredSets, { bonusTopicIds: shared });
-  const picked = spreadAcrossTopics(ranked, opts.count);
+  const picked = await draw(admin, {
+    slots: [{ count: opts.count }],
+    guestTokens: opts.guestTokens,
+    modes: ["pair", "both"],
+    spiceMax: 2,
+    topicIds: union,
+    bonusTopicIds: shared,
+  });
 
   return picked.map((row) => ({
     questionId: row.id,

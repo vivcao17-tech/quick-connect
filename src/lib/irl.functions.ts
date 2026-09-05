@@ -127,83 +127,74 @@ export const getRoomState = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const me = await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
 
-    const { data: session } = await supabaseAdmin
-      .from("sessions")
-      .select("id, room_code, status, current_index, spice_max")
-      .eq("id", data.sessionId)
-      .maybeSingle();
+    // Everything the screen needs in one database call.
+    const { data: raw, error } = await supabaseAdmin.rpc("room_state", {
+      _session_id: data.sessionId,
+      _guest_token: data.guestToken,
+    });
+    if (error) throw error;
+
+    const state = (raw ?? {}) as {
+      me: { id: string; display_name: string | null; role: string } | null;
+      session: {
+        id: string;
+        room_code: string | null;
+        status: string;
+        current_index: number;
+        spice_max: number;
+      } | null;
+      participants: { id: string; display_name: string | null; role: string }[];
+      topics: { id: string; slug: string; label: string }[];
+      topicPicks: { participant_id: string; topic_id: string }[];
+      votes: { participant_id: string; question_id: string }[];
+      questions: {
+        id: string;
+        question_id: string;
+        order_index: number;
+        revealed_at: string | null;
+        snapshot: Snapshot;
+        question_type: string;
+      }[];
+      answers: {
+        session_question_id: string;
+        participant_id: string;
+        option_key: string;
+        answer_role: string;
+      }[];
+    };
+
+    const me = state.me;
+    if (!me) throw new Error("Not in this room");
+    const session = state.session;
     if (!session) throw new Error("Room is gone");
 
-    const { data: participants } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, display_name, role, joined_at")
-      .eq("session_id", data.sessionId)
-      .order("joined_at");
-
-    const people = (participants ?? []).map((p) => ({
+    const people = (state.participants ?? []).map((p) => ({
       participantId: p.id,
       name: p.display_name ?? "Someone",
       isMe: p.id === me.id,
     }));
     const others = people.filter((p) => !p.isMe);
 
-    const { data: topics } = await supabaseAdmin
-      .from("topics")
-      .select("id, slug, label")
-      .eq("active", true)
-      .order("sort_order");
-
-    const { data: topicPicks } = await supabaseAdmin
-      .from("session_participant_topics")
-      .select("participant_id, topic_id")
-      .eq("session_id", data.sessionId);
+    const topics = state.topics ?? [];
+    const topicPicks = state.topicPicks ?? [];
 
     const topicCount = new Map<string, number>();
-    for (const row of topicPicks ?? []) {
+    for (const row of topicPicks) {
       topicCount.set(row.participant_id, (topicCount.get(row.participant_id) ?? 0) + 1);
     }
-    const myTopicIds = (topicPicks ?? [])
+    const myTopicIds = topicPicks
       .filter((row) => row.participant_id === me.id)
       .map((row) => row.topic_id);
 
-    const { data: votes } = await supabaseAdmin
-      .from("session_question_votes")
-      .select("participant_id, question_id")
-      .eq("session_id", data.sessionId);
     const voteCount = new Map<string, number>();
-    for (const row of votes ?? []) {
+    for (const row of state.votes ?? []) {
       voteCount.set(row.participant_id, (voteCount.get(row.participant_id) ?? 0) + 1);
     }
 
-    const { data: sqs } = await supabaseAdmin
-      .from("session_questions")
-      .select("id, question_id, order_index, revealed_at, snapshot")
-      .eq("session_id", data.sessionId)
-      .order("order_index");
-
-    const questionIds = [...new Set((sqs ?? []).map((sq) => sq.question_id))];
-    const { data: bankRows } = questionIds.length
-      ? await supabaseAdmin.from("questions").select("id, question_type").in("id", questionIds)
-      : { data: [] as { id: string; question_type: string }[] };
-    const typeOf = new Map((bankRows ?? []).map((row) => [row.id, row.question_type ?? "standard"]));
-
-    const sqIds = (sqs ?? []).map((sq) => sq.id);
-    const { data: answers } = sqIds.length
-      ? await supabaseAdmin
-          .from("answers")
-          .select("session_question_id, participant_id, option_key, answer_role, created_at")
-          .in("session_question_id", sqIds)
-          .order("created_at")
-      : {
-          data: [] as {
-            session_question_id: string;
-            participant_id: string;
-            option_key: string;
-            answer_role: string;
-          }[],
-        };
+    const sqs = state.questions ?? [];
+    const typeOf = new Map(sqs.map((sq) => [sq.question_id, sq.question_type ?? "standard"]));
+    const answers = state.answers ?? [];
 
     const otherPerson = people.find((p) => !p.isMe);
 
@@ -345,6 +336,27 @@ export const pickTopics = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const me = await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
 
+    // Everything that doesn't depend on my picks lands in the same wave.
+    const reads = Promise.all([
+      supabaseAdmin.from("session_participants").select("id").eq("session_id", data.sessionId),
+      supabaseAdmin
+        .from("session_participant_topics")
+        .select("participant_id")
+        .eq("session_id", data.sessionId)
+        .neq("participant_id", me.id),
+      supabaseAdmin
+        .from("sessions")
+        .select("spice_max, status")
+        .eq("id", data.sessionId)
+        .maybeSingle(),
+    ]);
+    void supabaseAdmin.from("events").insert({
+      guest_token: data.guestToken,
+      session_id: data.sessionId,
+      name: "topics_selected",
+      props: { count: data.topicIds.length },
+    });
+
     await supabaseAdmin
       .from("session_participant_topics")
       .delete()
@@ -358,45 +370,53 @@ export const pickTopics = createServerFn({ method: "POST" })
     );
     if (error) throw error;
 
-    await supabaseAdmin.from("events").insert({
-      guest_token: data.guestToken,
-      session_id: data.sessionId,
-      name: "topics_selected",
-      props: { count: data.topicIds.length },
-    });
+    const [{ data: participants }, { data: picks }, { data: session }] = await reads;
 
-    const { data: participants } = await supabaseAdmin
-      .from("session_participants")
-      .select("id")
-      .eq("session_id", data.sessionId);
-    const { data: picks } = await supabaseAdmin
-      .from("session_participant_topics")
-      .select("participant_id")
-      .eq("session_id", data.sessionId);
-
-    const done = new Map<string, number>();
+    const done = new Map<string, number>([[me.id, data.topicIds.length]]);
     for (const row of picks ?? []) done.set(row.participant_id, (done.get(row.participant_id) ?? 0) + 1);
     const everyone =
       (participants ?? []).length >= 2 &&
       (participants ?? []).every((p) => (done.get(p.id) ?? 0) >= 2);
 
-    if (everyone) {
-      // No question voting step: draw straight away and start on the first one.
-      const { data: session } = await supabaseAdmin
+    if (everyone && session?.status === "topic_select") {
+      // Only the first question blocks the tap — the rest are drawn behind it.
+      await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 1, 0);
+      await supabaseAdmin
+        .from("sessions")
+        .update({ status: "answering", current_index: 0 })
+        .eq("id", data.sessionId)
+        .eq("status", "topic_select");
+    }
+    return { advanced: everyone };
+  });
+
+
+/** Tops the room up to its full set of questions; safe to call repeatedly. */
+export const fillQuestions = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ guestToken: guest, sessionId: z.string().uuid(), want: z.number().min(1).max(8).optional() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
+
+    const [{ count }, { data: session }] = await Promise.all([
+      supabaseAdmin
+        .from("session_questions")
+        .select("id", { count: "exact", head: true })
+        .eq("session_id", data.sessionId),
+      supabaseAdmin
         .from("sessions")
         .select("spice_max, status")
         .eq("id", data.sessionId)
-        .maybeSingle();
-      if (session?.status === "topic_select") {
-        await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 3);
-        await supabaseAdmin
-          .from("sessions")
-          .update({ status: "answering", current_index: 0 })
-          .eq("id", data.sessionId)
-          .eq("status", "topic_select");
-      }
-    }
-    return { advanced: everyone };
+        .maybeSingle(),
+    ]);
+    const have = count ?? 0;
+    const target = data.want ?? 3;
+    if (!session || session.status === "ended" || have >= target) return { total: have };
+
+    const added = await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, target - have);
+    return { total: have + added };
   });
 
 export const answerInRoom = createServerFn({ method: "POST" })
@@ -541,7 +561,12 @@ export const advanceRoom = createServerFn({ method: "POST" })
     }
 
     const nextIndex = session.current_index + 1;
-    if (nextIndex >= total) {
+    // The background top-up may not have landed yet; don't end the room early.
+    let available = total;
+    if (nextIndex >= available && available < 3) {
+      available += await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 3 - available);
+    }
+    if (nextIndex >= available) {
       await supabaseAdmin
         .from("sessions")
         .update({ status: "ended", ended_at: new Date().toISOString() })

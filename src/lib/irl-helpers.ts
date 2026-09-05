@@ -57,16 +57,8 @@ export async function sessionIdentities(admin: Admin, sessionId: string) {
   return data ?? [];
 }
 
-/** One "already answered" set per person in the room — exclusion is per person, not per pair. */
-export async function answeredSetsFor(admin: Admin, sessionId: string) {
-  const { answeredByPerson } = await import("@/lib/selection.server");
-  const people = await sessionIdentities(admin, sessionId);
-  return Promise.all(
-    people.map((p) =>
-      answeredByPerson(admin, { guestTokens: [p.guest_token], profileIds: [p.profile_id] }),
-    ),
-  );
-}
+
+
 
 /** Topics: union of everyone's picks, with topics they both chose weighted up. */
 export async function sessionTopics(admin: Admin, sessionId: string) {
@@ -98,40 +90,22 @@ export async function candidateQuestions(
   spiceMax: number,
   opts?: { spiceExact?: number; limit?: number; exclude?: Set<string> },
 ) {
-  const { fetchPool, rankByHistory, spreadAcrossTopics } = await import("@/lib/selection.server");
+  const { drawQuestions } = await import("@/lib/selection.server");
   const limit = opts?.limit ?? 3;
-  const [{ union, shared }, answeredSets] = await Promise.all([
-    sessionTopics(admin, sessionId),
-    answeredSetsFor(admin, sessionId),
-  ]);
-
-  const exclude = opts?.exclude ?? new Set<string>();
-  const attempts: { topicIds?: string[]; spiceExact?: number }[] = [];
-  if (opts?.spiceExact !== undefined) {
-    attempts.push({ topicIds: union, spiceExact: opts.spiceExact }, { spiceExact: opts.spiceExact });
-  }
-  attempts.push({ topicIds: union }, {});
-
-  for (const attempt of attempts) {
-    if (attempt.topicIds && attempt.topicIds.length === 0) continue;
-    const pool = await fetchPool(admin, {
-      modes: PAIR_MODES,
-      spiceMax,
-      ...(attempt.spiceExact !== undefined ? { spiceExact: attempt.spiceExact } : {}),
-      ...(attempt.topicIds ? { topicIds: attempt.topicIds } : {}),
-    });
-    const ranked = rankByHistory(
-      pool.filter((row) => !exclude.has(row.id)),
-      answeredSets,
-      { bonusTopicIds: shared },
-    );
-    const picked = spreadAcrossTopics(ranked, limit);
-    if (picked.length >= limit || (picked.length > 0 && attempt === attempts[attempts.length - 1])) {
-      return picked as QuestionRow[];
-    }
-    if (picked.length >= limit) return picked as QuestionRow[];
-  }
-  return [] as QuestionRow[];
+  const rows = await drawQuestions(admin, {
+    slots: [
+      opts?.spiceExact !== undefined
+        ? { count: limit, spice: opts.spiceExact }
+        : { count: limit },
+    ],
+    sessionId,
+    modes: PAIR_MODES,
+    spiceMax,
+    exclude: [...(opts?.exclude ?? [])],
+    useSessionTopics: true,
+    excludeSessionQuestions: true,
+  });
+  return rows as QuestionRow[];
 }
 
 
@@ -170,93 +144,64 @@ export async function pairPlayedBefore(admin: Admin, sessionId: string, guestTok
 export async function pickImpressionQuestion(
   admin: Admin,
   excludeIds: string[],
-  answeredSets?: Set<string>[],
+  opts?: { sessionId?: string; guestTokens?: (string | null)[]; profileIds?: (string | null)[] },
 ) {
-  const { data: rows } = await admin
-    .from("questions")
-    .select(QUESTION_SELECT)
-    .eq("active", true)
-    .eq("question_type", "impression")
-    .in("mode", PAIR_MODES);
-  const pool = ((rows as QuestionRow[] | null) ?? []).filter((q) => !excludeIds.includes(q.id));
-  if (pool.length === 0) return null;
-  if (answeredSets && answeredSets.length > 0) {
-    const fresh = pool.filter((q) => !answeredSets.some((set) => set.has(q.id)));
-    if (fresh.length > 0) return fresh[Math.floor(Math.random() * fresh.length)]!;
-  }
-  return pool[Math.floor(Math.random() * pool.length)]!;
+  const { drawQuestions } = await import("@/lib/selection.server");
+  const rows = await drawQuestions(admin, {
+    slots: [{ count: 1, types: ["impression"] }],
+    modes: PAIR_MODES,
+    spiceMax: 2,
+    exclude: excludeIds,
+    ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+    ...(opts?.guestTokens ? { guestTokens: opts.guestTokens } : {}),
+    ...(opts?.profileIds ? { profileIds: opts.profileIds } : {}),
+  });
+  return (rows[0] as QuestionRow | undefined) ?? null;
+}
+
+/** Positional plan for a pair room: Q1 easy, Q2 the one that divides, Q3 impression. */
+function slotFor(index: number, spiceMax: number) {
+  if (index === 0) return { count: 1, spice: 1 };
+  if (index === 1) return { count: 1, spice: Math.min(2, Math.max(1, spiceMax)) };
+  if (index === 2) return { count: 1, types: ["impression"] };
+  return { count: 1 };
 }
 
 /**
  * Draws questions straight from both people's topics and appends them to the room.
- * The first draw is fixed by position: Q1 spice 1, Q2 spice 2, Q3 impression.
+ * Everything — per-person exclusion, priority tiers, topic spread and positional
+ * spice — happens in one database call.
  */
 export async function seedQuestions(
   admin: Admin,
   sessionId: string,
   spiceMax: number,
   want: number,
+  knownOffset?: number,
 ) {
-  const { data: existingRows, count } = await admin
-    .from("session_questions")
-    .select("question_id", { count: "exact" })
-    .eq("session_id", sessionId);
-  const offset = count ?? 0;
-  const alreadyPlayed = (existingRows ?? []).map((row) => row.question_id);
+  const { drawQuestions } = await import("@/lib/selection.server");
 
-  let chosen: QuestionRow[] = [];
-  const taken = new Set(alreadyPlayed);
-  const perTopic = new Map<string, number>();
-  const capReached = (q: QuestionRow) => (perTopic.get(q.topic_id ?? "none") ?? 0) >= 2;
-  const keep = (q: QuestionRow) => {
-    taken.add(q.id);
-    perTopic.set(q.topic_id ?? "none", (perTopic.get(q.topic_id ?? "none") ?? 0) + 1);
-    chosen.push(q);
-  };
-
-  if (offset === 0) {
-    // Q1 and Q2 get an exact spice level each, so every room has one dividing question.
-    for (const spice of [1, Math.min(2, Math.max(1, spiceMax))]) {
-      if (chosen.length >= want) break;
-      const exact = await candidateQuestions(admin, sessionId, spiceMax, {
-        spiceExact: spice,
-        limit: 6,
-        exclude: taken,
-      });
-      let next = exact.find((q) => !taken.has(q.id) && !capReached(q)) ?? exact.find((q) => !taken.has(q.id));
-      if (!next) {
-        const fallback = await candidateQuestions(admin, sessionId, spiceMax, {
-          limit: 8,
-          exclude: taken,
-        });
-        next = fallback.find((q) => !taken.has(q.id) && !capReached(q)) ?? fallback.find((q) => !taken.has(q.id));
-      }
-      if (next) keep(next);
-    }
-    if (chosen.length > 0 && want >= 3) {
-      const answeredSets = await answeredSetsFor(admin, sessionId);
-      const impression = await pickImpressionQuestion(admin, [...taken], answeredSets);
-      if (impression) chosen = [...chosen.slice(0, want - 1), impression];
-    }
-  } else {
-    const pool = await candidateQuestions(admin, sessionId, spiceMax, {
-      limit: want + 4,
-      exclude: taken,
-    });
-    for (const q of pool) {
-      if (chosen.length >= want) break;
-      if (taken.has(q.id) || capReached(q)) continue;
-      keep(q);
-    }
-    if (chosen.length < want) {
-      for (const q of pool) {
-        if (chosen.length >= want) break;
-        if (!taken.has(q.id)) keep(q);
-      }
-    }
+  let offset = knownOffset;
+  if (offset === undefined) {
+    const { count } = await admin
+      .from("session_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", sessionId);
+    offset = count ?? 0;
   }
 
+  const slots = Array.from({ length: Math.max(0, want) }, (_, i) => slotFor(offset + i, spiceMax));
+  if (slots.length === 0) return 0;
 
+
+  const chosen = (await drawQuestions(admin, {
+    slots,
+    sessionId,
+    modes: PAIR_MODES,
+    spiceMax,
+    useSessionTopics: true,
+    excludeSessionQuestions: true,
+  })) as QuestionRow[];
 
   if (chosen.length === 0) return 0;
 

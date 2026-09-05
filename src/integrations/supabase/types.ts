@@ -976,6 +976,24 @@ export type Database = {
         Returns: Json
       }
       current_guest_token: { Args: never; Returns: string }
+      draw_questions: {
+        Args: {
+          _bonus_topic_ids?: string[]
+          _exclude?: string[]
+          _exclude_session_questions?: boolean
+          _guest_tokens?: string[]
+          _history?: string
+          _max_per_topic?: number
+          _modes?: string[]
+          _profile_ids?: string[]
+          _session_id?: string
+          _slots: Json
+          _spice_max?: number
+          _topic_ids?: string[]
+          _use_session_topics?: boolean
+        }
+        Returns: Json
+      }
       is_my_participant: { Args: { _participant_id: string }; Returns: boolean }
       is_session_member: { Args: { _session_id: string }; Returns: boolean }
       people_overview: {
@@ -992,6 +1010,34 @@ export type Database = {
       relationships_detail: {
         Args: { _guest_token: string; _profile_id: string }
         Returns: Json
+      }
+      room_state: {
+        Args: { _guest_token: string; _session_id: string }
+        Returns: Json
+      }
+      selection_history: {
+        Args: {
+          _guest_tokens: string[]
+          _history: string
+          _profile_ids: string[]
+          _session_id: string
+        }
+        Returns: {
+          n: number
+          pkey: string
+          question_id: string
+        }[]
+      }
+      selection_persons: {
+        Args: {
+          _guest_tokens: string[]
+          _profile_ids: string[]
+          _session_id: string
+        }
+        Returns: {
+          pids: string[]
+          pkey: string
+        }[]
       }
       session_question_revealed: {
         Args: { _session_question_id: string }
