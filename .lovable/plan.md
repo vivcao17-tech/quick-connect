@@ -83,4 +83,4 @@ Time the topic tap end to end in a real browser run before and after, and re-run
 ## Notes
 
 - No table changes, no changes to what players see or to which questions get chosen — only where the work happens and when the screen paints.
-- `getRoomState` is a separate 9-call offender on the same screen. Out of scope here unless you want it folded in; say the word and I'll collapse it into the same function.
+- The room screen's repeated state read is included in this work, so nothing on that screen is left on the old many-call path.
