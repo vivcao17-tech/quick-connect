@@ -1,4 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useEffect } from "react";
+
+import { track } from "@/lib/track";
 
 import { getPublicProfile } from "@/lib/profile.functions";
 import { isMismatch, labelOf, share, topOption } from "@/lib/profile-shared";
@@ -42,6 +45,10 @@ export const Route = createFileRoute("/p/$handle")({
 
 function PublicProfile() {
   const profile = Route.useLoaderData();
+
+  useEffect(() => {
+    track("profile_view", { handle: profile.handle });
+  }, [profile.handle]);
 
   const sorted = [...profile.impressions].sort((a, b) => {
     const mismatch = Number(isMismatch(b)) - Number(isMismatch(a));
@@ -117,7 +124,11 @@ function PublicProfile() {
 
       <div className="card-soft mt-16 border-primary px-6 py-8">
         <p className="text-3xl leading-snug">Find out how people read you.</p>
-        <Link to="/start" className="btn-ink mt-6 inline-block">
+        <Link
+          to="/start"
+          onClick={() => track("profile_cta_tap", { handle: profile.handle })}
+          className="btn-ink mt-6 inline-block"
+        >
           Start
         </Link>
         <p className="mt-3 text-sm text-muted-foreground">30 seconds, no account</p>
