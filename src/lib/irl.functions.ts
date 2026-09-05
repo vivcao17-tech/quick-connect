@@ -365,14 +365,18 @@ export const pickTopics = createServerFn({ method: "POST" })
       props: { count: data.topicIds.length },
     });
 
-    const { data: participants } = await supabaseAdmin
-      .from("session_participants")
-      .select("id")
-      .eq("session_id", data.sessionId);
-    const { data: picks } = await supabaseAdmin
-      .from("session_participant_topics")
-      .select("participant_id")
-      .eq("session_id", data.sessionId);
+    const [{ data: participants }, { data: picks }, { data: session }] = await Promise.all([
+      supabaseAdmin.from("session_participants").select("id").eq("session_id", data.sessionId),
+      supabaseAdmin
+        .from("session_participant_topics")
+        .select("participant_id")
+        .eq("session_id", data.sessionId),
+      supabaseAdmin
+        .from("sessions")
+        .select("spice_max, status")
+        .eq("id", data.sessionId)
+        .maybeSingle(),
+    ]);
 
     const done = new Map<string, number>();
     for (const row of picks ?? []) done.set(row.participant_id, (done.get(row.participant_id) ?? 0) + 1);
@@ -380,23 +384,44 @@ export const pickTopics = createServerFn({ method: "POST" })
       (participants ?? []).length >= 2 &&
       (participants ?? []).every((p) => (done.get(p.id) ?? 0) >= 2);
 
-    if (everyone) {
-      // No question voting step: draw straight away and start on the first one.
-      const { data: session } = await supabaseAdmin
+    if (everyone && session?.status === "topic_select") {
+      // Only the first question blocks the tap — the rest are drawn behind it.
+      await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 1);
+      await supabaseAdmin
+        .from("sessions")
+        .update({ status: "answering", current_index: 0 })
+        .eq("id", data.sessionId)
+        .eq("status", "topic_select");
+    }
+    return { advanced: everyone };
+  });
+
+/** Tops the room up to its full set of questions; safe to call repeatedly. */
+export const fillQuestions = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ guestToken: guest, sessionId: z.string().uuid(), want: z.number().min(1).max(8).optional() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
+
+    const [{ count }, { data: session }] = await Promise.all([
+      supabaseAdmin
+        .from("session_questions")
+        .select("id", { count: "exact", head: true })
+        .eq("session_id", data.sessionId),
+      supabaseAdmin
         .from("sessions")
         .select("spice_max, status")
         .eq("id", data.sessionId)
-        .maybeSingle();
-      if (session?.status === "topic_select") {
-        await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 3);
-        await supabaseAdmin
-          .from("sessions")
-          .update({ status: "answering", current_index: 0 })
-          .eq("id", data.sessionId)
-          .eq("status", "topic_select");
-      }
-    }
-    return { advanced: everyone };
+        .maybeSingle(),
+    ]);
+    const have = count ?? 0;
+    const target = data.want ?? 3;
+    if (!session || session.status === "ended" || have >= target) return { total: have };
+
+    const added = await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, target - have);
+    return { total: have + added };
   });
 
 export const answerInRoom = createServerFn({ method: "POST" })
