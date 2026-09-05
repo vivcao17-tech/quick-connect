@@ -90,40 +90,22 @@ export async function candidateQuestions(
   spiceMax: number,
   opts?: { spiceExact?: number; limit?: number; exclude?: Set<string> },
 ) {
-  const { fetchPool, rankByHistory, spreadAcrossTopics } = await import("@/lib/selection.server");
+  const { drawQuestions } = await import("@/lib/selection.server");
   const limit = opts?.limit ?? 3;
-  const [{ union, shared }, answeredSets] = await Promise.all([
-    sessionTopics(admin, sessionId),
-    answeredSetsFor(admin, sessionId),
-  ]);
-
-  const exclude = opts?.exclude ?? new Set<string>();
-  const attempts: { topicIds?: string[]; spiceExact?: number }[] = [];
-  if (opts?.spiceExact !== undefined) {
-    attempts.push({ topicIds: union, spiceExact: opts.spiceExact }, { spiceExact: opts.spiceExact });
-  }
-  attempts.push({ topicIds: union }, {});
-
-  for (const attempt of attempts) {
-    if (attempt.topicIds && attempt.topicIds.length === 0) continue;
-    const pool = await fetchPool(admin, {
-      modes: PAIR_MODES,
-      spiceMax,
-      ...(attempt.spiceExact !== undefined ? { spiceExact: attempt.spiceExact } : {}),
-      ...(attempt.topicIds ? { topicIds: attempt.topicIds } : {}),
-    });
-    const ranked = rankByHistory(
-      pool.filter((row) => !exclude.has(row.id)),
-      answeredSets,
-      { bonusTopicIds: shared },
-    );
-    const picked = spreadAcrossTopics(ranked, limit);
-    if (picked.length >= limit || (picked.length > 0 && attempt === attempts[attempts.length - 1])) {
-      return picked as QuestionRow[];
-    }
-    if (picked.length >= limit) return picked as QuestionRow[];
-  }
-  return [] as QuestionRow[];
+  const rows = await drawQuestions(admin, {
+    slots: [
+      opts?.spiceExact !== undefined
+        ? { count: limit, spice: opts.spiceExact }
+        : { count: limit },
+    ],
+    sessionId,
+    modes: PAIR_MODES,
+    spiceMax,
+    exclude: [...(opts?.exclude ?? [])],
+    useSessionTopics: true,
+    excludeSessionQuestions: true,
+  });
+  return rows as QuestionRow[];
 }
 
 
