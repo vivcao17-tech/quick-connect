@@ -127,83 +127,74 @@ export const getRoomState = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const me = await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
 
-    const { data: session } = await supabaseAdmin
-      .from("sessions")
-      .select("id, room_code, status, current_index, spice_max")
-      .eq("id", data.sessionId)
-      .maybeSingle();
+    // Everything the screen needs in one database call.
+    const { data: raw, error } = await supabaseAdmin.rpc("room_state", {
+      _session_id: data.sessionId,
+      _guest_token: data.guestToken,
+    });
+    if (error) throw error;
+
+    const state = (raw ?? {}) as {
+      me: { id: string; display_name: string | null; role: string } | null;
+      session: {
+        id: string;
+        room_code: string | null;
+        status: string;
+        current_index: number;
+        spice_max: number;
+      } | null;
+      participants: { id: string; display_name: string | null; role: string }[];
+      topics: { id: string; slug: string; label: string }[];
+      topicPicks: { participant_id: string; topic_id: string }[];
+      votes: { participant_id: string; question_id: string }[];
+      questions: {
+        id: string;
+        question_id: string;
+        order_index: number;
+        revealed_at: string | null;
+        snapshot: Snapshot;
+        question_type: string;
+      }[];
+      answers: {
+        session_question_id: string;
+        participant_id: string;
+        option_key: string;
+        answer_role: string;
+      }[];
+    };
+
+    const me = state.me;
+    if (!me) throw new Error("Not in this room");
+    const session = state.session;
     if (!session) throw new Error("Room is gone");
 
-    const { data: participants } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, display_name, role, joined_at")
-      .eq("session_id", data.sessionId)
-      .order("joined_at");
-
-    const people = (participants ?? []).map((p) => ({
+    const people = (state.participants ?? []).map((p) => ({
       participantId: p.id,
       name: p.display_name ?? "Someone",
       isMe: p.id === me.id,
     }));
     const others = people.filter((p) => !p.isMe);
 
-    const { data: topics } = await supabaseAdmin
-      .from("topics")
-      .select("id, slug, label")
-      .eq("active", true)
-      .order("sort_order");
-
-    const { data: topicPicks } = await supabaseAdmin
-      .from("session_participant_topics")
-      .select("participant_id, topic_id")
-      .eq("session_id", data.sessionId);
+    const topics = state.topics ?? [];
+    const topicPicks = state.topicPicks ?? [];
 
     const topicCount = new Map<string, number>();
-    for (const row of topicPicks ?? []) {
+    for (const row of topicPicks) {
       topicCount.set(row.participant_id, (topicCount.get(row.participant_id) ?? 0) + 1);
     }
-    const myTopicIds = (topicPicks ?? [])
+    const myTopicIds = topicPicks
       .filter((row) => row.participant_id === me.id)
       .map((row) => row.topic_id);
 
-    const { data: votes } = await supabaseAdmin
-      .from("session_question_votes")
-      .select("participant_id, question_id")
-      .eq("session_id", data.sessionId);
     const voteCount = new Map<string, number>();
-    for (const row of votes ?? []) {
+    for (const row of state.votes ?? []) {
       voteCount.set(row.participant_id, (voteCount.get(row.participant_id) ?? 0) + 1);
     }
 
-    const { data: sqs } = await supabaseAdmin
-      .from("session_questions")
-      .select("id, question_id, order_index, revealed_at, snapshot")
-      .eq("session_id", data.sessionId)
-      .order("order_index");
-
-    const questionIds = [...new Set((sqs ?? []).map((sq) => sq.question_id))];
-    const { data: bankRows } = questionIds.length
-      ? await supabaseAdmin.from("questions").select("id, question_type").in("id", questionIds)
-      : { data: [] as { id: string; question_type: string }[] };
-    const typeOf = new Map((bankRows ?? []).map((row) => [row.id, row.question_type ?? "standard"]));
-
-    const sqIds = (sqs ?? []).map((sq) => sq.id);
-    const { data: answers } = sqIds.length
-      ? await supabaseAdmin
-          .from("answers")
-          .select("session_question_id, participant_id, option_key, answer_role, created_at")
-          .in("session_question_id", sqIds)
-          .order("created_at")
-      : {
-          data: [] as {
-            session_question_id: string;
-            participant_id: string;
-            option_key: string;
-            answer_role: string;
-          }[],
-        };
+    const sqs = state.questions ?? [];
+    const typeOf = new Map(sqs.map((sq) => [sq.question_id, sq.question_type ?? "standard"]));
+    const answers = state.answers ?? [];
 
     const otherPerson = people.find((p) => !p.isMe);
 
