@@ -59,8 +59,23 @@ export const createGroupRoom = createServerFn({ method: "POST" })
     });
     if (pError) throw pError;
 
-    const questions = await pickGroupQuestions(supabaseAdmin, data.length, 1, data.guestToken);
+    const { closingImpression } = await import("@/lib/impression.server");
+    const questions = await pickGroupQuestions(supabaseAdmin, data.length - 1, 1, data.guestToken);
     if (questions.length === 0) throw new Error("No questions available");
+
+    // Every room closes on an impression question.
+    const impression = await closingImpression(supabaseAdmin, {
+      excludeIds: questions.map((q) => q.id),
+      sessionId: session.id,
+      guestTokens: [data.guestToken],
+    });
+    if (impression) questions.push(impression);
+    else {
+      const extra = await pickGroupQuestions(supabaseAdmin, data.length, 1, data.guestToken);
+      const spare = extra.find((q) => !questions.some((row) => row.id === q.id));
+      if (spare) questions.push(spare);
+    }
+
 
     const { error: sqError } = await supabaseAdmin.from("session_questions").insert(
       questions.map((q, index) => ({
