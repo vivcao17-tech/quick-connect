@@ -566,7 +566,12 @@ export const advanceRoom = createServerFn({ method: "POST" })
     }
 
     const nextIndex = session.current_index + 1;
-    if (nextIndex >= total) {
+    // The background top-up may not have landed yet; don't end the room early.
+    let available = total;
+    if (nextIndex >= available && available < 3) {
+      available += await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 3 - available);
+    }
+    if (nextIndex >= available) {
       await supabaseAdmin
         .from("sessions")
         .update({ status: "ended", ended_at: new Date().toISOString() })
