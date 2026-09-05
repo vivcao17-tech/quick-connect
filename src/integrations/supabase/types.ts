@@ -447,24 +447,110 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_impression_prefs: {
+        Row: {
+          created_at: string
+          hidden: boolean
+          id: string
+          profile_id: string
+          question_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hidden?: boolean
+          id?: string
+          profile_id: string
+          question_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hidden?: boolean
+          id?: string
+          profile_id?: string
+          question_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_impression_prefs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_impression_prefs_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_prompts: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          profile_id: string
+          prompt_key: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          profile_id: string
+          prompt_key: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+          prompt_key?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_prompts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
           display_name: string | null
           email: string | null
+          handle: string | null
           id: string
+          impressions_seen_at: string | null
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          handle?: string | null
           id: string
+          impressions_seen_at?: string | null
         }
         Update: {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          handle?: string | null
           id?: string
+          impressions_seen_at?: string | null
         }
         Relationships: []
       }
@@ -944,6 +1030,11 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_impression_exhaustion: { Args: never; Returns: Json }
+      admin_impression_questions: {
+        Args: { _include_test?: boolean }
+        Returns: Json
+      }
       admin_invites: {
         Args: { _from: string; _include_test?: boolean; _to: string }
         Returns: Json
@@ -999,6 +1090,17 @@ export type Database = {
       people_overview: {
         Args: { _guest_token: string; _profile_id: string }
         Returns: Json
+      }
+      profile_data: {
+        Args: { _include_hidden?: boolean; _profile_id: string }
+        Returns: Json
+      }
+      profile_id_for_handle: { Args: { _handle: string }; Returns: string }
+      profile_participants: {
+        Args: { _profile_id: string }
+        Returns: {
+          id: string
+        }[]
       }
       question_tally: {
         Args: { _question_id: string }
