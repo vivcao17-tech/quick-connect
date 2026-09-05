@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { track } from "@/lib/track";
 
 import { Thread } from "@/components/Thread";
+import { withName } from "@/components/QuestionText";
 import {
   answerInAsyncGroup,
   getAsyncGroupState,
@@ -83,11 +84,18 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
 
   const next = state.questions.find((q) => !q.myAnswer);
 
-  async function pick(sessionQuestionId: string, optionKey: OptionKey) {
+  async function pick(sessionQuestionId: string, optionKey: OptionKey, aboutParticipantId?: string) {
     if (busy) return;
     setBusy(true);
     try {
-      await answer({ data: { guestToken, sessionQuestionId, optionKey } });
+      await answer({
+        data: {
+          guestToken,
+          sessionQuestionId,
+          optionKey,
+          ...(aboutParticipantId ? { aboutParticipantId } : {}),
+        },
+      });
       await refresh();
     } finally {
       setBusy(false);
@@ -96,12 +104,25 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
 
   if (next && !state.revealed) {
     const position = state.questions.indexOf(next) + 1;
+    const imp = next.impression;
+    const pending = imp?.targets.find((t) => t.guessed === null) ?? null;
+    const onSelf = Boolean(imp && !pending && !imp.selfAnswer);
     return (
       <Shell>
         <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
           {position} of {state.questions.length}
         </p>
-        <h1 className="mt-8 text-4xl leading-tight">{next.text}</h1>
+        {pending && (
+          <p className="mt-8 text-sm tracking-[0.18em] text-muted-foreground uppercase">Guess:</p>
+        )}
+        <div
+          className={onSelf ? "mt-8 rounded-3xl border border-primary/40 bg-secondary px-6 py-6" : ""}
+        >
+          {onSelf && <p className="text-sm tracking-[0.18em] text-primary uppercase">And you?</p>}
+          <h1 className={`text-4xl leading-tight ${pending || onSelf ? "mt-2" : "mt-8"}`}>
+            {pending ? withName(pending.stem, pending.name) : onSelf ? imp!.selfStem : next.text}
+          </h1>
+        </div>
         <div className="mt-10 flex flex-col gap-3">
           {next.options.map((option) => (
             <button
@@ -113,12 +134,12 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
                   {
                     session_question_id: next.sessionQuestionId,
                     option_key: option.key,
-                    answer_role: "about_self",
+                    answer_role: pending ? "about_other" : "about_self",
                     kind: "group_async",
                   },
                   { sessionId },
                 );
-                void pick(next.sessionQuestionId, option.key);
+                void pick(next.sessionQuestionId, option.key, pending?.participantId);
               }}
               className="card-soft px-6 py-6 text-left text-2xl hover:border-primary disabled:opacity-40"
             >
