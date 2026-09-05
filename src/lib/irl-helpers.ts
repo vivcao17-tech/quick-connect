@@ -177,17 +177,22 @@ export async function seedQuestions(
   sessionId: string,
   spiceMax: number,
   want: number,
+  knownOffset?: number,
 ) {
   const { drawQuestions } = await import("@/lib/selection.server");
 
-  const { count } = await admin
-    .from("session_questions")
-    .select("id", { count: "exact", head: true })
-    .eq("session_id", sessionId);
-  const offset = count ?? 0;
+  let offset = knownOffset;
+  if (offset === undefined) {
+    const { count } = await admin
+      .from("session_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", sessionId);
+    offset = count ?? 0;
+  }
 
   const slots = Array.from({ length: Math.max(0, want) }, (_, i) => slotFor(offset + i, spiceMax));
   if (slots.length === 0) return 0;
+
 
   const chosen = (await drawQuestions(admin, {
     slots,
