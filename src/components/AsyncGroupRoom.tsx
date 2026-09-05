@@ -297,11 +297,37 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
           </button>
         ))}
       </div>
+
+      {/* The read on you is yours alone — nobody sees guesses about anyone else. */}
+      {state.questions
+        .filter((q) => q.impression && q.impression.aboutMe.length > 0)
+        .map((q) => (
+          <div key={q.sessionQuestionId} className="card-soft mt-8 px-6 py-6">
+            <p className="text-sm tracking-[0.18em] text-muted-foreground uppercase">
+              How they read you
+            </p>
+            <p className="mt-3 text-xl leading-snug">{q.text}</p>
+            <div className="mt-4 flex flex-col gap-2">
+              {q.impression!.aboutMe.map((row) => (
+                <p key={row.name} className="text-lg">
+                  {row.name} said {row.label}.
+                </p>
+              ))}
+              {q.impression!.selfAnswer && (
+                <p className="text-lg text-primary">
+                  You said {q.options.find((o) => o.key === q.impression!.selfAnswer)?.label}.
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+
       {state.questions.some((q) => !q.myAnswer) && (
         <p className="mt-8 text-sm text-muted-foreground">
           You can still answer the rest — they'll show up here.
         </p>
       )}
+
     </Shell>
   );
 }
