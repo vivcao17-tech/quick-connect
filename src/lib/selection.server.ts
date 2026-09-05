@@ -39,6 +39,10 @@ export type DrawOptions = {
    * 'group_used' — only what they've already used in a group room.
    */
   history?: "answered" | "group_used" | undefined;
+  /** Use the topics the room's players picked (union, with shared ones weighted up). */
+  useSessionTopics?: boolean | undefined;
+  /** Skip anything already queued in this room. */
+  excludeSessionQuestions?: boolean | undefined;
 };
 
 /**
