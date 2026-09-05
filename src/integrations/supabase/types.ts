@@ -980,6 +980,7 @@ export type Database = {
         Args: {
           _bonus_topic_ids?: string[]
           _exclude?: string[]
+          _exclude_session_questions?: boolean
           _guest_tokens?: string[]
           _history?: string
           _max_per_topic?: number
@@ -989,6 +990,7 @@ export type Database = {
           _slots: Json
           _spice_max?: number
           _topic_ids?: string[]
+          _use_session_topics?: boolean
         }
         Returns: Json
       }
