@@ -377,6 +377,8 @@ export const answerInGroup = createServerFn({ method: "POST" })
         guestToken: guest,
         sessionQuestionId: z.string().uuid(),
         optionKey: z.enum(["a", "b", "c"]),
+        /** Set when this is a guess about someone else in the room. */
+        aboutParticipantId: z.string().uuid().optional(),
       })
       .parse(input),
   )
@@ -393,13 +395,31 @@ export const answerInGroup = createServerFn({ method: "POST" })
     const me = await groupMember(supabaseAdmin, sq.session_id, data.guestToken);
     if (me.role === OBSERVER_ROLE) throw new Error("You're running this one, not playing");
 
+    const aboutOther = Boolean(data.aboutParticipantId);
+    const role = aboutOther ? "about_other" : "about_self";
+
+    // Everyone reads everyone, so the same person submits several rows here —
+    // guard each one so a double tap can't duplicate a guess.
+    const existing = supabaseAdmin
+      .from("answers")
+      .select("id")
+      .eq("session_question_id", sq.id)
+      .eq("participant_id", me.id)
+      .eq("answer_role", role);
+    const { data: already } = await (aboutOther
+      ? existing.eq("about_participant_id", data.aboutParticipantId!)
+      : existing
+    ).maybeSingle();
+    if (already) return { ok: true };
+
     const { error } = await supabaseAdmin.from("answers").insert({
       session_question_id: sq.id,
       participant_id: me.id,
       question_id: sq.question_id,
       option_key: data.optionKey,
       visibility: "session",
-      answer_role: "about_self",
+      answer_role: role,
+      about_participant_id: aboutOther ? data.aboutParticipantId! : me.id,
     });
     if (error) throw error;
 
@@ -407,11 +427,12 @@ export const answerInGroup = createServerFn({ method: "POST" })
       guest_token: data.guestToken,
       session_id: sq.session_id,
       name: "answer_submitted",
-      props: { question_id: sq.question_id, kind: "group" },
+      props: { question_id: sq.question_id, kind: "group", answer_role: role },
     });
 
     return { ok: true };
   });
+
 
 /** Host-only, always allowed: a missing or departed person never blocks the room. */
 export const revealGroupQuestion = createServerFn({ method: "POST" })
