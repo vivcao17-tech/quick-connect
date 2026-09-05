@@ -1,12 +1,14 @@
-import { QUESTION_SELECT } from "@/lib/irl-helpers";
 import type { QuestionRow } from "@/lib/irl-helpers";
-import { AB_TYPES } from "@/lib/remote-shared";
 
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
-export type SelectableRow = QuestionRow & { is_featured?: boolean | null };
-
-export const SELECTION_SELECT = `${QUESTION_SELECT}, is_featured`;
+export type SelectableRow = QuestionRow & {
+  is_featured?: boolean | null;
+  /** How many times the person we drew for has answered this question before. */
+  answered_count?: number;
+  /** How many people in the draw have seen it before. */
+  seen_by?: number;
+};
 
 /** Default ceilings by session type. */
 export const SPICE_MAX = { pair: 2, group_irl: 1, group_remote: 2 } as const;
@@ -15,125 +17,60 @@ export const SPICE_MAX = { pair: 2, group_irl: 1, group_remote: 2 } as const;
 export const MAX_PER_TOPIC = 2;
 
 /**
- * Everything one person has ever answered — across every partner, not just this
- * pair. Answering the same question with someone else is the same repetition.
+ * One slot in a draw. `spice` prefers (but never requires) that exact level;
+ * `types` overrides the default A/B bank types — e.g. `["impression"]`.
  */
-export async function answeredByPerson(
-  admin: Admin,
-  identity: { guestTokens?: (string | null | undefined)[]; profileIds?: (string | null | undefined)[] },
-): Promise<Set<string>> {
-  const tokens = (identity.guestTokens ?? []).filter((t): t is string => Boolean(t));
-  const profiles = (identity.profileIds ?? []).filter((p): p is string => Boolean(p));
-  if (tokens.length === 0 && profiles.length === 0) return new Set();
+export type DrawSlot = { count?: number; spice?: number; types?: string[] };
 
-  const ids = new Set<string>();
-  if (tokens.length > 0) {
-    const { data } = await admin.from("session_participants").select("id").in("guest_token", tokens);
-    for (const row of data ?? []) ids.add(row.id);
-  }
-  if (profiles.length > 0) {
-    const { data } = await admin.from("session_participants").select("id").in("profile_id", profiles);
-    for (const row of data ?? []) ids.add(row.id);
-  }
-  if (ids.size === 0) return new Set();
-
-  const { data: answers } = await admin
-    .from("answers")
-    .select("question_id")
-    .in("participant_id", [...ids]);
-  return new Set((answers ?? []).map((a) => a.question_id));
-}
-
-/** Questions this person has already used in a group room (group repetition only). */
-export async function usedInGroupsBy(admin: Admin, guestToken: string): Promise<Set<string>> {
-  const { data: parts } = await admin
-    .from("session_participants")
-    .select("session_id")
-    .eq("guest_token", guestToken);
-  const sessionIds = [...new Set((parts ?? []).map((p) => p.session_id))];
-  if (sessionIds.length === 0) return new Set();
-
-  const { data: sessions } = await admin
-    .from("sessions")
-    .select("id")
-    .in("id", sessionIds)
-    .in("kind", ["group", "group_async"]);
-  const groupIds = (sessions ?? []).map((s) => s.id);
-  if (groupIds.length === 0) return new Set();
-
-  const { data: sqs } = await admin
-    .from("session_questions")
-    .select("question_id")
-    .in("session_id", groupIds);
-  return new Set((sqs ?? []).map((row) => row.question_id));
-}
-
-/** Active A/B bank rows for one session type, under the spice ceiling. */
-export async function fetchPool(
-  admin: Admin,
-  opts: {
-    modes: string[];
-    spiceMax: number;
-    spiceExact?: number | undefined;
-    topicIds?: string[] | undefined;
-  },
-): Promise<SelectableRow[]> {
-  let query = admin
-    .from("questions")
-    .select(SELECTION_SELECT)
-    .eq("active", true)
-    .in("question_type", AB_TYPES as unknown as string[])
-    .in("mode", opts.modes);
-
-  query = opts.spiceExact !== undefined
-    ? query.eq("spice_level", opts.spiceExact)
-    : query.lte("spice_level", opts.spiceMax);
-
-  if (opts.topicIds && opts.topicIds.length > 0) query = query.in("topic_id", opts.topicIds);
-
-  const { data } = await query;
-  return ((data as SelectableRow[] | null) ?? []).filter(Boolean);
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const out = [...items];
-  for (let i = out.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j]!, out[i]!];
-  }
-  return out;
-}
+export type DrawOptions = {
+  slots: DrawSlot[];
+  /** Draw for everyone in this room. */
+  sessionId?: string | null | undefined;
+  guestTokens?: (string | null | undefined)[] | undefined;
+  profileIds?: (string | null | undefined)[] | undefined;
+  modes?: string[] | undefined;
+  spiceMax?: number | undefined;
+  topicIds?: string[] | undefined;
+  bonusTopicIds?: string[] | undefined;
+  exclude?: string[] | undefined;
+  maxPerTopic?: number | undefined;
+  /**
+   * 'answered' — anything these people have answered anywhere (pair rooms).
+   * 'group_used' — only what they've already used in a group room.
+   */
+  history?: "answered" | "group_used" | undefined;
+};
 
 /**
- * Priority order, best first:
- *   0. featured, nobody has answered it
- *   1. nobody has answered it
- *   2. only one of them has answered it
- *   3. both have answered it (never block a session on an empty pool)
- * A shared-topic bonus, when given, nudges within a tier only.
+ * The whole selection in a single round trip: per-person exclusion, the
+ * featured/unseen/seen priority tiers, the topic spread and positional spice
+ * all run inside Postgres (`public.draw_questions`). Never returns empty just
+ * because the pool is exhausted — repeats are allowed as a last resort.
  */
-export function rankByHistory(
-  rows: SelectableRow[],
-  answeredSets: Set<string>[],
-  opts?: { bonusTopicIds?: Set<string> | undefined },
-): SelectableRow[] {
-  const scored = shuffle(rows).map((row) => {
-    const seenBy = answeredSets.filter((set) => set.has(row.id)).length;
-    let tier: number;
-    if (seenBy === 0) tier = row.is_featured ? 0 : 1;
-    else if (seenBy >= answeredSets.length && answeredSets.length > 0) tier = 3;
-    else tier = 2;
-    const bonus = opts?.bonusTopicIds && row.topic_id && opts.bonusTopicIds.has(row.topic_id) ? 1 : 0;
-    return { row, key: tier * 10 - bonus };
+export async function drawQuestions(admin: Admin, opts: DrawOptions): Promise<SelectableRow[]> {
+  const clean = <T>(items: (T | null | undefined)[] | undefined) =>
+    (items ?? []).filter((item): item is T => Boolean(item));
+
+  const { data, error } = await admin.rpc("draw_questions", {
+    _slots: opts.slots as never,
+    _session_id: opts.sessionId ?? undefined,
+    _guest_tokens: clean(opts.guestTokens),
+    _profile_ids: clean(opts.profileIds),
+    _modes: opts.modes ?? ["pair", "both"],
+    _spice_max: opts.spiceMax ?? 2,
+    _topic_ids: clean(opts.topicIds),
+    _bonus_topic_ids: clean(opts.bonusTopicIds),
+    _exclude: clean(opts.exclude),
+    _max_per_topic: opts.maxPerTopic ?? MAX_PER_TOPIC,
+    _history: opts.history ?? "answered",
   });
-  scored.sort((a, b) => a.key - b.key);
-  return scored.map((entry) => entry.row);
+  if (error) throw error;
+  return ((data as unknown as SelectableRow[] | null) ?? []).filter(Boolean);
 }
 
 /**
  * Take `count` rows in the given order while keeping any one topic to at most
- * `maxPerTopic` — a session that draws five money questions is monotonous.
- * Falls back to the overflow rather than returning short.
+ * `maxPerTopic`. Only needed where a caller re-sorts a drawn pool itself.
  */
 export function spreadAcrossTopics(
   rows: SelectableRow[],
@@ -164,40 +101,4 @@ export function spreadAcrossTopics(
     }
   }
   return taken.slice(0, count);
-}
-
-/** One question at an exact spice level, honouring priority and what's already picked. */
-export async function pickAtSpice(
-  admin: Admin,
-  opts: {
-    modes: string[];
-    spiceMax: number;
-    spice: number;
-    answeredSets: Set<string>[];
-    exclude: Set<string>;
-    topicIds?: string[] | undefined;
-    bonusTopicIds?: Set<string> | undefined;
-  },
-): Promise<SelectableRow | null> {
-  const tries: { spiceExact?: number | undefined; topicIds?: string[] | undefined }[] = [
-    { spiceExact: opts.spice, topicIds: opts.topicIds },
-    { spiceExact: opts.spice },
-    { topicIds: opts.topicIds },
-    {},
-  ];
-  for (const attempt of tries) {
-    const pool = await fetchPool(admin, {
-      modes: opts.modes,
-      spiceMax: opts.spiceMax,
-      spiceExact: attempt.spiceExact,
-      topicIds: attempt.topicIds,
-    });
-    const ranked = rankByHistory(
-      pool.filter((row) => !opts.exclude.has(row.id)),
-      opts.answeredSets,
-      { bonusTopicIds: opts.bonusTopicIds },
-    );
-    if (ranked[0]) return ranked[0];
-  }
-  return null;
 }
