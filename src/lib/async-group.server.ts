@@ -33,21 +33,19 @@ export async function pickAsyncGroupQuestions(
   count = ASYNC_QUESTION_COUNT,
   creatorGuestToken?: string,
 ) {
-  const { fetchPool, rankByHistory, spreadAcrossTopics, usedInGroupsBy } = await import(
-    "@/lib/selection.server"
-  );
+  const { drawQuestions, spreadAcrossTopics } = await import("@/lib/selection.server");
 
-  let pool = topicId
-    ? await fetchPool(admin, { modes: ["group", "both"], spiceMax: 2, topicIds: [topicId] })
-    : [];
-  if (pool.length < count) {
-    const wider = await fetchPool(admin, { modes: ["group", "both"], spiceMax: 2 });
-    const seen = new Set(pool.map((q) => q.id));
-    pool = [...pool, ...wider.filter((q) => !seen.has(q.id))];
-  }
+  // Already ordered by freshness-for-the-creator; we re-sort it by lopsidedness below.
+  const pool = await drawQuestions(admin, {
+    slots: [{ count: Math.max(count * 6, 24) }],
+    guestTokens: creatorGuestToken ? [creatorGuestToken] : [],
+    modes: ["group", "both"],
+    spiceMax: 2,
+    topicIds: topicId ? [topicId] : [],
+    history: "group_used",
+    maxPerTopic: 99,
+  });
   if (pool.length === 0) return [] as QuestionRow[];
-
-  const used = creatorGuestToken ? await usedInGroupsBy(admin, creatorGuestToken) : new Set<string>();
 
   // How lopsided each question has been across every session so far.
   const { data: history } = await admin
@@ -63,29 +61,21 @@ export async function pickAsyncGroupQuestions(
     tallies.set(row.question_id, byOption);
   }
 
-  const scored = pool.map((q) => {
+  const scored = pool.map((q, index) => {
     const byOption = tallies.get(q.id);
     const votes = byOption ? [...byOption.values()] : [];
     const total = votes.reduce((sum, n) => sum + n, 0);
     // Sweet spot: roughly three-quarters one way, so one or two people stand out.
     const lopsided = total >= 6 ? 1 - Math.abs(Math.max(...votes) / total - 0.78) * 2 : 0.55;
     const spiceBonus = q.spice_level >= 2 ? 0.12 : 0;
-    const featured = q.is_featured ? 0.3 : 0;
-    return { q, score: lopsided + spiceBonus + featured + Math.random() * 0.12 };
+    const fresh = (q.seen_by ?? 0) === 0 ? 0.4 : 0;
+    // Keep the database ordering as a gentle tiebreak.
+    const rank = 0.2 * (1 - index / pool.length);
+    return { q, score: lopsided + spiceBonus + fresh + rank + Math.random() * 0.12 };
   });
   scored.sort((a, b) => b.score - a.score);
 
-  // Fresh-for-the-creator first, then the rest; no more than two from one topic.
-  const ordered = rankByHistory(scored.map((s) => s.q), used.size > 0 ? [used] : []);
-  const byScore = new Map(scored.map((s, index) => [s.q.id, index]));
-  const stable = [...ordered].sort((a, b) => {
-    const aUsed = used.has(a.id) ? 1 : 0;
-    const bUsed = used.has(b.id) ? 1 : 0;
-    if (aUsed !== bUsed) return aUsed - bUsed;
-    return (byScore.get(a.id) ?? 0) - (byScore.get(b.id) ?? 0);
-  });
-
-  return spreadAcrossTopics(stable, count) as QuestionRow[];
+  return spreadAcrossTopics(scored.map((s) => s.q), count) as QuestionRow[];
 }
 
 
