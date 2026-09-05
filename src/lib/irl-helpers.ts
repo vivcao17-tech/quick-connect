@@ -57,16 +57,8 @@ export async function sessionIdentities(admin: Admin, sessionId: string) {
   return data ?? [];
 }
 
-/** One "already answered" set per person in the room — exclusion is per person, not per pair. */
-export async function answeredSetsFor(admin: Admin, sessionId: string) {
-  const { answeredByPerson } = await import("@/lib/selection.server");
-  const people = await sessionIdentities(admin, sessionId);
-  return Promise.all(
-    people.map((p) =>
-      answeredByPerson(admin, { guestTokens: [p.guest_token], profileIds: [p.profile_id] }),
-    ),
-  );
-}
+
+
 
 /** Topics: union of everyone's picks, with topics they both chose weighted up. */
 export async function sessionTopics(admin: Admin, sessionId: string) {
