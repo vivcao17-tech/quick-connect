@@ -16,6 +16,7 @@ import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as GremoteRouteImport } from './routes/gremote'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as MeRouteImport } from './routes/me'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as StartRouteImport } from './routes/start'
@@ -69,6 +70,11 @@ const GroupRoute = GroupRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeRoute = MeRouteImport.update({
+  id: '/me',
+  path: '/me',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PeopleRoute = PeopleRouteImport.update({
@@ -177,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/me': typeof MeRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/me': typeof MeRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/me': typeof MeRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
@@ -264,6 +273,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/me'
     | '/people'
     | '/remote'
     | '/start'
@@ -292,6 +302,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/me'
     | '/people'
     | '/remote'
     | '/start'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/me'
     | '/people'
     | '/remote'
     | '/start'
@@ -349,6 +361,7 @@ export interface RootRouteChildren {
   GremoteRoute: typeof GremoteRoute
   GroupRoute: typeof GroupRoute
   InboxRoute: typeof InboxRoute
+  MeRoute: typeof MeRoute
   PeopleRoute: typeof PeopleRoute
   RemoteRoute: typeof RemoteRoute
   StartRoute: typeof StartRoute
@@ -419,6 +432,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me': {
+      id: '/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof MeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/people': {
@@ -565,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   GremoteRoute: GremoteRoute,
   GroupRoute: GroupRoute,
   InboxRoute: InboxRoute,
+  MeRoute: MeRoute,
   PeopleRoute: PeopleRoute,
   RemoteRoute: RemoteRoute,
   StartRoute: StartRoute,
