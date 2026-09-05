@@ -76,7 +76,7 @@ function MyProfile() {
         <p className="mt-4 text-lg text-muted-foreground">
           Sign in and it's here, with everything people have read about you.
         </p>
-        <Link to="/auth" search={{ next: "/me" }} className="btn-ink mt-8 self-start">
+        <Link to="/auth" search={{ redirect: "/me" }} className="btn-ink mt-8 self-start">
           Sign in
         </Link>
       </Shell>
