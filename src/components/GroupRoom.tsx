@@ -362,47 +362,89 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
             <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
               Question {state.currentIndex + 1} of {state.total}
             </p>
-            <h2 className="mt-6 text-4xl leading-tight">{current.text}</h2>
+            {(() => {
+              const imp = current.kind === "impression" ? current.impression : null;
+              const pending = imp?.targets.find((t) => t.guessed === null) ?? null;
+              const onSelf = Boolean(imp && !pending && !imp.selfAnswer);
+              const myDone = imp ? imp.done : Boolean(current.myAnswer);
+              const heading = current.revealed
+                ? current.text
+                : pending
+                  ? pending.stem
+                  : onSelf
+                    ? imp!.selfStem
+                    : current.text;
 
-            {!current.revealed && state.iAmPlaying && !current.myAnswer && (
-              <div className="mt-10 flex flex-col gap-3">
-                {current.options.map((option) => (
-                  <button
-                    key={option.key}
-                    disabled={busy}
-                    onClick={() => {
-                      track(
-                        "answer_submitted",
-                        {
-                          session_question_id: current.sessionQuestionId,
-                          option_key: option.key,
-                          answer_role: "about_self",
-                          kind: "group",
-                          seconds: Math.round((Date.now() - shownAt.current) / 1000),
-                        },
-                        { sessionId },
-                      );
-                      void run(() =>
-                        answer({
-                          data: {
-                            guestToken,
-                            sessionQuestionId: current.sessionQuestionId,
-                            optionKey: option.key,
-                          },
-                        }),
-                      );
-                    }}
-                    className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
+              return (
+                <>
+                  {!current.revealed && pending && (
+                    <p className="mt-6 text-sm tracking-[0.18em] text-muted-foreground uppercase">
+                      Guess:
+                    </p>
+                  )}
+                  <div
+                    className={
+                      !current.revealed && onSelf
+                        ? "mt-6 rounded-3xl border border-primary/40 bg-secondary px-6 py-6"
+                        : ""
+                    }
                   >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            )}
+                    {!current.revealed && onSelf && (
+                      <p className="text-sm tracking-[0.18em] text-primary uppercase">And you?</p>
+                    )}
+                    <h2
+                      className={`text-4xl leading-tight ${
+                        !current.revealed && (pending || onSelf) ? "mt-2" : "mt-6"
+                      }`}
+                    >
+                      {imp && pending ? withName(heading, pending.name) : heading}
+                    </h2>
+                  </div>
 
-            {!current.revealed && state.iAmPlaying && current.myAnswer && (
-              <p className="mt-12 text-lg text-muted-foreground">That's yours.</p>
-            )}
+                  {!current.revealed && state.iAmPlaying && !myDone && (
+                    <div className="mt-10 flex flex-col gap-3">
+                      {current.options.map((option) => (
+                        <button
+                          key={option.key}
+                          disabled={busy}
+                          onClick={() => {
+                            track(
+                              "answer_submitted",
+                              {
+                                session_question_id: current.sessionQuestionId,
+                                option_key: option.key,
+                                answer_role: pending ? "about_other" : "about_self",
+                                kind: "group",
+                                seconds: Math.round((Date.now() - shownAt.current) / 1000),
+                              },
+                              { sessionId },
+                            );
+                            void run(() =>
+                              answer({
+                                data: {
+                                  guestToken,
+                                  sessionQuestionId: current.sessionQuestionId,
+                                  optionKey: option.key,
+                                  ...(pending ? { aboutParticipantId: pending.participantId } : {}),
+                                },
+                              }),
+                            );
+                          }}
+                          className="card-soft px-6 py-6 text-left text-xl hover:border-primary disabled:opacity-50"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {!current.revealed && state.iAmPlaying && myDone && (
+                    <p className="mt-12 text-lg text-muted-foreground">That's yours.</p>
+                  )}
+                </>
+              );
+            })()}
+
 
             {!current.revealed && state.iAmHost && (
               <div className="mt-12">
