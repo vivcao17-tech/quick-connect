@@ -51,9 +51,8 @@ export async function drawQuestions(admin: Admin, opts: DrawOptions): Promise<Se
   const clean = <T>(items: (T | null | undefined)[] | undefined) =>
     (items ?? []).filter((item): item is T => Boolean(item));
 
-  const { data, error } = await admin.rpc("draw_questions", {
+  const args = {
     _slots: opts.slots as never,
-    _session_id: opts.sessionId ?? undefined,
     _guest_tokens: clean(opts.guestTokens),
     _profile_ids: clean(opts.profileIds),
     _modes: opts.modes ?? ["pair", "both"],
@@ -63,7 +62,12 @@ export async function drawQuestions(admin: Admin, opts: DrawOptions): Promise<Se
     _exclude: clean(opts.exclude),
     _max_per_topic: opts.maxPerTopic ?? MAX_PER_TOPIC,
     _history: opts.history ?? "answered",
-  });
+    _use_session_topics: opts.useSessionTopics ?? false,
+    _exclude_session_questions: opts.excludeSessionQuestions ?? false,
+    ...(opts.sessionId ? { _session_id: opts.sessionId } : {}),
+  };
+
+  const { data, error } = await admin.rpc("draw_questions", args);
   if (error) throw error;
   return ((data as unknown as SelectableRow[] | null) ?? []).filter(Boolean);
 }
