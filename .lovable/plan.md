@@ -72,11 +72,15 @@ Same shape for the remote and async-group flows: the first question renders on s
 
 Add `answers(participant_id)` and `session_questions(question_id)`; drop the duplicate `answers_sq_idx`.
 
-### 4. Verify
+### 4. Fold in the room state read
 
-Time the topic tap end to end in a real browser run before and after, and re-run `EXPLAIN (ANALYZE, BUFFERS)` on the new function to confirm index use. Target under 500 ms; expected shape is one call of a few milliseconds plus one round trip.
+`getRoomState` currently makes 9 sequential calls (membership, session, participants, topics, topic picks, votes, session questions, answers, notifications) on the same screen, and the room polls it every 2 seconds. It becomes a single `public.room_state(...)` security-definer function returning one JSON payload with exactly the same shape the component reads today, so the polling loop and every Realtime-triggered refresh cost one round trip instead of nine.
+
+### 5. Verify
+
+Time the topic tap end to end in a real browser run before and after, and re-run `EXPLAIN (ANALYZE, BUFFERS)` on both new functions to confirm index use. Target under 500 ms; expected shape is one call of a few milliseconds plus one round trip.
 
 ## Notes
 
 - No table changes, no changes to what players see or to which questions get chosen — only where the work happens and when the screen paints.
-- `getRoomState` is a separate 9-call offender on the same screen. Out of scope here unless you want it folded in; say the word and I'll collapse it into the same function.
+- The room screen's repeated state read is included in this work, so nothing on that screen is left on the old many-call path.
