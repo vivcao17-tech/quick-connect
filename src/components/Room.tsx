@@ -19,6 +19,7 @@ import { getGuestToken } from "@/lib/guest";
 import {
   advanceRoom,
   answerInRoom,
+  fillQuestions,
   getRoomState,
   pickTopics,
   saveSessionEmail,
@@ -40,6 +41,7 @@ const SAME_PROMPTS = ["You both picked the same — but your reasons might be co
 export function Room({ sessionId }: { sessionId: string }) {
   const load = useServerFn(getRoomState);
   const submitTopics = useServerFn(pickTopics);
+  const topUp = useServerFn(fillQuestions);
   const submitAnswer = useServerFn(answerInRoom);
   const advance = useServerFn(advanceRoom);
   const changeSpice = useServerFn(setSpice);
