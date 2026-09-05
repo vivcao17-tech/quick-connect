@@ -293,7 +293,13 @@ export function Room({ sessionId }: { sessionId: string }) {
             {!state.myTopicsDone && (
               <button
                 disabled={topicDraft.length !== 2 || busy}
-                onClick={() => run(() => submitTopics({ data: { guestToken, sessionId, topicIds: topicDraft } }))}
+                onClick={() =>
+                  run(async () => {
+                    const res = await submitTopics({ data: { guestToken, sessionId, topicIds: topicDraft } });
+                    // The first question is already in; draw the rest while they read it.
+                    if (res?.advanced) void topUp({ data: { guestToken, sessionId } }).then(() => refresh());
+                  })
+                }
                 className="btn-ink mt-4 self-start disabled:opacity-30"
               >
                 That's my two
