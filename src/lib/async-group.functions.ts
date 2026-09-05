@@ -39,7 +39,13 @@ export const createAsyncGroup = createServerFn({ method: "POST" })
       topicId = topic?.id ?? null;
     }
 
-    const questions = await pickAsyncGroupQuestions(supabaseAdmin, topicId, ASYNC_QUESTION_COUNT, data.guestToken);
+    const { closingImpression } = await import("@/lib/impression.server");
+    const questions = await pickAsyncGroupQuestions(
+      supabaseAdmin,
+      topicId,
+      ASYNC_QUESTION_COUNT - 1,
+      data.guestToken,
+    );
     if (questions.length === 0) throw new Error("No questions available");
 
     const { data: session, error } = await supabaseAdmin
@@ -56,6 +62,24 @@ export const createAsyncGroup = createServerFn({ method: "POST" })
       role: "host",
     });
     if (pError) throw pError;
+
+    // The last question is always an impression question.
+    const impression = await closingImpression(supabaseAdmin, {
+      excludeIds: questions.map((q) => q.id),
+      sessionId: session.id,
+      guestTokens: [data.guestToken],
+    });
+    if (impression) questions.push(impression);
+    else {
+      const extra = await pickAsyncGroupQuestions(
+        supabaseAdmin,
+        topicId,
+        ASYNC_QUESTION_COUNT,
+        data.guestToken,
+      );
+      const spare = extra.find((q) => !questions.some((row) => row.id === q.id));
+      if (spare) questions.push(spare);
+    }
 
     const { error: sqError } = await supabaseAdmin.from("session_questions").insert(
       questions.map((q, index) => ({
@@ -114,16 +138,36 @@ export const getAsyncGroupState = createServerFn({ method: "POST" })
 
     const { data: answerRows } = await supabaseAdmin
       .from("answers")
-      .select("session_question_id, participant_id, option_key, created_at")
+      .select("session_question_id, participant_id, option_key, created_at, answer_role, about_participant_id")
       .in("session_question_id", sqs.length ? sqs.map((sq) => sq.id) : [""])
       .order("created_at");
 
     const picks = new Map<string, OptionKey>();
+    /** `sq:guesser:target` — one row per person this guesser read. */
+    const guesses = new Map<string, OptionKey>();
     for (const row of answerRows ?? []) {
+      if ((row.answer_role ?? "about_self") === "about_other") {
+        if (row.about_participant_id) {
+          guesses.set(
+            `${row.session_question_id}:${row.participant_id}:${row.about_participant_id}`,
+            row.option_key as OptionKey,
+          );
+        }
+        continue;
+      }
       picks.set(`${row.session_question_id}:${row.participant_id}`, row.option_key as OptionKey);
     }
 
-    const doneCount = people.filter((p) => sqs.every((sq) => picks.has(`${sq.id}:${p.id}`))).length;
+    /** An impression question needs a read on everyone else plus a self-answer. */
+    const finishedBy = (sq: { id: string; snapshot: unknown }, personId: string) => {
+      if (!picks.has(`${sq.id}:${personId}`)) return false;
+      if ((sq.snapshot as Snapshot).kind !== "impression") return true;
+      return people
+        .filter((other) => other.id !== personId)
+        .every((other) => guesses.has(`${sq.id}:${personId}:${other.id}`));
+    };
+
+    const doneCount = people.filter((p) => sqs.every((sq) => finishedBy(sq, p.id))).length;
 
     // Reveal is decided here, server-side, and only ever from these two facts.
     const ageHours = (Date.now() - new Date(session.created_at).getTime()) / 3_600_000;
@@ -136,19 +180,49 @@ export const getAsyncGroupState = createServerFn({ method: "POST" })
       }
     }
 
+    const { stemForTarget, selfStem } = await import("@/lib/impression.server");
     const questions = sqs.map((sq) => {
       const snap = sq.snapshot as Snapshot;
+      const isImpression = snap.kind === "impression";
+      const others = people.filter((p) => p.id !== me.id);
       return {
         sessionQuestionId: sq.id,
         index: sq.order_index,
         text: snap.text,
         options: snap.options,
-        myAnswer: picks.get(`${sq.id}:${me.id}`) ?? null,
+        // Only complete once every part is in, so the flow doesn't skip ahead.
+        myAnswer: finishedBy(sq, me.id) ? (picks.get(`${sq.id}:${me.id}`) ?? null) : null,
+        impression: isImpression
+          ? {
+              targets: others.map((p) => ({
+                participantId: p.id,
+                name: p.name,
+                stem: stemForTarget(snap, p.name),
+                guessed: guesses.get(`${sq.id}:${me.id}:${p.id}`) ?? null,
+              })),
+              selfStem: selfStem(snap),
+              selfAnswer: picks.get(`${sq.id}:${me.id}`) ?? null,
+              // Personal: only what other people said about me.
+              aboutMe: revealed
+                ? others
+                    .map((p) => {
+                      const key = guesses.get(`${sq.id}:${p.id}:${me.id}`);
+                      if (!key) return null;
+                      return {
+                        name: p.name,
+                        optionKey: key,
+                        label: snap.options.find((o) => o.key === key)?.label ?? "",
+                      };
+                    })
+                    .filter((row): row is { name: string; optionKey: OptionKey; label: string } => row !== null)
+                : [],
+            }
+          : null,
       };
     });
 
     const blocks: RevealBlock[] = revealed
-      ? sqs.map((sq) => {
+      ? sqs.filter((sq) => (sq.snapshot as Snapshot).kind !== "impression").map((sq) => {
           const snap = sq.snapshot as Snapshot;
           const groups = snap.options.map((option) => ({
             optionKey: option.key,
@@ -200,6 +274,8 @@ export const answerInAsyncGroup = createServerFn({ method: "POST" })
         guestToken: guest,
         sessionQuestionId: z.string().uuid(),
         optionKey: z.enum(["a", "b", "c"]),
+        /** Set when this is a guess about someone else in the room. */
+        aboutParticipantId: z.string().uuid().optional(),
       })
       .parse(input),
   )
@@ -216,13 +292,29 @@ export const answerInAsyncGroup = createServerFn({ method: "POST" })
     const me = await asyncMember(supabaseAdmin, sq.session_id, data.guestToken);
     if (!me) throw new Error("Not in this room");
 
+    const aboutOther = Boolean(data.aboutParticipantId);
+    const role = aboutOther ? "about_other" : "about_self";
+
+    const query = supabaseAdmin
+      .from("answers")
+      .select("id")
+      .eq("session_question_id", sq.id)
+      .eq("participant_id", me.id)
+      .eq("answer_role", role);
+    const { data: already } = await (aboutOther
+      ? query.eq("about_participant_id", data.aboutParticipantId!)
+      : query
+    ).maybeSingle();
+    if (already) return { ok: true };
+
     const { error } = await supabaseAdmin.from("answers").insert({
       session_question_id: sq.id,
       participant_id: me.id,
       question_id: sq.question_id,
       option_key: data.optionKey,
       visibility: "session",
-      answer_role: "about_self",
+      answer_role: role,
+      about_participant_id: aboutOther ? data.aboutParticipantId! : me.id,
     });
     if (error) throw error;
 
@@ -230,7 +322,7 @@ export const answerInAsyncGroup = createServerFn({ method: "POST" })
       guest_token: data.guestToken,
       session_id: sq.session_id,
       name: "answer_submitted",
-      props: { question_id: sq.question_id, kind: ASYNC_GROUP_KIND },
+      props: { question_id: sq.question_id, kind: ASYNC_GROUP_KIND, answer_role: role },
     });
 
     return { ok: true };

@@ -59,8 +59,23 @@ export const createGroupRoom = createServerFn({ method: "POST" })
     });
     if (pError) throw pError;
 
-    const questions = await pickGroupQuestions(supabaseAdmin, data.length, 1, data.guestToken);
+    const { closingImpression } = await import("@/lib/impression.server");
+    const questions = await pickGroupQuestions(supabaseAdmin, data.length - 1, 1, data.guestToken);
     if (questions.length === 0) throw new Error("No questions available");
+
+    // Every room closes on an impression question.
+    const impression = await closingImpression(supabaseAdmin, {
+      excludeIds: questions.map((q) => q.id),
+      sessionId: session.id,
+      guestTokens: [data.guestToken],
+    });
+    if (impression) questions.push(impression);
+    else {
+      const extra = await pickGroupQuestions(supabaseAdmin, data.length, 1, data.guestToken);
+      const spare = extra.find((q) => !questions.some((row) => row.id === q.id));
+      if (spare) questions.push(spare);
+    }
+
 
     const { error: sqError } = await supabaseAdmin.from("session_questions").insert(
       questions.map((q, index) => ({
@@ -123,13 +138,24 @@ export const getGroupState = createServerFn({ method: "POST" })
 
     const { data: answerRows } = await supabaseAdmin
       .from("answers")
-      .select("session_question_id, participant_id, option_key, created_at")
+      .select("session_question_id, participant_id, option_key, created_at, answer_role, about_participant_id")
       .in("session_question_id", sqs.map((sq) => sq.id).length ? sqs.map((sq) => sq.id) : [""])
       .order("created_at");
 
     // Answers are never overwritten — the latest row per person is the one that counts.
     const latest = new Map<string, string>();
+    /** `sq:guesser:target` → what the guesser said about that person. */
+    const guesses = new Map<string, string>();
     for (const row of answerRows ?? []) {
+      if ((row.answer_role ?? "about_self") === "about_other") {
+        if (row.about_participant_id) {
+          guesses.set(
+            `${row.session_question_id}:${row.participant_id}:${row.about_participant_id}`,
+            row.option_key,
+          );
+        }
+        continue;
+      }
       latest.set(`${row.session_question_id}:${row.participant_id}`, row.option_key);
     }
 
@@ -140,6 +166,14 @@ export const getGroupState = createServerFn({ method: "POST" })
     const connected = new Set((myConnections ?? []).map((c) => c.target_participant_id));
 
     const currentSq = sqs[session.current_index];
+    type Impression = {
+      targets: { participantId: string; name: string; stem: string; guessed: OptionKey | null }[];
+      selfStem: string;
+      selfAnswer: OptionKey | null;
+      done: boolean;
+      /** Only ever what other people said about me — never about anyone else. */
+      aboutMe: { name: string; optionKey: OptionKey; label: string }[];
+    };
     let current: {
       sessionQuestionId: string;
       questionId: string;
@@ -154,10 +188,13 @@ export const getGroupState = createServerFn({ method: "POST" })
       minorityOption: OptionKey | null;
       minorityNames: string[];
       iAmMinority: boolean;
+      kind: "standard" | "impression";
+      impression: Impression | null;
     } | null = null;
 
     if (currentSq) {
       const snap = currentSq.snapshot as Snapshot;
+      const isImpression = snap.kind === "impression";
       const picks = players
         .map((p) => {
           const key = latest.get(`${currentSq.id}:${p.participantId}`);
@@ -174,9 +211,54 @@ export const getGroupState = createServerFn({ method: "POST" })
       }
       const groups = [...byOption.values()].sort((a, b) => b.length - a.length);
       const small = groups.length > 1 ? groups[groups.length - 1]! : [];
-      const isMinority = revealed && small.length > 0 && small.length <= 2 && small.length < groups[0]!.length;
+      const isMinority =
+        !isImpression && revealed && small.length > 0 && small.length <= 2 && small.length < groups[0]!.length;
       const minorityNames = isMinority ? small.map((p) => p.name) : [];
       const iAmMinority = isMinority && small.some((p) => p.isMe);
+
+      let impression: Impression | null = null;
+      if (isImpression) {
+        const { stemForTarget, selfStem } = await import("@/lib/impression.server");
+        const others = players.filter((p) => !p.isMe);
+        impression = {
+          targets: others.map((p) => ({
+            participantId: p.participantId,
+            name: p.name,
+            stem: stemForTarget(snap, p.name),
+            guessed:
+              (guesses.get(`${currentSq.id}:${me.id}:${p.participantId}`) as OptionKey | undefined) ?? null,
+          })),
+          selfStem: selfStem(snap),
+          selfAnswer: (latest.get(`${currentSq.id}:${me.id}`) as OptionKey | undefined) ?? null,
+          done: false,
+          aboutMe: revealed
+            ? others
+                .map((p) => {
+                  const key = guesses.get(`${currentSq.id}:${p.participantId}:${me.id}`) as
+                    | OptionKey
+                    | undefined;
+                  if (!key) return null;
+                  return {
+                    name: p.name,
+                    optionKey: key,
+                    label: snap.options.find((o) => o.key === key)?.label ?? "",
+                  };
+                })
+                .filter((row): row is NonNullable<typeof row> => row !== null)
+            : [],
+        };
+        impression.done =
+          Boolean(impression.selfAnswer) && impression.targets.every((t) => t.guessed !== null);
+      }
+
+      // An impression question only counts as answered once every guess and the
+      // self-answer are in.
+      const impressionAnsweredCount = players.filter((p) => {
+        if (!latest.get(`${currentSq.id}:${p.participantId}`)) return false;
+        return players
+          .filter((other) => other.participantId !== p.participantId)
+          .every((other) => guesses.get(`${currentSq.id}:${p.participantId}:${other.participantId}`));
+      }).length;
 
       current = {
         sessionQuestionId: currentSq.id,
@@ -185,16 +267,19 @@ export const getGroupState = createServerFn({ method: "POST" })
         options: snap.options,
         revealed,
         myAnswer: (latest.get(`${currentSq.id}:${me.id}`) as OptionKey | undefined) ?? null,
-        answeredCount: picks.length,
-        picks: revealed ? picks : [],
+        answeredCount: isImpression ? impressionAnsweredCount : picks.length,
+        picks: revealed && !isImpression ? picks : [],
         minority: minorityNames.length ? minorityLine(minorityNames) : "",
         // The nudge to speak lands on everyone except the person in the minority.
         ask: minorityNames.length && !iAmMinority ? askLine(minorityNames) : "",
         minorityOption: isMinority ? (small[0]!.optionKey as OptionKey) : null,
         minorityNames,
         iAmMinority,
+        kind: isImpression ? "impression" : "standard",
+        impression,
       };
     }
+
 
     // End screen: plain counts of where each person landed differently from me.
     const differences = players
@@ -292,6 +377,8 @@ export const answerInGroup = createServerFn({ method: "POST" })
         guestToken: guest,
         sessionQuestionId: z.string().uuid(),
         optionKey: z.enum(["a", "b", "c"]),
+        /** Set when this is a guess about someone else in the room. */
+        aboutParticipantId: z.string().uuid().optional(),
       })
       .parse(input),
   )
@@ -308,13 +395,31 @@ export const answerInGroup = createServerFn({ method: "POST" })
     const me = await groupMember(supabaseAdmin, sq.session_id, data.guestToken);
     if (me.role === OBSERVER_ROLE) throw new Error("You're running this one, not playing");
 
+    const aboutOther = Boolean(data.aboutParticipantId);
+    const role = aboutOther ? "about_other" : "about_self";
+
+    // Everyone reads everyone, so the same person submits several rows here —
+    // guard each one so a double tap can't duplicate a guess.
+    const existing = supabaseAdmin
+      .from("answers")
+      .select("id")
+      .eq("session_question_id", sq.id)
+      .eq("participant_id", me.id)
+      .eq("answer_role", role);
+    const { data: already } = await (aboutOther
+      ? existing.eq("about_participant_id", data.aboutParticipantId!)
+      : existing
+    ).maybeSingle();
+    if (already) return { ok: true };
+
     const { error } = await supabaseAdmin.from("answers").insert({
       session_question_id: sq.id,
       participant_id: me.id,
       question_id: sq.question_id,
       option_key: data.optionKey,
       visibility: "session",
-      answer_role: "about_self",
+      answer_role: role,
+      about_participant_id: aboutOther ? data.aboutParticipantId! : me.id,
     });
     if (error) throw error;
 
@@ -322,11 +427,12 @@ export const answerInGroup = createServerFn({ method: "POST" })
       guest_token: data.guestToken,
       session_id: sq.session_id,
       name: "answer_submitted",
-      props: { question_id: sq.question_id, kind: "group" },
+      props: { question_id: sq.question_id, kind: "group", answer_role: role },
     });
 
     return { ok: true };
   });
+
 
 /** Host-only, always allowed: a missing or departed person never blocks the room. */
 export const revealGroupQuestion = createServerFn({ method: "POST" })

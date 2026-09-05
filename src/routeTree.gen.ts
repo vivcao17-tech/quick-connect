@@ -16,6 +16,7 @@ import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as GremoteRouteImport } from './routes/gremote'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as MeRouteImport } from './routes/me'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as StartRouteImport } from './routes/start'
@@ -26,6 +27,7 @@ import { Route as GsendSessionIdRouteImport } from './routes/gsend.$sessionId'
 import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as JCodeRouteImport } from './routes/j.$code'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
+import { Route as PHandleRouteImport } from './routes/p.$handle'
 import { Route as RoomSessionIdRouteImport } from './routes/room.$sessionId'
 import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as SendSessionIdRouteImport } from './routes/send.$sessionId'
@@ -69,6 +71,11 @@ const GroupRoute = GroupRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeRoute = MeRouteImport.update({
+  id: '/me',
+  path: '/me',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PeopleRoute = PeopleRouteImport.update({
@@ -119,6 +126,11 @@ const JCodeRoute = JCodeRouteImport.update({
 const JoinCodeRoute = JoinCodeRouteImport.update({
   id: '/join/$code',
   path: '/join/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PHandleRoute = PHandleRouteImport.update({
+  id: '/p/$handle',
+  path: '/p/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoomSessionIdRoute = RoomSessionIdRouteImport.update({
@@ -177,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/me': typeof MeRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
@@ -187,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
@@ -205,6 +219,7 @@ export interface FileRoutesByTo {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/me': typeof MeRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
@@ -215,6 +230,7 @@ export interface FileRoutesByTo {
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
@@ -234,6 +250,7 @@ export interface FileRoutesById {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/me': typeof MeRoute
   '/people': typeof PeopleRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
@@ -244,6 +261,7 @@ export interface FileRoutesById {
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
   '/send/$sessionId': typeof SendSessionIdRoute
@@ -264,6 +282,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/me'
     | '/people'
     | '/remote'
     | '/start'
@@ -274,6 +293,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
     | '/send/$sessionId'
@@ -292,6 +312,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/me'
     | '/people'
     | '/remote'
     | '/start'
@@ -302,6 +323,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
     | '/send/$sessionId'
@@ -320,6 +342,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/me'
     | '/people'
     | '/remote'
     | '/start'
@@ -330,6 +353,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
     | '/send/$sessionId'
@@ -349,6 +373,7 @@ export interface RootRouteChildren {
   GremoteRoute: typeof GremoteRoute
   GroupRoute: typeof GroupRoute
   InboxRoute: typeof InboxRoute
+  MeRoute: typeof MeRoute
   PeopleRoute: typeof PeopleRoute
   RemoteRoute: typeof RemoteRoute
   StartRoute: typeof StartRoute
@@ -359,6 +384,7 @@ export interface RootRouteChildren {
   ITokenRoute: typeof ITokenRoute
   JCodeRoute: typeof JCodeRoute
   JoinCodeRoute: typeof JoinCodeRoute
+  PHandleRoute: typeof PHandleRoute
   RoomSessionIdRoute: typeof RoomSessionIdRoute
   STokenRoute: typeof STokenRoute
   SendSessionIdRoute: typeof SendSessionIdRoute
@@ -419,6 +445,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me': {
+      id: '/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof MeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/people': {
@@ -489,6 +522,13 @@ declare module '@tanstack/react-router' {
       path: '/join/$code'
       fullPath: '/join/$code'
       preLoaderRoute: typeof JoinCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$handle': {
+      id: '/p/$handle'
+      path: '/p/$handle'
+      fullPath: '/p/$handle'
+      preLoaderRoute: typeof PHandleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/room/$sessionId': {
@@ -565,6 +605,7 @@ const rootRouteChildren: RootRouteChildren = {
   GremoteRoute: GremoteRoute,
   GroupRoute: GroupRoute,
   InboxRoute: InboxRoute,
+  MeRoute: MeRoute,
   PeopleRoute: PeopleRoute,
   RemoteRoute: RemoteRoute,
   StartRoute: StartRoute,
@@ -575,6 +616,7 @@ const rootRouteChildren: RootRouteChildren = {
   ITokenRoute: ITokenRoute,
   JCodeRoute: JCodeRoute,
   JoinCodeRoute: JoinCodeRoute,
+  PHandleRoute: PHandleRoute,
   RoomSessionIdRoute: RoomSessionIdRoute,
   STokenRoute: STokenRoute,
   SendSessionIdRoute: SendSessionIdRoute,

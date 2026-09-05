@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { exportCsv } from "@/lib/admin-csv";
+import { getAdminImpressions } from "@/lib/admin.functions";
 import {
   getCohorts,
   getFunnel,
@@ -109,6 +110,7 @@ const TABS = [
   ["cohorts", "Cohorts"],
   ["people", "People"],
   ["questions", "Questions"],
+  ["impressions", "Impressions"],
   ["sessions", "Sessions"],
   ["invites", "Invites"],
   ["notifications", "Notifications"],
@@ -224,6 +226,7 @@ function AdminPage() {
               {tab === "cohorts" && <CohortsTab includeTest={includeTest} />}
               {tab === "people" && <PeopleTab includeTest={includeTest} />}
               {tab === "questions" && <QuestionsTab includeTest={includeTest} />}
+              {tab === "impressions" && <ImpressionsTab includeTest={includeTest} />}
               {tab === "sessions" && <SessionsTab range={range} />}
               {tab === "invites" && <InvitesTab range={range} />}
               {tab === "notifications" && <NotificationsTab range={range} />}
@@ -1150,5 +1153,80 @@ function NotificationsTab({ range }: { range: Range }) {
         )}
       </div>
     </>
+  );
+}
+
+/* ---------- impressions ---------- */
+
+function ImpressionsTab({ includeTest }: { includeTest: boolean }) {
+  const load = useServerFn(getAdminImpressions);
+  const [data, setData] = useState<Awaited<ReturnType<typeof getAdminImpressions>> | null>(null);
+
+  useEffect(() => {
+    void load({ data: { includeTest } })
+      .then(setData)
+      .catch(() => setData(null));
+  }, [load, includeTest]);
+
+  if (!data) return <p className="mt-8 text-muted-foreground">Loading…</p>;
+
+  return (
+    <div className="mt-8">
+      <div className="grid gap-4 sm:grid-cols-4">
+        <Stat label="Share pages opened" value={String(data.share.views)} />
+        <Stat label="Tapped the invite" value={String(data.share.ctaTaps)} />
+        <Stat label="Started after a view" value={String(data.share.startedAfterView)} />
+        <Stat label="View to session" value={`${data.share.conversion}%`} />
+      </div>
+
+      <h2 className="mt-10 text-2xl">Mismatch rate</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        How often the guess differs from the self-answer. Low means the question tells nobody
+        anything — cut it.
+      </p>
+      <table className="mt-4 w-full text-left text-sm">
+        <thead className="text-muted-foreground">
+          <tr>
+            <th className="py-2">Question</th>
+            <th className="py-2">Pairs</th>
+            <th className="py-2">Mismatches</th>
+            <th className="py-2">Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.questions.map((row) => (
+            <tr key={row.questionId} className="border-t border-border">
+              <td className="py-2 pr-4">{row.text}</td>
+              <td className="py-2">{row.answers}</td>
+              <td className="py-2">{row.mismatches}</td>
+              <td className="py-2">{Math.round(row.mismatchRate)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 className="mt-10 text-2xl">Running out of impression questions</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Fell back to an ordinary question {data.impressionFallbacks} times in the last 90 days.
+      </p>
+      <table className="mt-4 w-full text-left text-sm">
+        <thead className="text-muted-foreground">
+          <tr>
+            <th className="py-2">Person</th>
+            <th className="py-2">Seen</th>
+            <th className="py-2">Bank</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.exhaustion.map((row) => (
+            <tr key={row.personKey} className="border-t border-border">
+              <td className="py-2 pr-4">{row.name || "Someone"}</td>
+              <td className="py-2">{row.seen}</td>
+              <td className="py-2">{row.bank}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
