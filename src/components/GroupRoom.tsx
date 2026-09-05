@@ -6,6 +6,8 @@ import { track } from "@/lib/track";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import QRCode from "qrcode";
 
+import { withName } from "@/components/QuestionText";
+
 import {
   addConnection,
   answerInGroup,
@@ -472,7 +474,38 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
               </div>
             )}
 
-            {current.revealed && (
+            {current.revealed && current.kind === "impression" && current.impression && (
+              <div className="mt-10 flex flex-col gap-6">
+                <p className="text-sm tracking-[0.18em] text-muted-foreground uppercase">
+                  How the room read you
+                </p>
+                {current.impression.aboutMe.length === 0 ? (
+                  <p className="text-2xl leading-snug">Nobody got to yours this time.</p>
+                ) : (
+                  current.impression.aboutMe.map((row) => (
+                    <p key={row.name} className="text-2xl leading-snug">
+                      {row.name} said {row.label}.
+                    </p>
+                  ))
+                )}
+                {current.impression.selfAnswer && (
+                  <p className="text-2xl leading-snug text-primary">
+                    You said{" "}
+                    {current.options.find((o) => o.key === current.impression!.selfAnswer)?.label}.
+                  </p>
+                )}
+                {state.iAmHost && (
+                  <button
+                    onClick={() => void run(() => next({ data: { guestToken, sessionId } }))}
+                    className="btn-quiet mt-8 self-start"
+                  >
+                    Next question
+                  </button>
+                )}
+              </div>
+            )}
+
+            {current.revealed && current.kind !== "impression" && (
               <div className="mt-10 flex flex-col gap-8">
                 {[...current.options]
                   .sort((a, b) =>
