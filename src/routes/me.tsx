@@ -16,16 +16,16 @@ export const Route = createFileRoute("/me")({
   component: MyProfile,
   head: () => ({
     meta: [
-      { title: "Your profile — NoSure" },
+      { title: "Their read on you — NoSure" },
       {
         name: "description",
         content: "How the people you've answered with read you, next to how you read yourself.",
       },
-      { property: "og:title", content: "Your profile — NoSure" },
+      { property: "og:title", content: "Their read on you — NoSure" },
       { property: "og:description", content: "How people read you, next to how you read yourself." },
       { property: "og:type", content: "profile" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "Your profile — NoSure" },
+      { name: "twitter:title", content: "Their read on you — NoSure" },
       { name: "twitter:description", content: "How people read you, next to how you read yourself." },
       { name: "robots", content: "noindex" },
     ],
@@ -72,7 +72,7 @@ function MyProfile() {
   if (signedOut) {
     return (
       <Shell>
-        <h1 className="text-4xl leading-tight">Your profile lives with your account.</h1>
+        <h1 className="text-4xl leading-tight">Their read on you lives with your account.</h1>
         <p className="mt-4 text-lg text-muted-foreground">
           Sign in and it's here, with everything people have read about you.
         </p>
