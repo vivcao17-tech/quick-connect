@@ -120,9 +120,9 @@ function Home() {
         </p>
 
         <h1 className="mt-8 text-6xl leading-[0.95] sm:text-7xl">
-          Three questions.
+          Pick a side.
           <br />
-          <em className="italic text-primary">Then you talk.</em>
+          <em className="italic text-primary">See their side of you.</em>
         </h1>
 
         {/* One tap from home into the thread that has something new in it. */}
@@ -171,7 +171,9 @@ function Home() {
           <button className="btn-ink hover:opacity-90" onClick={() => void navigate({ to: "/start" })}>
             Start
           </button>
-          <p className="mt-3 text-sm text-muted-foreground">30 seconds, no account</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Three questions with someone you know. 30 seconds, no account.
+          </p>
         </div>
 
 
@@ -195,18 +197,27 @@ function Home() {
         </div>
 
 
-        <div className="mt-16 flex flex-col gap-3 self-start text-sm text-muted-foreground">
-          {badge && (
-            <Link to="/me" className="flex items-center gap-2 underline underline-offset-4">
-              {badge.name ? `${badge.name}'s profile` : "Your profile"}
-              {badge.newSince > 0 && (
-                <span
-                  aria-label="Someone read you"
-                  className="inline-block h-2 w-2 rounded-full bg-primary"
-                />
-              )}
-            </Link>
+        <Link to="/me" className="card-soft mt-14 block px-6 py-5 hover:border-primary">
+          <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+            Their read on you
+          </p>
+          {badge && badge.newSince > 0 ? (
+            <p className="mt-2 flex items-center gap-2 text-xl">
+              <span
+                aria-label="New reads"
+                className="inline-block h-2 w-2 shrink-0 rounded-full bg-primary"
+              />
+              {badge.newSince} {badge.newSince === 1 ? "person has" : "people have"} read you since
+              you last looked
+            </p>
+          ) : (
+            <p className="mt-2 text-lg text-muted-foreground">
+              Send a set to a few people — how they read you lands here.
+            </p>
           )}
+        </Link>
+
+        <div className="mt-10 flex flex-col gap-3 self-start text-sm text-muted-foreground">
           <Link to="/people" className="underline underline-offset-4">
             People
           </Link>
