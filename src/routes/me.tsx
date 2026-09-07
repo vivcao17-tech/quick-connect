@@ -104,7 +104,9 @@ function MyProfile() {
 
   return (
     <Shell>
-      <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Your profile</p>
+      <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
+        Their read on you
+      </p>
       <h1 className="mt-6 text-5xl leading-[1.05]">{profile.displayName}</h1>
       <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
 
