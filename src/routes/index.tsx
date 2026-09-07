@@ -120,9 +120,9 @@ function Home() {
         </p>
 
         <h1 className="mt-8 text-6xl leading-[0.95] sm:text-7xl">
-          Three questions.
+          Pick a side.
           <br />
-          <em className="italic text-primary">Then you talk.</em>
+          <em className="italic text-primary">See their side of you.</em>
         </h1>
 
         {/* One tap from home into the thread that has something new in it. */}
@@ -171,7 +171,9 @@ function Home() {
           <button className="btn-ink hover:opacity-90" onClick={() => void navigate({ to: "/start" })}>
             Start
           </button>
-          <p className="mt-3 text-sm text-muted-foreground">30 seconds, no account</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Three questions with someone you know. 30 seconds, no account.
+          </p>
         </div>
 
 
