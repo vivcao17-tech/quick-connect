@@ -166,9 +166,11 @@ function Home() {
           </div>
         )}
 
-
         <div className="mt-12">
-          <button className="btn-ink hover:opacity-90" onClick={() => void navigate({ to: "/start" })}>
+          <button
+            className="btn-ink w-full py-6 text-xl hover:opacity-90"
+            onClick={() => void navigate({ to: "/start" })}
+          >
             Start
           </button>
           <p className="mt-3 text-sm text-muted-foreground">
@@ -176,56 +178,49 @@ function Home() {
           </p>
         </div>
 
-
-        <div className="mt-10 flex items-center gap-4">
-          <label htmlFor="room-code" className="text-sm text-muted-foreground">
-            Got a code?
-          </label>
-          <input
-            id="room-code"
-            value={code}
-            onChange={(event) => onCode(event.target.value)}
-            inputMode="text"
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            maxLength={4}
-            placeholder="＿＿＿＿"
-            aria-label="Four letter room code"
-            className="w-32 rounded-full border border-border bg-card px-4 py-2 text-center text-lg tracking-[0.4em] uppercase outline-none focus:border-primary"
-          />
-        </div>
-
-
-        <Link to="/me" className="card-soft mt-14 block px-6 py-5 hover:border-primary">
-          <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-            Their read on you
-          </p>
+        <Link to="/me" className="mt-10 block">
           {badge && badge.newSince > 0 ? (
-            <p className="mt-2 flex items-center gap-2 text-xl">
-              <span
-                aria-label="New reads"
-                className="inline-block h-2 w-2 shrink-0 rounded-full bg-primary"
-              />
-              {badge.newSince} {badge.newSince === 1 ? "person has" : "people have"} read you since
-              you last looked
-            </p>
+            <div className="card-soft px-6 py-5 hover:border-primary">
+              <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+                Their read on you
+              </p>
+              <p className="mt-2 flex items-center gap-2 text-xl">
+                <span
+                  aria-label="New reads"
+                  className="inline-block h-2 w-2 shrink-0 rounded-full bg-primary"
+                />
+                {badge.newSince} {badge.newSince === 1 ? "person has" : "people have"} read you since
+                you last looked
+              </p>
+            </div>
           ) : (
-            <p className="mt-2 text-lg text-muted-foreground">
-              Send a set to a few people — how they read you lands here.
-            </p>
+            <p className="text-sm text-muted-foreground">Their read on you — nothing yet</p>
           )}
         </Link>
 
-        <div className="mt-10 flex flex-col gap-3 self-start text-sm text-muted-foreground">
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
           <Link to="/people" className="underline underline-offset-4">
             People
           </Link>
-          {sets.length > 0 && (
-            <Link to="/conversations" className="underline underline-offset-4">
-              Ask someone else ({sets.length})
-            </Link>
-          )}
+          <Link to="/conversations" className="underline underline-offset-4">
+            Ask someone else{sets.length > 0 ? ` (${sets.length})` : ""}
+          </Link>
+          <label className="flex items-center gap-2">
+            <span>Got a code?</span>
+            <input
+              id="room-code"
+              value={code}
+              onChange={(event) => onCode(event.target.value)}
+              inputMode="text"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={4}
+              placeholder="＿＿＿＿"
+              aria-label="Four letter room code"
+              className="w-24 rounded-full border border-border bg-card px-3 py-1 text-center tracking-[0.4em] uppercase outline-none focus:border-primary"
+            />
+          </label>
         </div>
       </section>
     </main>
