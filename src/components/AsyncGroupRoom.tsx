@@ -32,6 +32,7 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
   const [email, setEmail] = useState("");
   const [emailDone, setEmailDone] = useState(false);
   const [openQuestion, setOpenQuestion] = useState("");
+  const saveRef = useEndScreenTracking("group_async", Boolean(state?.revealed), { sessionId });
 
   useEffect(() => setGuestToken(getGuestToken()), []);
 
