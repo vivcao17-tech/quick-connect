@@ -921,6 +921,9 @@ function SessionsTab({ range }: { range: Range }) {
                   "reached_reveal",
                   "seconds_to_first_reveal",
                   "seconds_to_last_activity",
+                  "end_shown",
+                  "save_prompt_shown",
+                  "emails_saved",
                   "dropouts",
                 ],
                 rows.map((row) => [
