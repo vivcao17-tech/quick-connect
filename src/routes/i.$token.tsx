@@ -80,6 +80,7 @@ function InvitePage() {
   const [reason, setReason] = useState("");
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const [half, setHalf] = useState<"other" | "self">("other");
+  const saveRef = useEndScreenTracking("remote", stage === "summary", { sessionId });
   /** True once "Spill the tea" is tapped: the follow-up takes over the screen. */
   const [spill, setSpill] = useState(false);
   const [busy, setBusy] = useState(false);
