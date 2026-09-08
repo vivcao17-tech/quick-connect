@@ -465,6 +465,17 @@ export const startInvite = createServerFn({ method: "POST" })
       .eq("participant_id", invite.inviter_participant_id ?? "")
       .order("created_at");
 
+    // A run started from a test room stays a test room, and so does an
+    // automated or owner-driven one.
+    const { data: parentSession } = await supabaseAdmin
+      .from("sessions")
+      .select("is_test")
+      .eq("id", invite.session_id)
+      .maybeSingle();
+    const parentIsTest =
+      Boolean(parentSession?.is_test) ||
+      (await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }));
+
     const { data: child, error: cError } = await supabaseAdmin
       .from("sessions")
       .insert({ kind: "remote", status: "active", is_test: parentIsTest })

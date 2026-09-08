@@ -657,6 +657,15 @@ export const startOneOnOne = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
+    const { data: parentSession } = await supabaseAdmin
+      .from("sessions")
+      .select("is_test")
+      .eq("id", data.sessionId)
+      .maybeSingle();
+    const parentIsTest =
+      Boolean(parentSession?.is_test) ||
+      (await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }));
+
     const { data: session, error } = await supabaseAdmin
       .from("sessions")
       .insert({ kind: "remote", status: "active", is_test: parentIsTest })
