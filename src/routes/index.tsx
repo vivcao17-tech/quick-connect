@@ -178,34 +178,35 @@ function Home() {
           </p>
         </div>
 
-        <Link to="/me" className="mt-10 block">
-          {badge && badge.newSince > 0 ? (
-            <div className="card-soft px-6 py-5 hover:border-primary">
-              <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-                Their read on you
-              </p>
-              <p className="mt-2 flex items-center gap-2 text-xl">
-                <span
-                  aria-label="New reads"
-                  className="inline-block h-2 w-2 shrink-0 rounded-full bg-primary"
-                />
-                {badge.newSince} {badge.newSince === 1 ? "person has" : "people have"} read you since
-                you last looked
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Their read on you — nothing yet</p>
-          )}
+        <Link
+          to={badge && badge.newSince > 0 ? "/me" : "/start"}
+          className="mt-10 block"
+        >
+          <div className="flex w-full items-center justify-between rounded-full border-2 border-primary px-6 py-4 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+            <span className="text-base font-medium">
+              {badge && badge.newSince > 0
+                ? `${badge.newSince} ${badge.newSince === 1 ? "person" : "people"} read you this week`
+                : "See how people read you"}
+            </span>
+            {badge && badge.newSince > 0 && (
+              <span
+                aria-label="New reads"
+                className="inline-block h-2.5 w-2.5 rounded-full bg-current"
+              />
+            )}
+          </div>
         </Link>
 
-        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-          <Link to="/people" className="underline underline-offset-4">
-            People
-          </Link>
-          <Link to="/conversations" className="underline underline-offset-4">
-            Ask someone else{sets.length > 0 ? ` (${sets.length})` : ""}
-          </Link>
-          <label className="flex items-center gap-2">
+        <div className="mt-12 flex flex-col gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link to="/people" className="underline underline-offset-4">
+              People
+            </Link>
+            <Link to="/conversations" className="underline underline-offset-4">
+              Ask someone else{sets.length > 0 ? ` (${sets.length})` : ""}
+            </Link>
+          </div>
+          <label className="flex items-center gap-3">
             <span>Got a code?</span>
             <input
               id="room-code"
@@ -218,7 +219,7 @@ function Home() {
               maxLength={4}
               placeholder="＿＿＿＿"
               aria-label="Four letter room code"
-              className="w-24 rounded-full border border-border bg-card px-3 py-1 text-center tracking-[0.4em] uppercase outline-none focus:border-primary"
+              className="w-32 rounded-full border border-border bg-card px-4 py-2 text-center text-base tracking-[0.4em] uppercase outline-none focus:border-primary"
             />
           </label>
         </div>
