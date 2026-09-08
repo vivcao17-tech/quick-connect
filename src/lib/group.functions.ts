@@ -659,7 +659,7 @@ export const startOneOnOne = createServerFn({ method: "POST" })
 
     const { data: session, error } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "remote", status: "active" })
+      .insert({ kind: "remote", status: "active", is_test: parentIsTest })
       .select("id")
       .single();
     if (error) throw error;
