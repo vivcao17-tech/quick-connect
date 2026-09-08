@@ -646,45 +646,6 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
               </div>
             )}
 
-            <div className="mt-12">
-              {saveState === "sent" ? (
-                <p className="text-lg text-muted-foreground">Sent. Check your inbox.</p>
-              ) : (
-                <div className="flex max-w-sm flex-col gap-3">
-                  <GoogleSignIn label="Continue with Google" redirectPath="/people" />
-                  <p className="text-sm text-muted-foreground">or leave an email</p>
-                  <input
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="you@email.com"
-                    className="w-full rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
-                  />
-                  <button
-                    disabled={!email.includes("@") || busy}
-                    onClick={() =>
-                      void run(async () => {
-                        const result = await saveEmail({ data: { guestToken, sessionId, email } });
-                        setSaveState(result.sent ? "sent" : "failed");
-                        track(
-                          result.sent ? "email_captured" : "email_capture_failed",
-                          { where: "group_end" },
-                          { sessionId },
-                        );
-                      })
-                    }
-                    className="btn-ink self-start disabled:opacity-30"
-                  >
-                    Save this session
-                  </button>
-                  {saveState === "failed" && (
-                    <p className="text-sm text-primary">
-                      That email didn't go out. Try again in a moment.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
           </div>
         )}
       </section>
