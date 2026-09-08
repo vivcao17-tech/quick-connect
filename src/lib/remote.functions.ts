@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { pickImpressionQuestion } from "@/lib/irl-helpers";
+import { resolveIsTest } from "@/lib/testing.server";
 import { notifyThreadReply } from "@/lib/notify.server";
 import { shortToken, snapshotOf, toPlay } from "@/lib/remote-shared";
 import type { Chip, OptionKey, PlayQuestion, Snapshot } from "@/lib/remote-shared";
@@ -74,7 +75,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
 
     const { data: session, error: sError } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "remote", status: "active" })
+      .insert({ kind: "remote", status: "active", is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }) })
       .select("id")
       .single();
     if (sError) throw sError;
@@ -464,9 +465,20 @@ export const startInvite = createServerFn({ method: "POST" })
       .eq("participant_id", invite.inviter_participant_id ?? "")
       .order("created_at");
 
+    // A run started from a test room stays a test room, and so does an
+    // automated or owner-driven one.
+    const { data: parentSession } = await supabaseAdmin
+      .from("sessions")
+      .select("is_test")
+      .eq("id", invite.session_id)
+      .maybeSingle();
+    const parentIsTest =
+      Boolean(parentSession?.is_test) ||
+      (await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }));
+
     const { data: child, error: cError } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "remote", status: "active" })
+      .insert({ kind: "remote", status: "active", is_test: parentIsTest })
       .select("id")
       .single();
     if (cError) throw cError;
