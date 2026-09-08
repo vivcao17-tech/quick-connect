@@ -494,7 +494,7 @@ function InvitePage() {
           <h1 className="text-4xl leading-tight">Now go talk to them.</h1>
 
           {emailState === "ask" && (
-            <div className="card-soft mt-8 px-6 py-5">
+            <div ref={saveRef} className="card-soft mt-8 px-6 py-5">
               <p className="text-lg leading-snug">
                 Want to know what {intro?.senderName ?? "they"} says back? Keep this conversation.
               </p>

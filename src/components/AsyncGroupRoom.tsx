@@ -164,7 +164,7 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
         </p>
 
         {!state.hasEmail && !emailDone && (
-          <div className="card-soft mt-10 px-6 py-6">
+          <div ref={saveRef} className="card-soft mt-10 px-6 py-6">
             <p className="text-xl">We'll tell you when everyone's in.</p>
             <div className="mt-4 flex flex-wrap gap-3">
               <input
