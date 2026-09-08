@@ -59,6 +59,7 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
   const [saveState, setSaveState] = useState<"idle" | "sent" | "failed">("idle");
   const [link, setLink] = useState("");
   const pending = useRef(false);
+  const saveRef = useEndScreenTracking("group", state?.status === "ended", { sessionId });
 
   useEffect(() => setGuestToken(getGuestToken()), []);
 

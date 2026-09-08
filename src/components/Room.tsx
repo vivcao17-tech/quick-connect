@@ -62,6 +62,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
   const pending = useRef(false);
   const fetchPrompts = useServerFn(getRevealPrompts);
+  const saveRef = useEndScreenTracking("irl_pair", state?.status === "ended", { sessionId });
 
   useEffect(() => setGuestToken(getGuestToken()), []);
 
