@@ -7,6 +7,8 @@
  * nobody has to spot a scripted run on the dashboard afterwards.
  */
 
+import { getRequestHeader } from "@tanstack/react-start/server";
+
 type Admin = { from: (table: string) => any };
 
 export type CreatorIdentity = { guestToken?: string | null; profileId?: string | null };
@@ -14,10 +16,6 @@ export type CreatorIdentity = { guestToken?: string | null; profileId?: string |
 /** Headless Chrome / Playwright / bots — every verification run I drive. */
 function isAutomatedRequest(): boolean {
   try {
-    // Imported lazily so this module stays usable outside a request context.
-    const { getRequestHeader } = require("@tanstack/react-start/server") as {
-      getRequestHeader: (name: string) => string | undefined;
-    };
     const ua = (getRequestHeader("user-agent") ?? "").toLowerCase();
     if (!ua) return false;
     return /headless|playwright|puppeteer|bot|spider|curl\//.test(ua);
@@ -25,6 +23,7 @@ function isAutomatedRequest(): boolean {
     return false;
   }
 }
+
 
 /** True when this person's rooms are excluded from the numbers. */
 export async function isExcludedIdentity(
