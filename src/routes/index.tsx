@@ -178,32 +178,23 @@ function Home() {
           </p>
         </div>
 
-        <Link to={badge && badge.newSince > 0 ? "/me" : "/start"} className="mt-10 block">
-          {badge && badge.newSince > 0 ? (
-            <div className="card-soft px-6 py-5 hover:border-primary">
-              <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-                Their read on you
-              </p>
-              <p className="mt-2 flex items-center gap-2 text-xl">
-                <span
-                  aria-label="New reads"
-                  className="inline-block h-2 w-2 shrink-0 rounded-full bg-primary"
-                />
-                {badge.newSince} {badge.newSince === 1 ? "person read you" : "people read you"} since
-                you last looked
-              </p>
-            </div>
-          ) : (
-            <div className="card-soft px-6 py-5 hover:border-primary">
-              <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-                Their read on you
-              </p>
-              <p className="mt-2 text-xl">
-                See how people read you{" "}
-                <span className="text-muted-foreground">→</span> send a set to a few friends
-              </p>
-            </div>
-          )}
+        <Link
+          to={badge && badge.newSince > 0 ? "/me" : "/start"}
+          className="mt-10 block"
+        >
+          <div className="flex w-full items-center justify-between rounded-full border-2 border-primary px-6 py-4 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+            <span className="text-base font-medium">
+              {badge && badge.newSince > 0
+                ? `${badge.newSince} ${badge.newSince === 1 ? "person" : "people"} read you this week`
+                : "See how people read you"}
+            </span>
+            {badge && badge.newSince > 0 && (
+              <span
+                aria-label="New reads"
+                className="inline-block h-2.5 w-2.5 rounded-full bg-current"
+              />
+            )}
+          </div>
         </Link>
 
         <div className="mt-12 flex flex-col gap-4 text-sm text-muted-foreground">
