@@ -22,6 +22,7 @@ import {
   startOneOnOne,
 } from "@/lib/group.functions";
 import type { GroupState } from "@/lib/group.functions";
+import { useEndScreenTracking } from "@/lib/end-tracking";
 import { getGuestToken } from "@/lib/guest";
 import { saveSessionEmail } from "@/lib/irl.functions";
 

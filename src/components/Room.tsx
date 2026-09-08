@@ -15,6 +15,7 @@ import type { CloudTopic } from "@/components/TopicCloud";
 import { supabase } from "@/integrations/supabase/client";
 import { getRevealPrompts } from "@/lib/ai-prompts.functions";
 import type { RevealPrompts } from "@/lib/ai-prompts.functions";
+import { useEndScreenTracking } from "@/lib/end-tracking";
 import { getGuestToken } from "@/lib/guest";
 import {
   advanceRoom,

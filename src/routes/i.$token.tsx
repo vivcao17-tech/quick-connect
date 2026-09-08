@@ -8,6 +8,7 @@ import { impressionStem, subjectName, withName } from "@/components/QuestionText
 import { FollowUp } from "@/components/FollowUp";
 import { Thread } from "@/components/Thread";
 import { track } from "@/lib/track";
+import { useEndScreenTracking } from "@/lib/end-tracking";
 import { getGuestToken } from "@/lib/guest";
 import {
   answerAsRecipient,

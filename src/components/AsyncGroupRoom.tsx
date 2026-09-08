@@ -12,6 +12,7 @@ import {
   revealAsyncGroup,
   saveAsyncGroupEmail,
 } from "@/lib/async-group.functions";
+import { useEndScreenTracking } from "@/lib/end-tracking";
 import { getGuestToken } from "@/lib/guest";
 import type { OptionKey } from "@/lib/remote-shared";
 
