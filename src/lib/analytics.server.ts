@@ -36,6 +36,9 @@ export type OverviewNumbers = {
   bridgeRate: number | null;
   emailCaptureRate: number | null;
   finishers: number;
+  endShown: number;
+  savePromptShown: number;
+  savePromptCaptureRate: number | null;
   medianRevealToFirstMessage: number | null;
   sessions: number;
   people: number;
@@ -165,6 +168,9 @@ export type SessionRow = {
   startedAt: string;
   endedAt: string | null;
   people: number;
+  endShown: number;
+  savePromptShown: number;
+  emailsSaved: number;
   participants: {
     participantId: string;
     name: string;

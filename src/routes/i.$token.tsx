@@ -8,6 +8,7 @@ import { impressionStem, subjectName, withName } from "@/components/QuestionText
 import { FollowUp } from "@/components/FollowUp";
 import { Thread } from "@/components/Thread";
 import { track } from "@/lib/track";
+import { useEndScreenTracking } from "@/lib/end-tracking";
 import { getGuestToken } from "@/lib/guest";
 import {
   answerAsRecipient,
@@ -79,6 +80,7 @@ function InvitePage() {
   const [reason, setReason] = useState("");
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const [half, setHalf] = useState<"other" | "self">("other");
+  const saveRef = useEndScreenTracking("remote", stage === "summary", { sessionId });
   /** True once "Spill the tea" is tapped: the follow-up takes over the screen. */
   const [spill, setSpill] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -492,7 +494,7 @@ function InvitePage() {
           <h1 className="text-4xl leading-tight">Now go talk to them.</h1>
 
           {emailState === "ask" && (
-            <div className="card-soft mt-8 px-6 py-5">
+            <div ref={saveRef} className="card-soft mt-8 px-6 py-5">
               <p className="text-lg leading-snug">
                 Want to know what {intro?.senderName ?? "they"} says back? Keep this conversation.
               </p>

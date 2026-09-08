@@ -15,6 +15,7 @@ import type { CloudTopic } from "@/components/TopicCloud";
 import { supabase } from "@/integrations/supabase/client";
 import { getRevealPrompts } from "@/lib/ai-prompts.functions";
 import type { RevealPrompts } from "@/lib/ai-prompts.functions";
+import { useEndScreenTracking } from "@/lib/end-tracking";
 import { getGuestToken } from "@/lib/guest";
 import {
   advanceRoom,
@@ -62,6 +63,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
   const pending = useRef(false);
   const fetchPrompts = useServerFn(getRevealPrompts);
+  const saveRef = useEndScreenTracking("irl_pair", state?.status === "ended", { sessionId });
 
   useEffect(() => setGuestToken(getGuestToken()), []);
 
@@ -569,32 +571,13 @@ export function Room({ sessionId }: { sessionId: string }) {
               {state.differing}.
             </h2>
 
-            <div className="mt-10 flex flex-col gap-3">
-              {state.questions
-                .filter((q) => q.revealed)
-                .map((q) => (
-                  <button
-                    key={q.sessionQuestionId}
-                    onClick={() => setOpenSq(q.sessionQuestionId)}
-                    className="card-soft px-6 py-5 text-left"
-                  >
-                    <p className="text-lg">{q.text}</p>
-                    {q.picks.map((p) => (
-                      <p key={p.name + String(p.isMe)} className="mt-1 text-base">
-                        <span className="text-muted-foreground">{p.isMe ? "You" : p.name}: </span>
-                        {p.label}
-                      </p>
-                    ))}
-                  </button>
-                ))}
-            </div>
-
-
-            <div className="mt-12">
+            {/* The save step closes the room, so it sits under the headline. */}
+            <div ref={saveRef} className="mt-8">
               {saveState === "sent" ? (
                 <p className="text-lg text-muted-foreground">Sent. Check your inbox.</p>
               ) : (
                 <div className="flex max-w-sm flex-col gap-3">
+                  <p className="text-lg">Keep this one.</p>
                   <GoogleSignIn label="Continue with Google" redirectPath="/people" />
                   <p className="text-sm text-muted-foreground">or leave an email</p>
                   <input
@@ -628,6 +611,28 @@ export function Room({ sessionId }: { sessionId: string }) {
                 </div>
               )}
             </div>
+
+            <div className="mt-12 flex flex-col gap-3">
+              {state.questions
+                .filter((q) => q.revealed)
+                .map((q) => (
+                  <button
+                    key={q.sessionQuestionId}
+                    onClick={() => setOpenSq(q.sessionQuestionId)}
+                    className="card-soft px-6 py-5 text-left"
+                  >
+                    <p className="text-lg">{q.text}</p>
+                    {q.picks.map((p) => (
+                      <p key={p.name + String(p.isMe)} className="mt-1 text-base">
+                        <span className="text-muted-foreground">{p.isMe ? "You" : p.name}: </span>
+                        {p.label}
+                      </p>
+                    ))}
+                  </button>
+                ))}
+            </div>
+
+
 
 
             <button
