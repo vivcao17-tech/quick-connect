@@ -168,6 +168,9 @@ export type SessionRow = {
   startedAt: string;
   endedAt: string | null;
   people: number;
+  endShown: number;
+  savePromptShown: number;
+  emailsSaved: number;
   participants: {
     participantId: string;
     name: string;
