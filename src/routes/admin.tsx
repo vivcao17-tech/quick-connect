@@ -286,9 +286,12 @@ function OverviewTab({ range }: { range: Range }) {
       note: delta(c.bridgeRate, p.bridgeRate, pct) ?? "group → 1:1",
     },
     {
-      label: "Email capture",
-      value: pct(c.emailCaptureRate),
-      note: delta(c.emailCaptureRate, p.emailCaptureRate, pct) ?? `${c.finishers} finished`,
+      label: "Save capture",
+      value: c.savePromptShown === 0 ? "—" : pct(c.savePromptCaptureRate),
+      note:
+        c.savePromptShown === 0
+          ? "save step not seen yet"
+          : `${c.endShown} reached ending · ${c.savePromptShown} saw the save step`,
     },
     {
       label: "Reveal → first message",
@@ -965,6 +968,11 @@ function SessionsTab({ range }: { range: Range }) {
                   {secs(row.secondsToFirstReveal)} · last activity {secs(row.secondsToLastActivity)}
                 </span>
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {row.endShown === 0 && row.savePromptShown === 0
+                  ? "ending: not tracked"
+                  : `ending reached ${row.endShown} · save step seen ${row.savePromptShown} · saved ${row.emailsSaved}`}
+              </p>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <label className="flex items-center gap-1">
                   <input
