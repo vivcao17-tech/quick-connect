@@ -937,6 +937,9 @@ function SessionsTab({ range }: { range: Range }) {
                   row.reachedReveal,
                   row.secondsToFirstReveal ?? "",
                   row.secondsToLastActivity ?? "",
+                  row.endShown,
+                  row.savePromptShown,
+                  row.emailsSaved,
                   row.participants
                     .filter((p) => p.answered < row.totalQuestions)
                     .map((p) => `${p.name}@Q${(p.lastAnsweredIndex ?? -1) + 1}`)
