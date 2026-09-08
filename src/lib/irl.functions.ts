@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { resolveIsTest } from "@/lib/testing.server";
 
 import {
   memberOf,
@@ -31,7 +32,7 @@ export const createRoom = createServerFn({ method: "POST" })
 
     const { data: session, error } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "irl_pair", status: "lobby", room_code: code, current_index: 0 })
+      .insert({ kind: "irl_pair", status: "lobby", room_code: code, current_index: 0, is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }) })
       .select("id, room_code")
       .single();
     if (error) throw error;

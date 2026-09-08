@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { resolveIsTest } from "@/lib/testing.server";
 
 import {
   ASYNC_GROUP_KIND,
@@ -50,7 +51,7 @@ export const createAsyncGroup = createServerFn({ method: "POST" })
 
     const { data: session, error } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: ASYNC_GROUP_KIND, status: "answering", spice_max: 2 })
+      .insert({ kind: ASYNC_GROUP_KIND, status: "answering", spice_max: 2, is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }) })
       .select("id")
       .single();
     if (error) throw error;
