@@ -36,6 +36,9 @@ export type OverviewNumbers = {
   bridgeRate: number | null;
   emailCaptureRate: number | null;
   finishers: number;
+  endShown: number;
+  savePromptShown: number;
+  savePromptCaptureRate: number | null;
   medianRevealToFirstMessage: number | null;
   sessions: number;
   people: number;
