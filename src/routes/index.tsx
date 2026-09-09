@@ -223,6 +223,18 @@ function Home() {
             />
           </label>
         </div>
+
+        <footer className="mt-16 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+          <Link to="/terms" className="underline underline-offset-4">
+            Terms
+          </Link>
+          <Link to="/privacy" className="underline underline-offset-4">
+            Privacy
+          </Link>
+          <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+            Contact
+          </a>
+        </footer>
       </section>
     </main>
   );

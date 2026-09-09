@@ -18,8 +18,10 @@ import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as PeopleRouteImport } from './routes/people'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as StartRouteImport } from './routes/start'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
 import { Route as GaSessionIdRouteImport } from './routes/ga.$sessionId'
 import { Route as GiTokenRouteImport } from './routes/gi.$token'
@@ -83,6 +85,11 @@ const PeopleRoute = PeopleRouteImport.update({
   path: '/people',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RemoteRoute = RemoteRouteImport.update({
   id: '/remote',
   path: '/remote',
@@ -91,6 +98,11 @@ const RemoteRoute = RemoteRouteImport.update({
 const StartRoute = StartRouteImport.update({
   id: '/start',
   path: '/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GSessionIdRoute = GSessionIdRouteImport.update({
@@ -191,8 +203,10 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/me': typeof MeRoute
   '/people': typeof PeopleRoute
+  '/privacy': typeof PrivacyRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -221,8 +235,10 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/me': typeof MeRoute
   '/people': typeof PeopleRoute
+  '/privacy': typeof PrivacyRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -252,8 +268,10 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/me': typeof MeRoute
   '/people': typeof PeopleRoute
+  '/privacy': typeof PrivacyRoute
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -284,8 +302,10 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/me'
     | '/people'
+    | '/privacy'
     | '/remote'
     | '/start'
+    | '/terms'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -314,8 +334,10 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/me'
     | '/people'
+    | '/privacy'
     | '/remote'
     | '/start'
+    | '/terms'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -344,8 +366,10 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/me'
     | '/people'
+    | '/privacy'
     | '/remote'
     | '/start'
+    | '/terms'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -375,8 +399,10 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   MeRoute: typeof MeRoute
   PeopleRoute: typeof PeopleRoute
+  PrivacyRoute: typeof PrivacyRoute
   RemoteRoute: typeof RemoteRoute
   StartRoute: typeof StartRoute
+  TermsRoute: typeof TermsRoute
   GSessionIdRoute: typeof GSessionIdRoute
   GaSessionIdRoute: typeof GaSessionIdRoute
   GiTokenRoute: typeof GiTokenRoute
@@ -461,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PeopleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/remote': {
       id: '/remote'
       path: '/remote'
@@ -473,6 +506,13 @@ declare module '@tanstack/react-router' {
       path: '/start'
       fullPath: '/start'
       preLoaderRoute: typeof StartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/g/$sessionId': {
@@ -607,8 +647,10 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   MeRoute: MeRoute,
   PeopleRoute: PeopleRoute,
+  PrivacyRoute: PrivacyRoute,
   RemoteRoute: RemoteRoute,
   StartRoute: StartRoute,
+  TermsRoute: TermsRoute,
   GSessionIdRoute: GSessionIdRoute,
   GaSessionIdRoute: GaSessionIdRoute,
   GiTokenRoute: GiTokenRoute,
