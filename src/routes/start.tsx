@@ -83,9 +83,6 @@ function StartPage() {
                 placeholder="Your name"
                 className="rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
               />
-              <button onClick={startHere} disabled={busy} className="btn-ink disabled:opacity-30">
-                Open the room
-              </button>
               <p className="w-full text-sm text-muted-foreground">
                 By continuing you agree to our{" "}
                 <Link to="/terms" className="underline underline-offset-4">
@@ -97,6 +94,9 @@ function StartPage() {
                 </Link>
                 .
               </p>
+              <button onClick={startHere} disabled={busy} className="btn-ink disabled:opacity-30">
+                Open the room
+              </button>
             </div>
           )}
 
