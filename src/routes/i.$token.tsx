@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -289,6 +289,18 @@ function InvitePage() {
               >
                 Start
               </button>
+
+              <footer className="mt-16 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                <Link to="/terms" className="underline underline-offset-4">
+                  Terms
+                </Link>
+                <Link to="/privacy" className="underline underline-offset-4">
+                  Privacy
+                </Link>
+                <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+                  Contact
+                </a>
+              </footer>
             </>
           )}
         </section>

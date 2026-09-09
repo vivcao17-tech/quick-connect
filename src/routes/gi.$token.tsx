@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
@@ -100,6 +100,17 @@ function GroupInvitePage() {
               placeholder="Your name"
               className="mt-10 w-full rounded-full border border-border bg-card px-5 py-3 text-lg outline-none focus:border-primary"
             />
+            <p className="mt-4 text-sm text-muted-foreground">
+              By continuing you agree to our{" "}
+              <Link to="/terms" className="underline underline-offset-4">
+                terms
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="underline underline-offset-4">
+                privacy policy
+              </Link>
+              .
+            </p>
             <button
               onClick={enter}
               disabled={!name.trim() || busy}
@@ -107,6 +118,18 @@ function GroupInvitePage() {
             >
               Start
             </button>
+
+            <footer className="mt-16 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <Link to="/terms" className="underline underline-offset-4">
+                Terms
+              </Link>
+              <Link to="/privacy" className="underline underline-offset-4">
+                Privacy
+              </Link>
+              <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+                Contact
+              </a>
+            </footer>
           </>
         )}
       </section>

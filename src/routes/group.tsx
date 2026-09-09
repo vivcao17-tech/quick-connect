@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
@@ -103,6 +103,17 @@ function GroupSetup() {
           placeholder="Your name"
           className="mt-8 w-full rounded-full border border-border bg-card px-5 py-3 text-lg outline-none focus:border-primary"
         />
+        <p className="mt-4 text-sm text-muted-foreground">
+          By continuing you agree to our{" "}
+          <Link to="/terms" className="underline underline-offset-4">
+            terms
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="underline underline-offset-4">
+            privacy policy
+          </Link>
+          .
+        </p>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
           <button

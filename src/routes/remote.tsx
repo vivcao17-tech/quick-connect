@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
@@ -240,6 +240,17 @@ function RemotePage() {
               className="mt-2 w-full rounded-full border border-border bg-card px-5 py-3 text-base text-foreground outline-none focus:border-primary"
             />
           </label>
+          <p className="mt-4 text-sm text-muted-foreground">
+            By continuing you agree to our{" "}
+            <Link to="/terms" className="underline underline-offset-4">
+              terms
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="underline underline-offset-4">
+              privacy policy
+            </Link>
+            .
+          </p>
 
           <button
             onClick={begin}
