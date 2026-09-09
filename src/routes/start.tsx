@@ -86,6 +86,17 @@ function StartPage() {
               <button onClick={startHere} disabled={busy} className="btn-ink disabled:opacity-30">
                 Open the room
               </button>
+              <p className="w-full text-sm text-muted-foreground">
+                By continuing you agree to our{" "}
+                <Link to="/terms" className="underline underline-offset-4">
+                  terms
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy" className="underline underline-offset-4">
+                  privacy policy
+                </Link>
+                .
+              </p>
             </div>
           )}
 
