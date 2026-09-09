@@ -584,6 +584,7 @@ export type Database = {
           created_at: string
           follow_up: string | null
           id: string
+          impression_pool: boolean
           is_featured: boolean
           mode: string
           option_a: string
@@ -601,6 +602,7 @@ export type Database = {
           created_at?: string
           follow_up?: string | null
           id?: string
+          impression_pool?: boolean
           is_featured?: boolean
           mode?: string
           option_a: string
@@ -618,6 +620,7 @@ export type Database = {
           created_at?: string
           follow_up?: string | null
           id?: string
+          impression_pool?: boolean
           is_featured?: boolean
           mode?: string
           option_a?: string
