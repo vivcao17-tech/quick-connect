@@ -1428,6 +1428,13 @@ export const getAnswerSet = createServerFn({ method: "POST" })
       .eq("participant_id", participant.id)
       .order("created_at");
 
+    // The impression question in this set: the send screen asks for one read per
+    // person against it, so it needs the stem template and both option labels.
+    const impressionRow = (sqs ?? []).find(
+      (row) => (row.snapshot as Snapshot | null)?.kind === "impression",
+    );
+    const impressionSnap = impressionRow ? (impressionRow.snapshot as Snapshot) : null;
+
     return {
       questions: (sqs ?? []).map((row) => {
         const snap = row.snapshot as Snapshot;
@@ -1442,5 +1449,13 @@ export const getAnswerSet = createServerFn({ method: "POST" })
           myReason: mine?.reason_text ?? "",
         };
       }),
+      impression:
+        impressionRow && impressionSnap
+          ? {
+              sessionQuestionId: impressionRow.id,
+              stemOther: impressionSnap.stemOther ?? impressionSnap.text,
+              options: impressionSnap.options,
+            }
+          : null,
     };
   });
