@@ -276,7 +276,9 @@ export const listSessionInvites = createServerFn({ method: "POST" })
 
     const { data: invites } = await supabaseAdmin
       .from("invites")
-      .select("token, recipient_label, personal_note, completed_at, opened_at, created_at")
+      .select(
+        "token, recipient_label, personal_note, completed_at, opened_at, created_at, sender_read_option",
+      )
       .eq("session_id", data.sessionId)
       .order("created_at");
 
@@ -288,6 +290,7 @@ export const listSessionInvites = createServerFn({ method: "POST" })
         answered: Boolean(row.completed_at),
         opened: Boolean(row.opened_at),
         sentAt: row.created_at,
+        readOption: (row.sender_read_option ?? null) as OptionKey | null,
       })),
     };
   });
