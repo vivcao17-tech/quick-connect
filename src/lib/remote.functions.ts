@@ -684,6 +684,8 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
     const senderAnswer = latest(sender?.id);
     const mine = latest(me.id);
     const myReadOfThem = latest(me.id, "about_other");
+    /** The read the sender left on this person specifically, before sending the link. */
+    const theirReadOfMe = latest(sender?.id, "about_other");
 
     // Mark the invite complete once every question in this run has been answered.
     const { data: allQs } = await supabaseAdmin
