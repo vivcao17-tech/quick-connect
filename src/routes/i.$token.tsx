@@ -278,9 +278,9 @@ function InvitePage() {
                   "{intro.note}"
                 </p>
               )}
-              <p className="mt-8 text-lg">Their answers unlock once you've answered.</p>
+              <p className="mt-8 text-lg">Three questions — and one about you.</p>
               <p className="mt-2 text-muted-foreground">
-                3 questions · 30 seconds · no signup
+                Their answers unlock once you've answered. 30 seconds · no signup
               </p>
               <button
                 onClick={begin}

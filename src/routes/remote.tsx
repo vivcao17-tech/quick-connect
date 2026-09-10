@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
+import { impressionStem, withName } from "@/components/QuestionText";
 import { TopicCloud } from "@/components/TopicCloud";
 import type { CloudTopic } from "@/components/TopicCloud";
 import { supabase } from "@/integrations/supabase/client";
