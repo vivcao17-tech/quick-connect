@@ -266,7 +266,11 @@ function RemotePage() {
       {stage === "play" && current && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
           <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">{topicLabel}</p>
-          <h1 className="mt-6 text-4xl leading-tight">{current.text}</h1>
+          <h1 className="mt-6 text-4xl leading-tight">
+            {current.kind === "impression"
+              ? withName(impressionStem(current, "self"), "you")
+              : current.text}
+          </h1>
 
           {!tally && (
             <>
