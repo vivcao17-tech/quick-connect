@@ -564,6 +564,23 @@ export const startInvite = createServerFn({ method: "POST" })
       if (caError) throw caError;
     }
 
+    // The sender read this specific person before the link existed. Now that the
+    // person has a row of their own, the read becomes a real answer about them.
+    const childImpression = ordered.find(
+      (cq) => (cq.snapshot as Snapshot | null)?.kind === "impression",
+    );
+    if (invite.sender_read_option && childImpression) {
+      await supabaseAdmin.from("answers").insert({
+        session_question_id: childImpression.id,
+        participant_id: senderParticipant.id,
+        question_id: childImpression.question_id,
+        option_key: invite.sender_read_option,
+        visibility: "session",
+        answer_role: "about_other",
+        about_participant_id: me.id,
+      });
+    }
+
     await supabaseAdmin
       .from("invites")
       .update({ child_session_id: child.id, recipient_participant_id: me.id })
