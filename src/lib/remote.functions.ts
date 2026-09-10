@@ -190,7 +190,14 @@ export const createInvites = createServerFn({ method: "POST" })
         profileId: z.string().uuid().optional(),
         sessionId: z.string().uuid(),
         recipients: z
-          .array(z.object({ label: z.string().min(1).max(40), note: z.string().max(160).optional() }))
+          .array(
+            z.object({
+              label: z.string().min(1).max(40),
+              note: z.string().max(160).optional(),
+              // The sender's read on this one person, from the impression question.
+              impression: z.enum(["a", "b", "c"]).optional(),
+            }),
+          )
           .min(1)
           .max(10),
       })
@@ -217,16 +224,20 @@ export const createInvites = createServerFn({ method: "POST" })
           token: shortToken(),
           recipient_label: r.label,
           personal_note: r.note?.trim() ? r.note.trim() : null,
+          sender_read_option: r.impression ?? null,
         })),
       )
-      .select("token, recipient_label, personal_note");
+      .select("token, recipient_label, personal_note, sender_read_option");
     if (error) throw error;
 
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
       session_id: data.sessionId,
       name: "invite_created",
-      props: { count: data.recipients.length },
+      props: {
+        count: data.recipients.length,
+        with_read: data.recipients.filter((r) => r.impression).length,
+      },
     });
 
     return {
@@ -235,6 +246,7 @@ export const createInvites = createServerFn({ method: "POST" })
         token: row.token,
         label: row.recipient_label ?? "",
         note: row.personal_note ?? "",
+        readOption: (row.sender_read_option ?? null) as OptionKey | null,
       })),
     };
   });
@@ -264,7 +276,9 @@ export const listSessionInvites = createServerFn({ method: "POST" })
 
     const { data: invites } = await supabaseAdmin
       .from("invites")
-      .select("token, recipient_label, personal_note, completed_at, opened_at, created_at")
+      .select(
+        "token, recipient_label, personal_note, completed_at, opened_at, created_at, sender_read_option",
+      )
       .eq("session_id", data.sessionId)
       .order("created_at");
 
@@ -276,6 +290,7 @@ export const listSessionInvites = createServerFn({ method: "POST" })
         answered: Boolean(row.completed_at),
         opened: Boolean(row.opened_at),
         sentAt: row.created_at,
+        readOption: (row.sender_read_option ?? null) as OptionKey | null,
       })),
     };
   });
@@ -419,7 +434,9 @@ export const startInvite = createServerFn({ method: "POST" })
 
     const { data: invite } = await supabaseAdmin
       .from("invites")
-      .select("id, session_id, child_session_id, inviter_participant_id, recipient_label")
+      .select(
+        "id, session_id, child_session_id, inviter_participant_id, recipient_label, sender_read_option",
+      )
       .eq("token", data.token)
       .maybeSingle();
     if (!invite) throw new Error("This link doesn't exist");
@@ -547,6 +564,23 @@ export const startInvite = createServerFn({ method: "POST" })
       if (caError) throw caError;
     }
 
+    // The sender read this specific person before the link existed. Now that the
+    // person has a row of their own, the read becomes a real answer about them.
+    const childImpression = ordered.find(
+      (cq) => (cq.snapshot as Snapshot | null)?.kind === "impression",
+    );
+    if (invite.sender_read_option && childImpression) {
+      await supabaseAdmin.from("answers").insert({
+        session_question_id: childImpression.id,
+        participant_id: senderParticipant.id,
+        question_id: childImpression.question_id,
+        option_key: invite.sender_read_option,
+        visibility: "session",
+        answer_role: "about_other",
+        about_participant_id: me.id,
+      });
+    }
+
     await supabaseAdmin
       .from("invites")
       .update({ child_session_id: child.id, recipient_participant_id: me.id })
@@ -650,6 +684,8 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
     const senderAnswer = latest(sender?.id);
     const mine = latest(me.id);
     const myReadOfThem = latest(me.id, "about_other");
+    /** The read the sender left on this person specifically, before sending the link. */
+    const theirReadOfMe = latest(sender?.id, "about_other");
 
     // Mark the invite complete once every question in this run has been answered.
     const { data: allQs } = await supabaseAdmin
@@ -687,13 +723,20 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       revealed,
       kind: isImpression ? ("impression" as const) : ("standard" as const),
       needsSecondHalf: isImpression && !bothHalves,
-      // Impression pairing: how they see themselves vs how the recipient reads them.
+      // Impression pairing, both directions: how each read the other against
+      // what that person said about themselves.
       impression:
         isImpression && revealed && senderAnswer && myReadOfThem
           ? {
               theirSelf: senderAnswer.option_key as OptionKey,
               myReadOfThem: myReadOfThem.option_key as OptionKey,
               match: senderAnswer.option_key === myReadOfThem.option_key,
+              mySelf: (mine?.option_key ?? null) as OptionKey | null,
+              theirReadOfMe: (theirReadOfMe?.option_key ?? null) as OptionKey | null,
+              readMatch:
+                mine?.option_key && theirReadOfMe?.option_key
+                  ? mine.option_key === theirReadOfMe.option_key
+                  : null,
             }
           : null,
       senderName: sender?.display_name ?? "They",
@@ -1385,6 +1428,13 @@ export const getAnswerSet = createServerFn({ method: "POST" })
       .eq("participant_id", participant.id)
       .order("created_at");
 
+    // The impression question in this set: the send screen asks for one read per
+    // person against it, so it needs the stem template and both option labels.
+    const impressionRow = (sqs ?? []).find(
+      (row) => (row.snapshot as Snapshot | null)?.kind === "impression",
+    );
+    const impressionSnap = impressionRow ? (impressionRow.snapshot as Snapshot) : null;
+
     return {
       questions: (sqs ?? []).map((row) => {
         const snap = row.snapshot as Snapshot;
@@ -1399,5 +1449,13 @@ export const getAnswerSet = createServerFn({ method: "POST" })
           myReason: mine?.reason_text ?? "",
         };
       }),
+      impression:
+        impressionRow && impressionSnap
+          ? {
+              sessionQuestionId: impressionRow.id,
+              stemOther: impressionSnap.stemOther ?? impressionSnap.text,
+              options: impressionSnap.options,
+            }
+          : null,
     };
   });

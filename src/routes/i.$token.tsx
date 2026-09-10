@@ -43,7 +43,14 @@ type Reveal = {
   senderName: string;
   kind: "standard" | "impression";
   needsSecondHalf: boolean;
-  impression: { theirSelf: OptionKey; myReadOfThem: OptionKey; match: boolean } | null;
+  impression: {
+    theirSelf: OptionKey;
+    myReadOfThem: OptionKey;
+    match: boolean;
+    mySelf: OptionKey | null;
+    theirReadOfMe: OptionKey | null;
+    readMatch: boolean | null;
+  } | null;
   sender: { optionKey: OptionKey; reason: string } | null;
   mine: { optionKey: OptionKey; reason: string } | null;
   revealed: boolean;
@@ -278,9 +285,9 @@ function InvitePage() {
                   "{intro.note}"
                 </p>
               )}
-              <p className="mt-8 text-lg">Their answers unlock once you've answered.</p>
+              <p className="mt-8 text-lg">Three questions — and one about you.</p>
               <p className="mt-2 text-muted-foreground">
-                3 questions · 30 seconds · no signup
+                Their answers unlock once you've answered. 30 seconds · no signup
               </p>
               <button
                 onClick={begin}
@@ -433,29 +440,51 @@ function InvitePage() {
                   </div>
                   {reveal.impression && (
                     <div className="mt-8 border-t border-border pt-6">
-                      <p className="text-2xl leading-snug">
-                        <span
-                          className={reveal.impression.match ? "text-foreground" : "text-primary"}
-                        >
-                          {reveal.impression.match ? "\u2713" : "\u2717"}
-                        </span>{" "}
-                        You read {reveal.senderName} as{" "}
-                        <strong className="font-semibold">
-                          {labelOf(reveal.impression.myReadOfThem)}
-                        </strong>
-                        . {reveal.senderName} said{" "}
-                        <strong
-                          className={`font-semibold ${reveal.impression.match ? "" : "text-primary"}`}
-                        >
-                          {labelOf(reveal.impression.theirSelf)}
-                        </strong>
-                        .
-                      </p>
-                      <p className="mt-4 text-lg text-muted-foreground">
-                        {reveal.impression.match
-                          ? `You had ${reveal.senderName} figured out.`
-                          : `You didn't see that one coming.`}
-                      </p>
+                      {(() => {
+                        const imp = reveal.impression!;
+                        const who = reveal.senderName;
+                        const pairs = [
+                          imp.mySelf && imp.theirReadOfMe
+                            ? {
+                                key: "about-me",
+                                said: `You said: ${labelOf(imp.mySelf)}`,
+                                read: `${who} read you as: ${labelOf(imp.theirReadOfMe)}`,
+                                match: imp.readMatch === true,
+                              }
+                            : null,
+                          {
+                            key: "about-them",
+                            said: `${who} said: ${labelOf(imp.theirSelf)}`,
+                            read: `You read ${who} as: ${labelOf(imp.myReadOfThem)}`,
+                            match: imp.match,
+                          },
+                        ].filter((row): row is NonNullable<typeof row> => row !== null);
+                        // Lead with whichever one missed.
+                        pairs.sort((a, b) => Number(a.match) - Number(b.match));
+                        const allMatched = pairs.every((row) => row.match);
+                        return (
+                          <>
+                            <div className="flex flex-col gap-6">
+                              {pairs.map((row) => (
+                                <div key={row.key}>
+                                  <p className="text-xl leading-snug">{row.said}</p>
+                                  <p className="text-xl leading-snug">{row.read}</p>
+                                  <p
+                                    className={`mt-1 text-lg ${row.match ? "text-muted-foreground" : "text-primary"}`}
+                                  >
+                                    {row.match ? "you called it" : "different"}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                            {allMatched && (
+                              <p className="mt-6 text-lg text-muted-foreground">
+                                You both read each other exactly right.
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
 

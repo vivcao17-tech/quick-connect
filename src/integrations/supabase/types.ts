@@ -289,6 +289,7 @@ export type Database = {
           recipient_email: string | null
           recipient_label: string | null
           recipient_participant_id: string | null
+          sender_read_option: string | null
           session_id: string
           token: string
         }
@@ -303,6 +304,7 @@ export type Database = {
           recipient_email?: string | null
           recipient_label?: string | null
           recipient_participant_id?: string | null
+          sender_read_option?: string | null
           session_id: string
           token: string
         }
@@ -317,6 +319,7 @@ export type Database = {
           recipient_email?: string | null
           recipient_label?: string | null
           recipient_participant_id?: string | null
+          sender_read_option?: string | null
           session_id?: string
           token?: string
         }
