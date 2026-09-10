@@ -190,7 +190,14 @@ export const createInvites = createServerFn({ method: "POST" })
         profileId: z.string().uuid().optional(),
         sessionId: z.string().uuid(),
         recipients: z
-          .array(z.object({ label: z.string().min(1).max(40), note: z.string().max(160).optional() }))
+          .array(
+            z.object({
+              label: z.string().min(1).max(40),
+              note: z.string().max(160).optional(),
+              // The sender's read on this one person, from the impression question.
+              impression: z.enum(["a", "b", "c"]).optional(),
+            }),
+          )
           .min(1)
           .max(10),
       })
@@ -217,16 +224,20 @@ export const createInvites = createServerFn({ method: "POST" })
           token: shortToken(),
           recipient_label: r.label,
           personal_note: r.note?.trim() ? r.note.trim() : null,
+          sender_read_option: r.impression ?? null,
         })),
       )
-      .select("token, recipient_label, personal_note");
+      .select("token, recipient_label, personal_note, sender_read_option");
     if (error) throw error;
 
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
       session_id: data.sessionId,
       name: "invite_created",
-      props: { count: data.recipients.length },
+      props: {
+        count: data.recipients.length,
+        with_read: data.recipients.filter((r) => r.impression).length,
+      },
     });
 
     return {
@@ -235,6 +246,7 @@ export const createInvites = createServerFn({ method: "POST" })
         token: row.token,
         label: row.recipient_label ?? "",
         note: row.personal_note ?? "",
+        readOption: (row.sender_read_option ?? null) as OptionKey | null,
       })),
     };
   });
