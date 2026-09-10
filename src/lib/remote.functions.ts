@@ -434,7 +434,9 @@ export const startInvite = createServerFn({ method: "POST" })
 
     const { data: invite } = await supabaseAdmin
       .from("invites")
-      .select("id, session_id, child_session_id, inviter_participant_id, recipient_label")
+      .select(
+        "id, session_id, child_session_id, inviter_participant_id, recipient_label, sender_read_option",
+      )
       .eq("token", data.token)
       .maybeSingle();
     if (!invite) throw new Error("This link doesn't exist");
