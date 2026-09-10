@@ -440,29 +440,51 @@ function InvitePage() {
                   </div>
                   {reveal.impression && (
                     <div className="mt-8 border-t border-border pt-6">
-                      <p className="text-2xl leading-snug">
-                        <span
-                          className={reveal.impression.match ? "text-foreground" : "text-primary"}
-                        >
-                          {reveal.impression.match ? "\u2713" : "\u2717"}
-                        </span>{" "}
-                        You read {reveal.senderName} as{" "}
-                        <strong className="font-semibold">
-                          {labelOf(reveal.impression.myReadOfThem)}
-                        </strong>
-                        . {reveal.senderName} said{" "}
-                        <strong
-                          className={`font-semibold ${reveal.impression.match ? "" : "text-primary"}`}
-                        >
-                          {labelOf(reveal.impression.theirSelf)}
-                        </strong>
-                        .
-                      </p>
-                      <p className="mt-4 text-lg text-muted-foreground">
-                        {reveal.impression.match
-                          ? `You had ${reveal.senderName} figured out.`
-                          : `You didn't see that one coming.`}
-                      </p>
+                      {(() => {
+                        const imp = reveal.impression!;
+                        const who = reveal.senderName;
+                        const pairs = [
+                          imp.mySelf && imp.theirReadOfMe
+                            ? {
+                                key: "about-me",
+                                said: `You said: ${labelOf(imp.mySelf)}`,
+                                read: `${who} read you as: ${labelOf(imp.theirReadOfMe)}`,
+                                match: imp.readMatch === true,
+                              }
+                            : null,
+                          {
+                            key: "about-them",
+                            said: `${who} said: ${labelOf(imp.theirSelf)}`,
+                            read: `You read ${who} as: ${labelOf(imp.myReadOfThem)}`,
+                            match: imp.match,
+                          },
+                        ].filter((row): row is NonNullable<typeof row> => row !== null);
+                        // Lead with whichever one missed.
+                        pairs.sort((a, b) => Number(a.match) - Number(b.match));
+                        const allMatched = pairs.every((row) => row.match);
+                        return (
+                          <>
+                            <div className="flex flex-col gap-6">
+                              {pairs.map((row) => (
+                                <div key={row.key}>
+                                  <p className="text-xl leading-snug">{row.said}</p>
+                                  <p className="text-xl leading-snug">{row.read}</p>
+                                  <p
+                                    className={`mt-1 text-lg ${row.match ? "text-muted-foreground" : "text-primary"}`}
+                                  >
+                                    {row.match ? "you called it" : "different"}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                            {allMatched && (
+                              <p className="mt-6 text-lg text-muted-foreground">
+                                You both read each other exactly right.
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
 
