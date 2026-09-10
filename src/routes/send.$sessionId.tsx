@@ -31,17 +31,34 @@ export const Route = createFileRoute("/send/$sessionId")({
   }),
 });
 
-type Recipient = { label: string; note: string };
-type Invite = { token: string; label: string; note: string; answered?: boolean; opened?: boolean };
-type Answers = Awaited<ReturnType<typeof getAnswerSet>>["questions"];
+type OptionKey = "a" | "b" | "c";
+type Recipient = { label: string; note: string; read: OptionKey | null };
+type Invite = {
+  token: string;
+  label: string;
+  note: string;
+  answered?: boolean;
+  opened?: boolean;
+};
+type AnswerSet = Awaited<ReturnType<typeof getAnswerSet>>;
+type Answers = AnswerSet["questions"];
+type Impression = AnswerSet["impression"];
+
+/** "Chaotic than expected" reads as "Chaotic" in a column header. */
+function shortLabel(label: string) {
+  return label.split(/\s+than\s+/i)[0] ?? label;
+}
 
 function SendPage() {
   const { sessionId } = Route.useParams();
   const viewer = useViewer();
   const guestToken = viewer.guestToken;
-  const [recipients, setRecipients] = useState<Recipient[]>([{ label: "", note: "" }]);
+  const [recipients, setRecipients] = useState<Recipient[]>([
+    { label: "", note: "", read: null },
+  ]);
   const [links, setLinks] = useState<Invite[]>([]);
   const [answers, setAnswers] = useState<Answers>([]);
+  const [impression, setImpression] = useState<Impression>(null);
   const [copied, setCopied] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -63,7 +80,10 @@ function SendPage() {
       .then((result) => setLinks(result.invites))
       .catch(() => undefined);
     void loadAnswers({ data: payload })
-      .then((result) => setAnswers(result.questions))
+      .then((result) => {
+        setAnswers(result.questions);
+        setImpression(result.impression);
+      })
       .catch(() => undefined);
   }, [loadExisting, loadAnswers, viewer.ready, viewer.profileId, guestToken, sessionId]);
 
@@ -71,9 +91,12 @@ function SendPage() {
     setRecipients((prev) => prev.map((item, j) => (j === i ? { ...item, ...patch } : item)));
   }
 
+  const named = recipients.filter((r) => r.label.trim());
+  const ready =
+    named.length > 0 && (!impression || named.every((r) => r.read !== null));
+
   async function makeLinks() {
-    const clean = recipients.filter((r) => r.label.trim());
-    if (clean.length === 0 || !guestToken) return;
+    if (!ready || !guestToken) return;
     setBusy(true);
     setError("");
     try {
@@ -82,11 +105,15 @@ function SendPage() {
           guestToken,
           ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
           sessionId,
-          recipients: clean.map((r) => ({ label: r.label.trim(), note: r.note.trim() })),
+          recipients: named.map((r) => ({
+            label: r.label.trim(),
+            note: r.note.trim(),
+            ...(r.read ? { impression: r.read } : {}),
+          })),
         },
       });
       setLinks((prev) => [...prev, ...result.invites]);
-      setRecipients([{ label: "", note: "" }]);
+      setRecipients([{ label: "", note: "", read: null }]);
       const stored = JSON.parse(window.localStorage.getItem("beside.sent") ?? "[]");
       window.localStorage.setItem(
         "beside.sent",
@@ -106,6 +133,8 @@ function SendPage() {
     setCopied(invite.token);
     window.setTimeout(() => setCopied(""), 2500);
   }
+
+  const columns = impression?.options ?? [];
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -136,64 +165,130 @@ function SendPage() {
           </div>
         )}
 
-        <div className="mt-8 flex flex-col gap-6">
-          {recipients.map((recipient, i) => (
-            <div key={i} className="card-soft px-6 py-5">
-              <input
-                value={recipient.label}
-                onChange={(event) => update(i, { label: event.target.value })}
-                placeholder="Their name"
-                className="w-full bg-transparent text-lg outline-none"
-              />
-              <textarea
-                value={recipient.note}
-                onChange={(event) => update(i, { note: event.target.value })}
-                rows={3}
-                placeholder="Write them a line — just for them"
-                className="mt-4 w-full resize-none rounded-2xl border border-border bg-background px-4 py-3 text-lg italic outline-none focus:border-primary"
-              />
+        {impression ? (
+          <div className="mt-10">
+            <p className="text-lg text-muted-foreground">
+              {impression.stemOther.replace(/\{name\}/g, "Jack")}
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <div className="flex items-end gap-2 pl-1 text-sm text-muted-foreground">
+                <span className="flex-1" />
+                {columns.map((option) => (
+                  <span key={option.key} className="w-20 text-center">
+                    {shortLabel(option.label)}
+                  </span>
+                ))}
+              </div>
+
+              {recipients.map((recipient, i) => (
+                <div key={i} className="card-soft px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={recipient.label}
+                      onChange={(event) => update(i, { label: event.target.value })}
+                      placeholder="Their name"
+                      className="min-w-0 flex-1 bg-transparent text-lg outline-none"
+                    />
+                    {columns.map((option) => {
+                      const on = recipient.read === option.key;
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          aria-label={`${recipient.label || "This person"} — ${option.label}`}
+                          onClick={() => update(i, { read: option.key })}
+                          className={`flex w-20 justify-center py-2 ${
+                            on ? "text-primary" : "text-muted-foreground"
+                          }`}
+                        >
+                          <span
+                            className={`block h-5 w-5 rounded-full border ${
+                              on ? "border-primary bg-primary" : "border-border"
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input
+                    value={recipient.note}
+                    onChange={(event) => update(i, { note: event.target.value })}
+                    placeholder="Write them a line — just for them (optional)"
+                    className="mt-2 w-full bg-transparent text-base italic outline-none placeholder:not-italic"
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="mt-8 flex flex-col gap-6">
+            {recipients.map((recipient, i) => (
+              <div key={i} className="card-soft px-6 py-5">
+                <input
+                  value={recipient.label}
+                  onChange={(event) => update(i, { label: event.target.value })}
+                  placeholder="Their name"
+                  className="w-full bg-transparent text-lg outline-none"
+                />
+                <textarea
+                  value={recipient.note}
+                  onChange={(event) => update(i, { note: event.target.value })}
+                  rows={3}
+                  placeholder="Write them a line — just for them"
+                  className="mt-4 w-full resize-none rounded-2xl border border-border bg-background px-4 py-3 text-lg italic outline-none focus:border-primary"
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         <button
-          onClick={() => setRecipients((prev) => [...prev, { label: "", note: "" }])}
+          onClick={() =>
+            setRecipients((prev) => [...prev, { label: "", note: "", read: null }])
+          }
           className="mt-4 text-sm text-muted-foreground underline underline-offset-4"
         >
-          Add someone else
+          + Add someone
         </button>
 
         <div className="mt-10">
           <button
             onClick={makeLinks}
-            disabled={busy || !recipients.some((r) => r.label.trim())}
+            disabled={busy || !ready}
             className="btn-ink hover:opacity-90 disabled:opacity-40"
           >
             Make their links
           </button>
+          {impression && named.length > 0 && !ready && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Pick one side for each person first.
+            </p>
+          )}
         </div>
         {error && <p className="mt-4 text-sm text-primary">{error}</p>}
 
         {links.length > 0 && (
           <div className="mt-14 border-t border-border pt-10">
             <h2 className="text-3xl leading-tight">Yours to send.</h2>
-            <p className="mt-3 text-muted-foreground">
-              Copy each one into your own messages — nothing goes out from here.
+            <p className="mt-3 text-lg text-primary">
+              Each link is different — send each person their own.
             </p>
-            <div className="mt-8 flex flex-col gap-4">
+            <div className="mt-8 flex flex-col gap-5">
               {links.map((invite) => (
-                <div key={invite.token} className="card-soft px-6 py-5">
-                  <p className="text-lg">
-                    {invite.label}
-                    <span className="ml-3 text-base text-muted-foreground">
-                      {invite.answered ? "answered" : invite.opened ? "opened it" : "not yet"}
-                    </span>
+                <div key={invite.token} className="card-soft px-6 py-6">
+                  <p className="font-display text-3xl leading-tight">{invite.label}</p>
+                  <p className="mt-2 font-mono text-sm break-all text-muted-foreground">
+                    /i/{invite.token}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {invite.answered ? "answered" : invite.opened ? "opened it" : "not sent yet"}
                   </p>
                   {invite.note && (
                     <p className="mt-2 text-base italic text-muted-foreground">"{invite.note}"</p>
                   )}
                   <button onClick={() => copy(invite)} className="btn-quiet mt-4 hover:bg-secondary">
-                    {copied === invite.token ? "Copied" : "Copy message + link"}
+                    {copied === invite.token ? "Copied" : `Copy ${invite.label}'s link`}
                   </button>
                 </div>
               ))}
