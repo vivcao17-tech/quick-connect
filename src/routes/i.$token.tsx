@@ -43,7 +43,14 @@ type Reveal = {
   senderName: string;
   kind: "standard" | "impression";
   needsSecondHalf: boolean;
-  impression: { theirSelf: OptionKey; myReadOfThem: OptionKey; match: boolean } | null;
+  impression: {
+    theirSelf: OptionKey;
+    myReadOfThem: OptionKey;
+    match: boolean;
+    mySelf: OptionKey | null;
+    theirReadOfMe: OptionKey | null;
+    readMatch: boolean | null;
+  } | null;
   sender: { optionKey: OptionKey; reason: string } | null;
   mine: { optionKey: OptionKey; reason: string } | null;
   revealed: boolean;
