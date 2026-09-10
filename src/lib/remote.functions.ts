@@ -723,13 +723,20 @@ export const answerAsRecipient = createServerFn({ method: "POST" })
       revealed,
       kind: isImpression ? ("impression" as const) : ("standard" as const),
       needsSecondHalf: isImpression && !bothHalves,
-      // Impression pairing: how they see themselves vs how the recipient reads them.
+      // Impression pairing, both directions: how each read the other against
+      // what that person said about themselves.
       impression:
         isImpression && revealed && senderAnswer && myReadOfThem
           ? {
               theirSelf: senderAnswer.option_key as OptionKey,
               myReadOfThem: myReadOfThem.option_key as OptionKey,
               match: senderAnswer.option_key === myReadOfThem.option_key,
+              mySelf: (mine?.option_key ?? null) as OptionKey | null,
+              theirReadOfMe: (theirReadOfMe?.option_key ?? null) as OptionKey | null,
+              readMatch:
+                mine?.option_key && theirReadOfMe?.option_key
+                  ? mine.option_key === theirReadOfMe.option_key
+                  : null,
             }
           : null,
       senderName: sender?.display_name ?? "They",
