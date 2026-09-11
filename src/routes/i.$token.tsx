@@ -13,6 +13,7 @@ import { getGuestToken } from "@/lib/guest";
 import {
   answerAsRecipient,
   getInvite,
+  getInviteMeta,
   saveRecipientEmail,
   startInvite,
 } from "@/lib/remote.functions";
@@ -21,22 +22,28 @@ import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 
 export const Route = createFileRoute("/i/$token")({
   component: InvitePage,
-  head: () => ({
-    meta: [
-      { title: "Someone answered three questions for you — NoSure" },
-      {
-        name: "description",
-        content: "3 questions · 30 seconds · no signup. They've already answered. Your turn.",
-      },
-      { property: "og:title", content: "3 questions · 30 seconds" },
-      { property: "og:description", content: "They've already answered. Your turn." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "3 questions · 30 seconds" },
-      { name: "twitter:description", content: "They've already answered. Your turn." },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
+  // Names in the preview card: the link should read as one person writing to
+  // another, not as a product blurb.
+  loader: ({ params }) => getInviteMeta({ data: { token: params.token } }),
+  head: ({ loaderData }) => {
+    const sender = loaderData?.senderName?.trim() || "A friend";
+    const to = loaderData?.recipientLabel?.trim() ?? "";
+    const title = `${to ? `${to} — ` : ""}${sender} sent you three questions`;
+    const description = `One of them is ${sender}'s read on you. 30 seconds, no signup.`;
+    return {
+      meta: [
+        { title: `${title} — NoSure` },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "robots", content: "noindex" },
+      ],
+    };
+  },
 });
 
 type Reveal = {
