@@ -299,6 +299,31 @@ export const listSessionInvites = createServerFn({ method: "POST" })
   });
 
 
+/**
+ * Just the names, for the link preview card. Read-only on purpose: unlike
+ * getInvite it must not mark the invite as opened when a chat app fetches it.
+ */
+export const getInviteMeta = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(4).max(40) }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: invite } = await supabaseAdmin
+      .from("invites")
+      .select("recipient_label, inviter_participant_id")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (!invite) return { senderName: "", recipientLabel: "" };
+    const { data: inviter } = await supabaseAdmin
+      .from("session_participants")
+      .select("display_name")
+      .eq("id", invite.inviter_participant_id ?? "")
+      .maybeSingle();
+    return {
+      senderName: inviter?.display_name ?? "",
+      recipientLabel: invite.recipient_label ?? "",
+    };
+  });
+
 export const getInvite = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ token: z.string().min(4).max(40) }).parse(input))
   .handler(async ({ data }) => {
