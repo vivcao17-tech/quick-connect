@@ -3,7 +3,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
 import { Thread } from "@/components/Thread";
-import { mergeRemoteOpening, pairRevealGuidance, RevealGuidance } from "@/components/RevealGuidance";
+import {
+  mergeRemoteOpening,
+  pairRevealGuidance,
+  RevealGuidance,
+} from "@/components/RevealGuidance";
 import { getSessionBlock } from "@/lib/conversations.functions";
 import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 import { useViewer } from "@/lib/viewer";
@@ -47,7 +51,6 @@ function SessionBlockPage() {
   const viewer = useViewer();
   const [data, setData] = useState<Data | null>(null);
   const [openId, setOpenId] = useState(q ?? "");
-
 
   const load = useServerFn(getSessionBlock);
 
