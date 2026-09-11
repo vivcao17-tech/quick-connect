@@ -388,30 +388,6 @@ function InvitePage() {
                 )}
               </div>
 
-              <p className="mt-8 text-lg">
-                {distribution.withMost
-                  ? "Here are your results — you're with most people."
-                  : "Here are your results — you're in the minority."}
-              </p>
-              <div className="mt-6 flex flex-col gap-4">
-                {distribution.rows.map((row) => (
-                  <div key={row.key}>
-                    <div className="flex items-baseline justify-between text-base">
-                      <span className={row.key === reveal.mine?.optionKey ? "text-primary" : ""}>
-                        {row.label}
-                      </span>
-                      <span className="text-muted-foreground">{row.share}%</span>
-                    </div>
-                    <div className="mt-2 h-px w-full bg-border">
-                      <div
-                        className="h-px bg-primary"
-                        style={{ width: `${Math.max(row.share, 2)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               {reveal.revealed ? (
                 <>
                   <div className="mt-10">

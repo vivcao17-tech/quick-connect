@@ -286,27 +286,6 @@ export function Thread({
         </div>
       )}
 
-      {/* Closing reactions sit with the messages, not with the composer. */}
-      <div className={`mb-8 ${bare ? "hidden" : ""} ${compactRemote ? "text-right" : ""}`}>
-        <div className="flex flex-wrap gap-2">
-          {(compactRemote ? CLOSERS.slice(0, 1) : CLOSERS).map((closer) => (
-            <button
-              key={closer}
-              disabled={busy}
-              onClick={() => void send("reaction", closer)}
-              className="rounded-full border border-border px-4 py-2 text-lg disabled:opacity-40"
-            >
-              {closer}
-            </button>
-          ))}
-        </div>
-        <p
-          className={`${compactRemote ? "mt-2" : "mb-2 -order-1"} text-xs tracking-[0.18em] text-muted-foreground uppercase`}
-        >
-          No reply needed
-        </p>
-      </div>
-
       {/* Continuation prompts: specific to this question, tapped into the box. */}
       {!bare && allPrompts.length > 0 && (
         <div className="rounded-2xl bg-secondary/40 px-4 py-4">
@@ -351,6 +330,29 @@ export function Thread({
           </div>
         </div>
       )}
+
+      {/* Closing reactions sit apart from the writing choices. */}
+      <div
+        className={`${allPrompts.length > 0 ? "mt-8" : ""} mb-8 ${bare ? "hidden" : ""} ${compactRemote ? "text-right" : ""}`}
+      >
+        <div className={`flex flex-wrap gap-2 ${compactRemote ? "justify-end" : ""}`}>
+          {(compactRemote ? CLOSERS.slice(0, 1) : CLOSERS).map((closer) => (
+            <button
+              key={closer}
+              disabled={busy}
+              onClick={() => void send("reaction", closer)}
+              className="rounded-full border border-border px-4 py-2 text-lg disabled:opacity-40"
+            >
+              {closer}
+            </button>
+          ))}
+        </div>
+        <p
+          className={`${compactRemote ? "mt-2" : "mb-2 -order-1"} text-xs tracking-[0.18em] text-muted-foreground uppercase`}
+        >
+          No reply needed
+        </p>
+      </div>
 
       <div ref={endRef} className="h-px" />
 
