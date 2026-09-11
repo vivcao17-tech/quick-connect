@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { FollowUp } from "@/components/FollowUp";
+import { pairRevealGuidance, RevealGuidance } from "@/components/RevealGuidance";
 import { Thread } from "@/components/Thread";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
 import { TopicCloud } from "@/components/TopicCloud";
@@ -435,6 +436,12 @@ export function Room({ sessionId }: { sessionId: string }) {
                   ))}
                 </div>
                 <p className="mt-6 text-lg text-muted-foreground">{current.impression.summary}</p>
+                <RevealGuidance
+                  text={pairRevealGuidance(
+                    current.otherName,
+                    current.impression.lines.every((line) => line.match),
+                  )}
+                />
               </div>
             )}
 
@@ -451,6 +458,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                     {reveal?.differs ? "You went different ways." : "Same answer."}
                   </p>
                 </div>
+                <RevealGuidance text={pairRevealGuidance(current.otherName, !reveal?.differs)} />
               </div>
             )}
 

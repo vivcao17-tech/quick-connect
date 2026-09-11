@@ -6,6 +6,7 @@ import { track } from "@/lib/track";
 
 import { Thread } from "@/components/Thread";
 import { withName } from "@/components/QuestionText";
+import { groupRevealGuidance, RevealGuidance } from "@/components/RevealGuidance";
 import {
   answerInAsyncGroup,
   getAsyncGroupState,
@@ -32,6 +33,7 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
   const [email, setEmail] = useState("");
   const [emailDone, setEmailDone] = useState(false);
   const [openQuestion, setOpenQuestion] = useState("");
+  const [prefill, setPrefill] = useState<{ text: string; nonce: number }>();
   const saveRef = useEndScreenTracking("group_async", Boolean(state?.revealed), { sessionId });
 
   useEffect(() => setGuestToken(getGuestToken()), []);
@@ -229,6 +231,8 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
   }
 
   const open = state.blocks.find((block) => block.sessionQuestionId === openQuestion);
+  const guidanceFor = (block: Loaded["blocks"][number]) =>
+    groupRevealGuidance(block.options.map((option) => ({ names: option.names, mine: option.mine })));
 
   if (open) {
     return (
@@ -255,6 +259,11 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
               </div>
             ))}
           </div>
+          <RevealGuidance
+            text={guidanceFor(open)}
+            interactive
+            onActivate={() => setPrefill({ text: guidanceFor(open), nonce: Date.now() })}
+          />
         </header>
         <div className="min-h-0 flex-1">
           <Thread
@@ -263,6 +272,8 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
             prompts={open.prompts}
             sessionId={sessionId}
             promptSource={open.prompts?.length ? "ai" : "template"}
+            compactRemote
+            prefill={prefill}
           />
         </div>
       </main>
@@ -277,11 +288,8 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
       </p>
       <div className="mt-10 flex flex-col gap-4">
         {state.blocks.map((block) => (
-          <button
-            key={block.sessionQuestionId}
-            onClick={() => setOpenQuestion(block.sessionQuestionId)}
-            className="card-soft px-6 py-5 text-left hover:border-primary"
-          >
+          <div key={block.sessionQuestionId} className="card-soft px-6 py-5">
+            <button onClick={() => setOpenQuestion(block.sessionQuestionId)} className="w-full text-left">
             <p className="text-xl leading-snug">{block.text}</p>
             <div className="mt-4 flex flex-col gap-2">
               {block.options.map((option) => (
@@ -296,7 +304,16 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
                 </p>
               ))}
             </div>
-          </button>
+            </button>
+            <RevealGuidance
+              text={guidanceFor(block)}
+              interactive
+              onActivate={() => {
+                setPrefill({ text: guidanceFor(block), nonce: Date.now() });
+                setOpenQuestion(block.sessionQuestionId);
+              }}
+            />
+          </div>
         ))}
       </div>
 

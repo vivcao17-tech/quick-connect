@@ -7,6 +7,7 @@ import { GoogleSignIn } from "@/components/GoogleSignIn";
 import QRCode from "qrcode";
 
 import { withName } from "@/components/QuestionText";
+import { groupRevealGuidance, RevealGuidance } from "@/components/RevealGuidance";
 
 import {
   addConnection,
@@ -496,6 +497,13 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                     {current.options.find((o) => o.key === current.impression!.selfAnswer)?.label}.
                   </p>
                 )}
+                <RevealGuidance
+                  text={
+                    current.impression.aboutMe.length > 0
+                      ? `${current.impression.aboutMe.map((row) => row.name).join(" and ")} read you here. Which read surprised you?`
+                      : "Nobody got to yours this time. Next."
+                  }
+                />
                 {state.iAmHost && (
                   <button
                     onClick={() => void run(() => next({ data: { guestToken, sessionId } }))}
@@ -551,7 +559,16 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                       </div>
                     );
                   })}
-                {current.ask && <p className="text-2xl leading-snug">{current.ask}</p>}
+                <RevealGuidance
+                  text={groupRevealGuidance(
+                    current.options.map((option) => ({
+                      names: current.picks
+                        .filter((pick) => pick.optionKey === option.key)
+                        .map((pick) => (pick.isMe ? "You" : pick.name)),
+                      mine: current.picks.some((pick) => pick.optionKey === option.key && pick.isMe),
+                    })),
+                  )}
+                />
                 {state.iAmHost && (
                   <button
                     onClick={() => void run(() => next({ data: { guestToken, sessionId } }))}
