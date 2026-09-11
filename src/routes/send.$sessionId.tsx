@@ -197,6 +197,11 @@ function SendPage() {
 
               {recipients.map((recipient, i) => (
                 <div key={i} className="card-soft px-4 py-3">
+                  {recipient.label.trim() && (
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      {impression.stemOther.replace(/\{name\}/g, recipient.label.trim())}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2">
                     <input
                       value={recipient.label}
@@ -272,7 +277,7 @@ function SendPage() {
             disabled={busy || !ready}
             className="btn-ink hover:opacity-90 disabled:opacity-40"
           >
-            Make their links
+            Send to them
           </button>
           {impression && named.length > 0 && !ready && (
             <p className="mt-3 text-sm text-muted-foreground">
