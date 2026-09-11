@@ -11,7 +11,7 @@ function joinNames(names: string[]) {
 
 function countWord(count: number) {
   return (
-    ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"][count] ?? String(count)
+    ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight"][count] ?? String(count)
   );
 }
 
@@ -47,7 +47,8 @@ export function groupRevealGuidance(sides: SplitSide[]) {
   }
 
   const counts = answered.map((side) => side.names.length).sort((a, b) => b - a);
-  return `${counts.map(countWord).join(" and ")}. Each side, say why — then see if anyone switches.`;
+  const countLine = counts.map(countWord).join(counts.length > 2 ? ", " : " and ");
+  return `${countLine[0]?.toUpperCase() ?? ""}${countLine.slice(1)}. Each side, say why — then see if anyone switches.`;
 }
 
 export function mergeRemoteOpening(observation: string, guidance: string) {

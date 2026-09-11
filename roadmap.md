@@ -11,8 +11,8 @@
 
 ## Reveal guidance and remote reveal simplification
 
-- [ ] Add shared split-aware, name-aware guidance across all four modes
-- [ ] Make in-person guidance static and remote guidance open a prefilled composer
-- [ ] Reduce remote reveals to one opening line, one fallback chip, and one 👀 reaction
-- [ ] Move remote follow-up questions inside the opened thread
+- [x] Add shared split-aware, name-aware guidance across all four modes
+- [x] Make in-person guidance static and remote guidance open a prefilled composer
+- [x] Reduce remote reveals to one opening line, one fallback chip, and one 👀 reaction
+- [x] Move remote follow-up questions inside the opened thread
 - [ ] Verify unanimous, even, minority-viewer, majority-viewer, and 1:1 states on mobile and desktop

@@ -474,7 +474,7 @@ function InvitePage() {
                         <Thread
                           guestToken={guestToken}
                           sessionQuestionId={current.sessionQuestionId}
-                          prompts={ai.prompts.slice(0, 1)}
+                          prompts={ai.prompts[0] ? [ai.prompts[0]] : ["What made you pick that?"]}
                           sessionId={sessionId}
                           promptSource={ai.prompts?.length ? "ai" : "template"}
                           compactRemote

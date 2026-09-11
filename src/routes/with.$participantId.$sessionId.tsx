@@ -198,7 +198,7 @@ function QuestionView({
           <Thread
             guestToken={guestToken}
             sessionQuestionId={question.sessionQuestionId}
-            prompts={ai.prompts.slice(0, 1)}
+            prompts={ai.prompts[0] ? [ai.prompts[0]] : ["What made you pick that?"]}
             compactRemote
             prefill={prefill}
           />

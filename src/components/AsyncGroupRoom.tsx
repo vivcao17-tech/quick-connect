@@ -278,7 +278,7 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
           <Thread
             guestToken={guestToken}
             sessionQuestionId={open.sessionQuestionId}
-            prompts={open.prompts}
+            prompts={open.prompts[0] ? [open.prompts[0]] : ["What made you pick that?"]}
             sessionId={sessionId}
             promptSource={open.prompts?.length ? "ai" : "template"}
             compactRemote
