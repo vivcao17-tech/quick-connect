@@ -30,7 +30,6 @@ import {
 import type { RoomState } from "@/lib/irl.functions";
 import { logEvent } from "@/lib/play.functions";
 
-
 const DIFFERENT_PROMPTS = [
   "What happened last time?",
   "Why does that feel better to you?",
@@ -102,7 +101,12 @@ export function Room({ sessionId }: { sessionId: string }) {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "session_questions", filter: `session_id=eq.${sessionId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "session_questions",
+          filter: `session_id=eq.${sessionId}`,
+        },
         () => void refresh(),
       )
       .subscribe();
@@ -118,7 +122,11 @@ export function Room({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!joinUrl) return;
-    void QRCode.toDataURL(joinUrl, { margin: 1, width: 320, color: { dark: "#221c17", light: "#0000" } })
+    void QRCode.toDataURL(joinUrl, {
+      margin: 1,
+      width: 320,
+      color: { dark: "#221c17", light: "#0000" },
+    })
       .then(setQr)
       .catch(() => setQr(""));
   }, [joinUrl]);
@@ -211,7 +219,6 @@ export function Room({ sessionId }: { sessionId: string }) {
     };
   }, [current, aiPrompts]);
 
-
   async function run(fn: () => Promise<unknown>) {
     if (busy) return;
     setBusy(true);
@@ -255,9 +262,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                 className="block mt-1 text-6xl leading-none font-semibold tracking-[0.2em]"
                 style={{
                   color: `var(--code-ink-${
-                    ((state.roomCode ?? "")
-                      .split("")
-                      .reduce((a, c) => a + c.charCodeAt(0), 0) %
+                    ((state.roomCode ?? "").split("").reduce((a, c) => a + c.charCodeAt(0), 0) %
                       6) +
                     1
                   })`,
@@ -266,7 +271,6 @@ export function Room({ sessionId }: { sessionId: string }) {
                 {state.roomCode}
               </span>
             </p>
-
 
             <p className="mt-3 text-sm text-muted-foreground">
               They scan the code on your screen. Nothing to download.
@@ -300,9 +304,12 @@ export function Room({ sessionId }: { sessionId: string }) {
                 disabled={topicDraft.length !== 2 || busy}
                 onClick={() =>
                   run(async () => {
-                    const res = await submitTopics({ data: { guestToken, sessionId, topicIds: topicDraft } });
+                    const res = await submitTopics({
+                      data: { guestToken, sessionId, topicIds: topicDraft },
+                    });
                     // The first question is already in; draw the rest while they read it.
-                    if (res?.advanced) void topUp({ data: { guestToken, sessionId } }).then(() => refresh());
+                    if (res?.advanced)
+                      void topUp({ data: { guestToken, sessionId } }).then(() => refresh());
                   })
                 }
                 className="btn-ink mt-4 self-start disabled:opacity-30"
@@ -333,9 +340,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                     : "other"
                   : null;
               const subject =
-                impressionStep === "self"
-                  ? "You"
-                  : subjectName("other", current.otherName);
+                impressionStep === "self" ? "You" : subjectName("other", current.otherName);
               return (
                 <div
                   className={
@@ -356,7 +361,9 @@ export function Room({ sessionId }: { sessionId: string }) {
                       Guess:
                     </p>
                   )}
-                  <h2 className={`text-4xl leading-tight ${impressionStep === "other" ? "mt-2" : "mt-6"}`}>
+                  <h2
+                    className={`text-4xl leading-tight ${impressionStep === "other" ? "mt-2" : "mt-6"}`}
+                  >
                     {impressionStep
                       ? withName(
                           impressionStem(current, impressionStep, current.otherName),
@@ -410,7 +417,6 @@ export function Room({ sessionId }: { sessionId: string }) {
                 </div>
               );
             })()}
-
 
             {!current.revealed && current.mySubmitted && (
               <p className="mt-12 text-lg text-muted-foreground">
@@ -517,7 +523,6 @@ export function Room({ sessionId }: { sessionId: string }) {
               </div>
             )}
 
-
             <div className="mt-14 flex items-center gap-6 text-sm text-muted-foreground">
               <button
                 onClick={() => {
@@ -539,7 +544,11 @@ export function Room({ sessionId }: { sessionId: string }) {
                 onClick={() =>
                   run(() =>
                     changeSpice({
-                      data: { guestToken, sessionId, spiceMax: state.spiceMax >= 3 ? 1 : state.spiceMax + 1 },
+                      data: {
+                        guestToken,
+                        sessionId,
+                        spiceMax: state.spiceMax >= 3 ? 1 : state.spiceMax + 1,
+                      },
                     }),
                   )
                 }
@@ -640,11 +649,10 @@ export function Room({ sessionId }: { sessionId: string }) {
                 ))}
             </div>
 
-
-
-
             <button
-              onClick={() => run(() => advance({ data: { guestToken, sessionId, action: "more" } }))}
+              onClick={() =>
+                run(() => advance({ data: { guestToken, sessionId, action: "more" } }))
+              }
               className="mt-10 self-start text-sm text-muted-foreground underline underline-offset-4"
             >
               A few more questions

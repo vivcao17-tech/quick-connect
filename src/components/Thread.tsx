@@ -148,7 +148,11 @@ export function Thread({
     shownRef.current = key;
     track(
       "prompt_shown",
-      { prompts: allPrompts.join(" | "), count: allPrompts.length, source: promptSource ?? "template" },
+      {
+        prompts: allPrompts.join(" | "),
+        count: allPrompts.length,
+        source: promptSource ?? "template",
+      },
       { sessionId: sessionId ?? null },
     );
   }, [allPrompts, sessionQuestionId, promptSource, sessionId]);
@@ -235,7 +239,9 @@ export function Thread({
     <div className="mt-8 border-t border-border pt-6">
       {showFollowUp && followUp && (
         <div className="mb-6 border-b border-border pb-6">
-          <p className="text-sm tracking-[0.18em] text-muted-foreground uppercase">One more thing</p>
+          <p className="text-sm tracking-[0.18em] text-muted-foreground uppercase">
+            One more thing
+          </p>
           <p className="mt-2 text-2xl leading-snug">{followUp.text}</p>
         </div>
       )}
@@ -294,7 +300,9 @@ export function Thread({
             </button>
           ))}
         </div>
-        <p className={`${compactRemote ? "mt-2" : "mb-2 -order-1"} text-xs tracking-[0.18em] text-muted-foreground uppercase`}>
+        <p
+          className={`${compactRemote ? "mt-2" : "mb-2 -order-1"} text-xs tracking-[0.18em] text-muted-foreground uppercase`}
+        >
           No reply needed
         </p>
       </div>
@@ -306,13 +314,22 @@ export function Thread({
             {rows.length === 0 ? "Want to ask why?" : "Tap to start a reply"}
           </p>
           <div className="flex flex-wrap gap-2">
-            {(compactRemote ? allPrompts.slice(0, 1) : showAll ? allPrompts : allPrompts.slice(0, 2)).map((prompt) => (
+            {(compactRemote
+              ? allPrompts.slice(0, 1)
+              : showAll
+                ? allPrompts
+                : allPrompts.slice(0, 2)
+            ).map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => {
                   track(
                     "prompt_tapped",
-                    { prompt, source: promptSource ?? "template", session_question_id: sessionQuestionId },
+                    {
+                      prompt,
+                      source: promptSource ?? "template",
+                      session_question_id: sessionQuestionId,
+                    },
                     { sessionId: sessionId ?? null },
                   );
                   onPrompt?.(prompt);
@@ -334,7 +351,6 @@ export function Thread({
           </div>
         </div>
       )}
-
 
       <div ref={endRef} className="h-px" />
 

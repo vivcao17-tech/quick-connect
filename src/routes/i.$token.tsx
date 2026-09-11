@@ -5,7 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { PairSummary } from "@/components/PairSummary";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
-import { mergeRemoteOpening, pairRevealGuidance, RevealGuidance } from "@/components/RevealGuidance";
+import {
+  mergeRemoteOpening,
+  pairRevealGuidance,
+  RevealGuidance,
+} from "@/components/RevealGuidance";
 import { Thread } from "@/components/Thread";
 import { track } from "@/lib/track";
 import { useEndScreenTracking } from "@/lib/end-tracking";
@@ -86,7 +90,6 @@ function InvitePage() {
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailFailed, setEmailFailed] = useState(false);
 
-
   const [stage, setStage] = useState<"landing" | "play" | "summary">("landing");
   const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<PlayQuestion[]>([]);
@@ -105,7 +108,6 @@ function InvitePage() {
   const start = useServerFn(startInvite);
   const answer = useServerFn(answerAsRecipient);
   const saveEmail = useServerFn(saveRecipientEmail);
-
 
   useEffect(() => {
     setGuestToken(getGuestToken());
@@ -229,7 +231,6 @@ function InvitePage() {
     setStage("summary");
   }
 
-
   function next() {
     if (revealShownAt.current && current) {
       track(
@@ -269,7 +270,6 @@ function InvitePage() {
     current?.sessionQuestionId ?? "",
     Boolean(reveal?.revealed),
   );
-
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -320,7 +320,6 @@ function InvitePage() {
           )}
         </section>
       )}
-
 
       {stage === "play" && current && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
@@ -419,7 +418,9 @@ function InvitePage() {
                     <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
                       {reveal.senderName}
                     </p>
-                    <p className="mt-2 text-2xl text-primary">{labelOf(reveal.sender?.optionKey)}</p>
+                    <p className="mt-2 text-2xl text-primary">
+                      {labelOf(reveal.sender?.optionKey)}
+                    </p>
                     {reveal.sender?.reason && (
                       <p className="mt-1 text-base italic text-muted-foreground">
                         "{reveal.sender.reason}"
@@ -476,13 +477,12 @@ function InvitePage() {
                     </div>
                   )}
 
-                  {ai.observation && (
-                    <></>
-                  )}
+                  {ai.observation && <></>}
                   {(() => {
-                    const matched = reveal.kind === "impression"
-                      ? Boolean(reveal.impression?.match && reveal.impression?.readMatch)
-                      : reveal.mine?.optionKey === reveal.sender?.optionKey;
+                    const matched =
+                      reveal.kind === "impression"
+                        ? Boolean(reveal.impression?.match && reveal.impression?.readMatch)
+                        : reveal.mine?.optionKey === reveal.sender?.optionKey;
                     const guidance = pairRevealGuidance(reveal.senderName, matched);
                     const opening = mergeRemoteOpening(ai.observation, guidance);
                     return (
@@ -506,7 +506,12 @@ function InvitePage() {
                           prefill={prefill}
                           showFollowUp={spill}
                           {...(current.followUp
-                            ? { followUp: { questionId: current.questionId, text: current.followUp } }
+                            ? {
+                                followUp: {
+                                  questionId: current.questionId,
+                                  text: current.followUp,
+                                },
+                              }
                             : {})}
                         />
                       </>
@@ -599,7 +604,6 @@ function InvitePage() {
             <p className="mt-8 text-lg text-muted-foreground">Sent. Check your inbox.</p>
           )}
 
-
           <div className="mt-10">
             {guestToken && sessionId && (
               <PairSummary
@@ -611,8 +615,6 @@ function InvitePage() {
           </div>
         </section>
       )}
-
-
     </main>
   );
 }

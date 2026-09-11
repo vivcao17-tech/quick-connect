@@ -10,7 +10,9 @@ function joinNames(names: string[]) {
 }
 
 function countWord(count: number) {
-  return ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"][count] ?? String(count);
+  return (
+    ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"][count] ?? String(count)
+  );
 }
 
 export function pairRevealGuidance(otherName: string, matched: boolean) {
@@ -29,8 +31,10 @@ export function groupRevealGuidance(sides: SplitSide[]) {
   const largest = ordered[ordered.length - 1];
   if (!smallest || !largest) return "Look at where everyone landed.";
 
-  const tiedSmallest = ordered.filter((side) => side.names.length === smallest.names.length).length > 1;
-  const isMinority = smallest.names.length <= 2 && smallest.names.length < largest.names.length && !tiedSmallest;
+  const tiedSmallest =
+    ordered.filter((side) => side.names.length === smallest.names.length).length > 1;
+  const isMinority =
+    smallest.names.length <= 2 && smallest.names.length < largest.names.length && !tiedSmallest;
   if (isMinority) {
     if (smallest.mine) {
       const others = smallest.names.filter((name) => name !== "You");

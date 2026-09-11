@@ -92,7 +92,11 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!joinUrl) return;
-    void QRCode.toDataURL(joinUrl, { margin: 1, width: 320, color: { dark: "#221c17", light: "#0000" } })
+    void QRCode.toDataURL(joinUrl, {
+      margin: 1,
+      width: 320,
+      color: { dark: "#221c17", light: "#0000" },
+    })
       .then(setQr)
       .catch(() => setQr(""));
   }, [joinUrl]);
@@ -236,7 +240,9 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                     onClick={() => {
                       setHandOffOpen(false);
                       void run(() =>
-                        handOff({ data: { guestToken, sessionId, toParticipantId: p.participantId } }),
+                        handOff({
+                          data: { guestToken, sessionId, toParticipantId: p.participantId },
+                        }),
                       );
                     }}
                     className="text-left text-lg underline underline-offset-4"
@@ -268,7 +274,9 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                     disabled={p.connected}
                     onClick={() =>
                       void run(() =>
-                        connect({ data: { guestToken, sessionId, targetParticipantId: p.participantId } }),
+                        connect({
+                          data: { guestToken, sessionId, targetParticipantId: p.participantId },
+                        }),
                       )
                     }
                     className="text-left text-lg underline underline-offset-4 disabled:no-underline disabled:opacity-50"
@@ -293,8 +301,8 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
           <div className="card-soft px-6 py-4">
             {state.hostRequest.isMine ? (
               <p className="text-base">
-                You asked to run this. It transfers in {state.hostRequest.secondsLeft}s unless they say
-                no.
+                You asked to run this. It transfers in {state.hostRequest.secondsLeft}s unless they
+                say no.
               </p>
             ) : state.iAmHost ? (
               <div className="flex items-center justify-between gap-4">
@@ -304,7 +312,9 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                 <button
                   onClick={() =>
                     void run(() =>
-                      decline({ data: { guestToken, sessionId, requestId: state.hostRequest!.id } }),
+                      decline({
+                        data: { guestToken, sessionId, requestId: state.hostRequest!.id },
+                      }),
                     )
                   }
                   className="text-sm underline underline-offset-4"
@@ -330,7 +340,11 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
             <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Room open</p>
             <p className="mt-6 text-7xl tracking-[0.2em]">{state.roomCode}</p>
             {qr && (
-              <img src={qr} alt={`QR code to join room ${state.roomCode}`} className="mt-6 h-48 w-48" />
+              <img
+                src={qr}
+                alt={`QR code to join room ${state.roomCode}`}
+                className="mt-6 h-48 w-48"
+              />
             )}
             <p className="mt-6 text-lg text-muted-foreground">Best with 3–6 people.</p>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -450,7 +464,6 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
               );
             })()}
 
-
             {!current.revealed && state.iAmHost && (
               <div className="mt-12">
                 <p className="text-lg text-muted-foreground">
@@ -519,7 +532,11 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
               <div className="mt-10 flex flex-col gap-8">
                 {[...current.options]
                   .sort((a, b) =>
-                    a.key === current.minorityOption ? -1 : b.key === current.minorityOption ? 1 : 0,
+                    a.key === current.minorityOption
+                      ? -1
+                      : b.key === current.minorityOption
+                        ? 1
+                        : 0,
                   )
                   .map((option) => {
                     const names = current.picks.filter((p) => p.optionKey === option.key);
@@ -565,7 +582,9 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                       names: current.picks
                         .filter((pick) => pick.optionKey === option.key)
                         .map((pick) => (pick.isMe ? "You" : pick.name)),
-                      mine: current.picks.some((pick) => pick.optionKey === option.key && pick.isMe),
+                      mine: current.picks.some(
+                        (pick) => pick.optionKey === option.key && pick.isMe,
+                      ),
                     })),
                   )}
                 />
@@ -579,7 +598,6 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                 )}
               </div>
             )}
-
           </div>
         )}
 
@@ -631,7 +649,6 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                 </div>
               )}
             </div>
-
 
             {top && top.count > 0 && top.topSessionQuestionId && (
               <div className="mt-8">
@@ -704,7 +721,6 @@ export function GroupRoom({ sessionId }: { sessionId: string }) {
                 </p>
               </div>
             )}
-
           </div>
         )}
       </section>
