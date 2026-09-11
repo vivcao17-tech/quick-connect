@@ -61,7 +61,10 @@ export const createRemoteSession = createServerFn({ method: "POST" })
 
     // The third question is always an impression question.
     const questionIds = [...data.questionIds];
-    const impression = await pickImpressionQuestion(supabaseAdmin, questionIds);
+    // Scoped to this sender so they aren't handed the same read twice.
+    const impression = await pickImpressionQuestion(supabaseAdmin, questionIds, {
+      guestTokens: [data.guestToken],
+    });
     if (impression) questionIds[2] = impression.id;
 
     const { data: questions, error: qError } = await supabaseAdmin
@@ -1436,6 +1439,7 @@ export const getAnswerSet = createServerFn({ method: "POST" })
     const impressionSnap = impressionRow ? (impressionRow.snapshot as Snapshot) : null;
 
     return {
+      senderName: participant.display_name ?? "A friend",
       questions: (sqs ?? []).map((row) => {
         const snap = row.snapshot as Snapshot;
         const mine = [...(answers ?? [])]
