@@ -59,6 +59,7 @@ function SendPage() {
   const [links, setLinks] = useState<Invite[]>([]);
   const [answers, setAnswers] = useState<Answers>([]);
   const [impression, setImpression] = useState<Impression>(null);
+  const [senderName, setSenderName] = useState("");
   const [copied, setCopied] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -83,6 +84,7 @@ function SendPage() {
       .then((result) => {
         setAnswers(result.questions);
         setImpression(result.impression);
+        setSenderName(result.senderName);
       })
       .catch(() => undefined);
   }, [loadExisting, loadAnswers, viewer.ready, viewer.profileId, guestToken, sessionId]);
@@ -128,7 +130,19 @@ function SendPage() {
 
   async function copy(invite: Invite) {
     const origin = window.location.origin;
-    const message = `${invite.note ? `${invite.note}\n\n` : ""}3 questions · 30 seconds · no signup\n${origin}/i/${invite.token}`;
+    // Addressed to one person, from one person — and the hook is the read on them.
+    const from = senderName || "A friend";
+    const to = invite.label.trim();
+    const lines = [
+      invite.note ? `${invite.note}\n` : "",
+      `${to ? `${to} — ` : ""}${from} sent you three questions.`,
+      impression
+        ? `One of them is ${from}'s read on you.`
+        : "One of them is about you.",
+      "30 seconds, no signup.",
+      `${origin}/i/${invite.token}`,
+    ].filter(Boolean);
+    const message = lines.join("\n");
     await navigator.clipboard.writeText(message);
     setCopied(invite.token);
     window.setTimeout(() => setCopied(""), 2500);
@@ -168,7 +182,7 @@ function SendPage() {
         {impression ? (
           <div className="mt-10">
             <p className="text-lg text-muted-foreground">
-              {impression.stemOther.replace(/\{name\}/g, "Jack")}
+              {impression.stemOther.replace(/\{name\}/g, "Each person below")}
             </p>
 
             <div className="mt-6 flex flex-col gap-3">
@@ -183,6 +197,11 @@ function SendPage() {
 
               {recipients.map((recipient, i) => (
                 <div key={i} className="card-soft px-4 py-3">
+                  {recipient.label.trim() && (
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      {impression.stemOther.replace(/\{name\}/g, recipient.label.trim())}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2">
                     <input
                       value={recipient.label}
@@ -258,7 +277,7 @@ function SendPage() {
             disabled={busy || !ready}
             className="btn-ink hover:opacity-90 disabled:opacity-40"
           >
-            Make their links
+            Send to them
           </button>
           {impression && named.length > 0 && !ready && (
             <p className="mt-3 text-sm text-muted-foreground">
