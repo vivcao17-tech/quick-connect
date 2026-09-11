@@ -27,6 +27,9 @@ export function Thread({
   followUp,
   autoFocus,
   bare,
+  compactRemote,
+  prefill,
+  showFollowUp,
 }: {
   guestToken: string;
   sessionQuestionId: string;
@@ -46,6 +49,12 @@ export function Thread({
   autoFocus?: boolean | undefined;
   /** Question + messages + composer only: used by the follow-up screen. */
   bare?: boolean | undefined;
+  /** Remote reveal: one fallback chip and one separated closing reaction. */
+  compactRemote?: boolean | undefined;
+  /** A parent action can place editable text into the composer without sending it. */
+  prefill?: { text: string; nonce: number } | undefined;
+  /** Follow-ups stay inside the thread and appear only after it has been opened. */
+  showFollowUp?: boolean | undefined;
   onPrompt?: (prompt: string) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -60,6 +69,7 @@ export function Thread({
   const settled = useRef(false);
   const sentRef = useRef(false);
   const followUpAnswered = useRef(false);
+  const lastPrefill = useRef(0);
 
   const load = useServerFn(getThread);
   const post = useServerFn(postThreadMessage);
@@ -138,7 +148,11 @@ export function Thread({
     shownRef.current = key;
     track(
       "prompt_shown",
-      { prompts: allPrompts.join(" | "), count: allPrompts.length, source: promptSource ?? "template" },
+      {
+        prompts: allPrompts.join(" | "),
+        count: allPrompts.length,
+        source: promptSource ?? "template",
+      },
       { sessionId: sessionId ?? null },
     );
   }, [allPrompts, sessionQuestionId, promptSource, sessionId]);
@@ -212,11 +226,25 @@ export function Thread({
     }, 0);
   }
 
+  useEffect(() => {
+    if (!prefill || prefill.nonce === lastPrefill.current) return;
+    lastPrefill.current = prefill.nonce;
+    fillDraft(prefill.text);
+  }, [prefill]);
+
   const chip =
     "rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground";
 
   return (
     <div className="mt-8 border-t border-border pt-6">
+      {showFollowUp && followUp && (
+        <div className="mb-6 border-b border-border pb-6">
+          <p className="text-sm tracking-[0.18em] text-muted-foreground uppercase">
+            One more thing
+          </p>
+          <p className="mt-2 text-2xl leading-snug">{followUp.text}</p>
+        </div>
+      )}
       {rows.length > 0 && (
         <div className="mb-6 flex flex-col gap-3">
           {rows.map((row) => (
@@ -258,25 +286,6 @@ export function Thread({
         </div>
       )}
 
-      {/* Closing reactions sit with the messages, not with the composer. */}
-      <div className={`mb-8 ${bare ? "hidden" : ""}`}>
-        <p className="mb-2 text-xs tracking-[0.18em] text-muted-foreground uppercase">
-          No reply needed
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {CLOSERS.map((closer) => (
-            <button
-              key={closer}
-              disabled={busy}
-              onClick={() => void send("reaction", closer)}
-              className="rounded-full border border-border px-4 py-2 text-lg disabled:opacity-40"
-            >
-              {closer}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Continuation prompts: specific to this question, tapped into the box. */}
       {!bare && allPrompts.length > 0 && (
         <div className="rounded-2xl bg-secondary/40 px-4 py-4">
@@ -284,13 +293,22 @@ export function Thread({
             {rows.length === 0 ? "Want to ask why?" : "Tap to start a reply"}
           </p>
           <div className="flex flex-wrap gap-2">
-            {(showAll ? allPrompts : allPrompts.slice(0, 2)).map((prompt) => (
+            {(compactRemote
+              ? allPrompts.slice(0, 1)
+              : showAll
+                ? allPrompts
+                : allPrompts.slice(0, 2)
+            ).map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => {
                   track(
                     "prompt_tapped",
-                    { prompt, source: promptSource ?? "template", session_question_id: sessionQuestionId },
+                    {
+                      prompt,
+                      source: promptSource ?? "template",
+                      session_question_id: sessionQuestionId,
+                    },
                     { sessionId: sessionId ?? null },
                   );
                   onPrompt?.(prompt);
@@ -301,7 +319,7 @@ export function Thread({
                 {prompt}
               </button>
             ))}
-            {allPrompts.length > 2 && (
+            {!compactRemote && allPrompts.length > 2 && (
               <button
                 onClick={() => setShowAll((open) => !open)}
                 className="rounded-full px-3 py-2 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
@@ -313,6 +331,28 @@ export function Thread({
         </div>
       )}
 
+      {/* Closing reactions sit apart from the writing choices. */}
+      <div
+        className={`${allPrompts.length > 0 ? "mt-8" : ""} mb-8 ${bare ? "hidden" : ""} ${compactRemote ? "text-right" : ""}`}
+      >
+        <div className={`flex flex-wrap gap-2 ${compactRemote ? "justify-end" : ""}`}>
+          {(compactRemote ? CLOSERS.slice(0, 1) : CLOSERS).map((closer) => (
+            <button
+              key={closer}
+              disabled={busy}
+              onClick={() => void send("reaction", closer)}
+              className="rounded-full border border-border px-4 py-2 text-lg disabled:opacity-40"
+            >
+              {closer}
+            </button>
+          ))}
+        </div>
+        <p
+          className={`${compactRemote ? "mt-2" : "mb-2 -order-1"} text-xs tracking-[0.18em] text-muted-foreground uppercase`}
+        >
+          No reply needed
+        </p>
+      </div>
 
       <div ref={endRef} className="h-px" />
 

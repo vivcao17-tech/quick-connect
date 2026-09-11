@@ -3,6 +3,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
 import { Thread } from "@/components/Thread";
+import {
+  mergeRemoteOpening,
+  pairRevealGuidance,
+  RevealGuidance,
+} from "@/components/RevealGuidance";
 import { getSessionBlock } from "@/lib/conversations.functions";
 import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 import { useViewer } from "@/lib/viewer";
@@ -46,7 +51,6 @@ function SessionBlockPage() {
   const viewer = useViewer();
   const [data, setData] = useState<Data | null>(null);
   const [openId, setOpenId] = useState(q ?? "");
-
 
   const load = useServerFn(getSessionBlock);
 
@@ -149,6 +153,11 @@ function QuestionView({
   onBack: () => void;
 }) {
   const ai = useRevealPrompts(guestToken, question.sessionQuestionId, question.revealed);
+  const [prefill, setPrefill] = useState<{ text: string; nonce: number }>();
+  const opening = mergeRemoteOpening(
+    ai.observation,
+    pairRevealGuidance(name, question.matched === true),
+  );
 
   return (
     <div>
@@ -181,11 +190,17 @@ function QuestionView({
 
       {question.revealed ? (
         <>
-          {ai.observation && <p className="mt-6 text-lg leading-snug">{ai.observation}</p>}
+          <RevealGuidance
+            text={opening}
+            interactive
+            onActivate={() => setPrefill({ text: opening, nonce: Date.now() })}
+          />
           <Thread
             guestToken={guestToken}
             sessionQuestionId={question.sessionQuestionId}
-            prompts={ai.prompts}
+            prompts={ai.prompts[0] ? [ai.prompts[0]] : ["What made you pick that?"]}
+            compactRemote
+            prefill={prefill}
           />
         </>
       ) : (

@@ -5,7 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { PairSummary } from "@/components/PairSummary";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
-import { FollowUp } from "@/components/FollowUp";
+import {
+  mergeRemoteOpening,
+  pairRevealGuidance,
+  RevealGuidance,
+} from "@/components/RevealGuidance";
 import { Thread } from "@/components/Thread";
 import { track } from "@/lib/track";
 import { useEndScreenTracking } from "@/lib/end-tracking";
@@ -86,7 +90,6 @@ function InvitePage() {
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailFailed, setEmailFailed] = useState(false);
 
-
   const [stage, setStage] = useState<"landing" | "play" | "summary">("landing");
   const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<PlayQuestion[]>([]);
@@ -97,6 +100,7 @@ function InvitePage() {
   const saveRef = useEndScreenTracking("remote", stage === "summary", { sessionId });
   /** True once "Spill the tea" is tapped: the follow-up takes over the screen. */
   const [spill, setSpill] = useState(false);
+  const [prefill, setPrefill] = useState<{ text: string; nonce: number }>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -104,7 +108,6 @@ function InvitePage() {
   const start = useServerFn(startInvite);
   const answer = useServerFn(answerAsRecipient);
   const saveEmail = useServerFn(saveRecipientEmail);
-
 
   useEffect(() => {
     setGuestToken(getGuestToken());
@@ -228,7 +231,6 @@ function InvitePage() {
     setStage("summary");
   }
 
-
   function next() {
     if (revealShownAt.current && current) {
       track(
@@ -268,7 +270,6 @@ function InvitePage() {
     current?.sessionQuestionId ?? "",
     Boolean(reveal?.revealed),
   );
-
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -320,28 +321,7 @@ function InvitePage() {
         </section>
       )}
 
-
-      {/* Spill the tea: the follow-up question and the composer, nothing else. */}
-      {stage === "play" && current && spill && current.followUp && (
-        <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-10">
-          <div className="sticky top-0 z-20 bg-background pt-4 pb-6">
-            <h1 className="text-4xl leading-tight">{current.followUp}</h1>
-          </div>
-          <Thread
-            guestToken={guestToken}
-            sessionQuestionId={current.sessionQuestionId}
-            sessionId={sessionId}
-            autoFocus
-            bare
-            followUp={{ questionId: current.questionId, text: current.followUp }}
-          />
-          <button onClick={next} className="btn-quiet mt-10 self-start hover:bg-secondary">
-            {index + 1 < questions.length ? "Next" : "That's the last one"}
-          </button>
-        </section>
-      )}
-
-      {stage === "play" && current && !spill && (
+      {stage === "play" && current && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
           <div
             className={
@@ -408,37 +388,15 @@ function InvitePage() {
                 )}
               </div>
 
-              <p className="mt-8 text-lg">
-                {distribution.withMost
-                  ? "Here are your results — you're with most people."
-                  : "Here are your results — you're in the minority."}
-              </p>
-              <div className="mt-6 flex flex-col gap-4">
-                {distribution.rows.map((row) => (
-                  <div key={row.key}>
-                    <div className="flex items-baseline justify-between text-base">
-                      <span className={row.key === reveal.mine?.optionKey ? "text-primary" : ""}>
-                        {row.label}
-                      </span>
-                      <span className="text-muted-foreground">{row.share}%</span>
-                    </div>
-                    <div className="mt-2 h-px w-full bg-border">
-                      <div
-                        className="h-px bg-primary"
-                        style={{ width: `${Math.max(row.share, 2)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               {reveal.revealed ? (
                 <>
                   <div className="mt-10">
                     <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
                       {reveal.senderName}
                     </p>
-                    <p className="mt-2 text-2xl text-primary">{labelOf(reveal.sender?.optionKey)}</p>
+                    <p className="mt-2 text-2xl text-primary">
+                      {labelOf(reveal.sender?.optionKey)}
+                    </p>
                     {reveal.sender?.reason && (
                       <p className="mt-1 text-base italic text-muted-foreground">
                         "{reveal.sender.reason}"
@@ -495,29 +453,46 @@ function InvitePage() {
                     </div>
                   )}
 
-                  {ai.observation && (
-                    <p className="mt-6 text-lg leading-snug">{ai.observation}</p>
-                  )}
-                  {current.followUp ? (
-                    <FollowUp
-                      text={current.followUp}
-                      questionId={current.questionId}
-                      sessionQuestionId={current.sessionQuestionId}
-                      sessionId={sessionId}
-                      nextLabel={index + 1 < questions.length ? "Next" : "That's the last one"}
-                      onSpill={() => setSpill(true)}
-                      onNext={next}
-                    />
-                  ) : (
-                    <Thread
-                      guestToken={guestToken}
-                      sessionQuestionId={current.sessionQuestionId}
-                      prompts={ai.prompts}
-                      extraPrompts={current.chips.map((chip) => chip.text)}
-                      sessionId={sessionId}
-                      promptSource={ai.prompts?.length ? "ai" : "template"}
-                    />
-                  )}
+                  {ai.observation && <></>}
+                  {(() => {
+                    const matched =
+                      reveal.kind === "impression"
+                        ? Boolean(reveal.impression?.match && reveal.impression?.readMatch)
+                        : reveal.mine?.optionKey === reveal.sender?.optionKey;
+                    const guidance = pairRevealGuidance(reveal.senderName, matched);
+                    const opening = mergeRemoteOpening(ai.observation, guidance);
+                    return (
+                      <>
+                        <RevealGuidance
+                          text={opening}
+                          interactive
+                          onActivate={() => {
+                            setSpill(true);
+                            setPrefill({ text: opening, nonce: Date.now() });
+                          }}
+                        />
+                        <Thread
+                          guestToken={guestToken}
+                          sessionQuestionId={current.sessionQuestionId}
+                          prompts={ai.prompts[0] ? [ai.prompts[0]] : ["What made you pick that?"]}
+                          sessionId={sessionId}
+                          promptSource={ai.prompts?.length ? "ai" : "template"}
+                          compactRemote
+                          autoFocus={spill}
+                          prefill={prefill}
+                          showFollowUp={spill}
+                          {...(current.followUp
+                            ? {
+                                followUp: {
+                                  questionId: current.questionId,
+                                  text: current.followUp,
+                                },
+                              }
+                            : {})}
+                        />
+                      </>
+                    );
+                  })()}
                 </>
               ) : (
                 <p className="mt-10 text-lg text-muted-foreground italic">
@@ -525,11 +500,9 @@ function InvitePage() {
                 </p>
               )}
 
-              {!(reveal.revealed && current.followUp) && (
-                <button onClick={next} className="btn-quiet mt-10 hover:bg-secondary">
-                  {index + 1 < questions.length ? "Next" : "That's the last one"}
-                </button>
-              )}
+              <button onClick={next} className="btn-quiet mt-10 hover:bg-secondary">
+                {index + 1 < questions.length ? "Next" : "That's the last one"}
+              </button>
             </div>
           )}
 
@@ -607,7 +580,6 @@ function InvitePage() {
             <p className="mt-8 text-lg text-muted-foreground">Sent. Check your inbox.</p>
           )}
 
-
           <div className="mt-10">
             {guestToken && sessionId && (
               <PairSummary
@@ -619,8 +591,6 @@ function InvitePage() {
           </div>
         </section>
       )}
-
-
     </main>
   );
 }

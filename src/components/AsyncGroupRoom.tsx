@@ -6,6 +6,7 @@ import { track } from "@/lib/track";
 
 import { Thread } from "@/components/Thread";
 import { withName } from "@/components/QuestionText";
+import { groupRevealGuidance, RevealGuidance } from "@/components/RevealGuidance";
 import {
   answerInAsyncGroup,
   getAsyncGroupState,
@@ -32,6 +33,7 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
   const [email, setEmail] = useState("");
   const [emailDone, setEmailDone] = useState(false);
   const [openQuestion, setOpenQuestion] = useState("");
+  const [prefill, setPrefill] = useState<{ text: string; nonce: number }>();
   const saveRef = useEndScreenTracking("group_async", Boolean(state?.revealed), { sessionId });
 
   useEffect(() => setGuestToken(getGuestToken()), []);
@@ -86,7 +88,11 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
 
   const next = state.questions.find((q) => !q.myAnswer);
 
-  async function pick(sessionQuestionId: string, optionKey: OptionKey, aboutParticipantId?: string) {
+  async function pick(
+    sessionQuestionId: string,
+    optionKey: OptionKey,
+    aboutParticipantId?: string,
+  ) {
     if (busy) return;
     setBusy(true);
     try {
@@ -118,7 +124,9 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
           <p className="mt-8 text-sm tracking-[0.18em] text-muted-foreground uppercase">Guess:</p>
         )}
         <div
-          className={onSelf ? "mt-8 rounded-3xl border border-primary/40 bg-secondary px-6 py-6" : ""}
+          className={
+            onSelf ? "mt-8 rounded-3xl border border-primary/40 bg-secondary px-6 py-6" : ""
+          }
         >
           {onSelf && <p className="text-sm tracking-[0.18em] text-primary uppercase">And you?</p>}
           <h1 className={`text-4xl leading-tight ${pending || onSelf ? "mt-2" : "mt-8"}`}>
@@ -160,7 +168,8 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
           {state.answeredPeople} of {state.totalPeople} have answered.
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Nobody sees anything until it opens — {state.hoursLeft > 0 ? `at the latest in ${state.hoursLeft}h` : "any moment now"}.
+          Nobody sees anything until it opens —{" "}
+          {state.hoursLeft > 0 ? `at the latest in ${state.hoursLeft}h` : "any moment now"}.
         </p>
 
         {!state.hasEmail && !emailDone && (
@@ -229,6 +238,10 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
   }
 
   const open = state.blocks.find((block) => block.sessionQuestionId === openQuestion);
+  const guidanceFor = (block: Loaded["blocks"][number]) =>
+    groupRevealGuidance(
+      block.options.map((option) => ({ names: option.names, mine: option.mine })),
+    );
 
   if (open) {
     return (
@@ -255,14 +268,21 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
               </div>
             ))}
           </div>
+          <RevealGuidance
+            text={guidanceFor(open)}
+            interactive
+            onActivate={() => setPrefill({ text: guidanceFor(open), nonce: Date.now() })}
+          />
         </header>
         <div className="min-h-0 flex-1">
           <Thread
             guestToken={guestToken}
             sessionQuestionId={open.sessionQuestionId}
-            prompts={open.prompts}
+            prompts={open.prompts[0] ? [open.prompts[0]] : ["What made you pick that?"]}
             sessionId={sessionId}
             promptSource={open.prompts?.length ? "ai" : "template"}
+            compactRemote
+            prefill={prefill}
           />
         </div>
       </main>
@@ -277,26 +297,35 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
       </p>
       <div className="mt-10 flex flex-col gap-4">
         {state.blocks.map((block) => (
-          <button
-            key={block.sessionQuestionId}
-            onClick={() => setOpenQuestion(block.sessionQuestionId)}
-            className="card-soft px-6 py-5 text-left hover:border-primary"
-          >
-            <p className="text-xl leading-snug">{block.text}</p>
-            <div className="mt-4 flex flex-col gap-2">
-              {block.options.map((option) => (
-                <p key={option.key} className="text-base">
-                  <span className={option.names.length === 1 ? "text-primary" : ""}>
-                    {option.label}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {" — "}
-                    {option.names.length ? option.names.join(", ") : "nobody"}
-                  </span>
-                </p>
-              ))}
-            </div>
-          </button>
+          <div key={block.sessionQuestionId} className="card-soft px-6 py-5">
+            <button
+              onClick={() => setOpenQuestion(block.sessionQuestionId)}
+              className="w-full text-left"
+            >
+              <p className="text-xl leading-snug">{block.text}</p>
+              <div className="mt-4 flex flex-col gap-2">
+                {block.options.map((option) => (
+                  <p key={option.key} className="text-base">
+                    <span className={option.names.length === 1 ? "text-primary" : ""}>
+                      {option.label}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {" — "}
+                      {option.names.length ? option.names.join(", ") : "nobody"}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            </button>
+            <RevealGuidance
+              text={guidanceFor(block)}
+              interactive
+              onActivate={() => {
+                setPrefill({ text: guidanceFor(block), nonce: Date.now() });
+                setOpenQuestion(block.sessionQuestionId);
+              }}
+            />
+          </div>
         ))}
       </div>
 
@@ -329,7 +358,6 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
           You can still answer the rest — they'll show up here.
         </p>
       )}
-
     </Shell>
   );
 }
