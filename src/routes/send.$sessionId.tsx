@@ -59,6 +59,7 @@ function SendPage() {
   const [links, setLinks] = useState<Invite[]>([]);
   const [answers, setAnswers] = useState<Answers>([]);
   const [impression, setImpression] = useState<Impression>(null);
+  const [senderName, setSenderName] = useState("");
   const [copied, setCopied] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -83,6 +84,7 @@ function SendPage() {
       .then((result) => {
         setAnswers(result.questions);
         setImpression(result.impression);
+        setSenderName(result.senderName);
       })
       .catch(() => undefined);
   }, [loadExisting, loadAnswers, viewer.ready, viewer.profileId, guestToken, sessionId]);
