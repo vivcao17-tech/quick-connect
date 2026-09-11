@@ -130,7 +130,19 @@ function SendPage() {
 
   async function copy(invite: Invite) {
     const origin = window.location.origin;
-    const message = `${invite.note ? `${invite.note}\n\n` : ""}3 questions · 30 seconds · no signup\n${origin}/i/${invite.token}`;
+    // Addressed to one person, from one person — and the hook is the read on them.
+    const from = senderName || "A friend";
+    const to = invite.label.trim();
+    const lines = [
+      invite.note ? `${invite.note}\n` : "",
+      `${to ? `${to} — ` : ""}${from} sent you three questions.`,
+      impression
+        ? `One of them is ${from}'s read on you.`
+        : "One of them is about you.",
+      "30 seconds, no signup.",
+      `${origin}/i/${invite.token}`,
+    ].filter(Boolean);
+    const message = lines.join("\n");
     await navigator.clipboard.writeText(message);
     setCopied(invite.token);
     window.setTimeout(() => setCopied(""), 2500);
@@ -170,7 +182,7 @@ function SendPage() {
         {impression ? (
           <div className="mt-10">
             <p className="text-lg text-muted-foreground">
-              {impression.stemOther.replace(/\{name\}/g, "Jack")}
+              {impression.stemOther.replace(/\{name\}/g, "Each person below")}
             </p>
 
             <div className="mt-6 flex flex-col gap-3">
