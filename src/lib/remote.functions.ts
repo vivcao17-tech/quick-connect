@@ -50,9 +50,12 @@ export const createRemoteSession = createServerFn({ method: "POST" })
     z
       .object({
         guestToken: guest,
+        profileId: z.string().uuid().optional(),
         displayName: z.string().min(1).max(40),
         topicSlug: z.string().min(1),
         questionIds: z.array(z.string().uuid()).min(3).max(5),
+        /** Asking more people the same wall question overrides the impression slot. */
+        impressionQuestionId: z.string().uuid().optional(),
       })
       .parse(input),
   )
@@ -61,11 +64,22 @@ export const createRemoteSession = createServerFn({ method: "POST" })
 
     // The third question is always an impression question.
     const questionIds = [...data.questionIds];
-    // Scoped to this sender so they aren't handed the same read twice.
-    const impression = await pickImpressionQuestion(supabaseAdmin, questionIds, {
-      guestTokens: [data.guestToken],
-    });
-    if (impression) questionIds[2] = impression.id;
+    if (data.impressionQuestionId) {
+      const { data: chosen } = await supabaseAdmin
+        .from("questions")
+        .select("id, question_type")
+        .eq("id", data.impressionQuestionId)
+        .eq("question_type", "impression")
+        .maybeSingle();
+      if (chosen) questionIds[2] = chosen.id;
+    }
+    if (questionIds[2] !== data.impressionQuestionId) {
+      // Scoped to this sender so they aren't handed the same read twice.
+      const impression = await pickImpressionQuestion(supabaseAdmin, questionIds, {
+        guestTokens: [data.guestToken],
+      });
+      if (impression) questionIds[2] = impression.id;
+    }
 
     const { data: questions, error: qError } = await supabaseAdmin
       .from("questions")
