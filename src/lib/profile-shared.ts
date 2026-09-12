@@ -32,7 +32,10 @@ export function handleFrom(name: string, salt: string) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "")
       .slice(0, 14) || "friend";
-  return `${base}-${salt.replace(/[^a-z0-9]/gi, "").slice(0, 6).toLowerCase()}`;
+  return `${base}-${salt
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 6)
+    .toLowerCase()}`;
 }
 
 export type ProfileImpression = {

@@ -29,11 +29,17 @@ export const Route = createFileRoute("/me")({
         content: "How the people you've answered with read you, next to how you read yourself.",
       },
       { property: "og:title", content: "Their read on you — NoSure" },
-      { property: "og:description", content: "How people read you, next to how you read yourself." },
+      {
+        property: "og:description",
+        content: "How people read you, next to how you read yourself.",
+      },
       { property: "og:type", content: "profile" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Their read on you — NoSure" },
-      { name: "twitter:description", content: "How people read you, next to how you read yourself." },
+      {
+        name: "twitter:description",
+        content: "How people read you, next to how you read yourself.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -114,9 +120,7 @@ function MyProfile() {
 
   return (
     <Shell>
-      <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
-        Their read on you
-      </p>
+      <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Their read on you</p>
       <h1 className="mt-6 text-5xl leading-[1.05]">{profile.displayName}</h1>
       <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
 
@@ -302,7 +306,9 @@ function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: (
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="paper min-h-screen bg-background">
-      <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-16">{children}</section>
+      <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-16">
+        {children}
+      </section>
     </main>
   );
 }

@@ -43,7 +43,6 @@ type Data = {
   sessions: Awaited<ReturnType<typeof getPersonSessions>>["sessions"];
 };
 
-
 export function ago(iso: string) {
   if (!iso) return "";
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -139,9 +138,7 @@ function WithPersonPage() {
         },
       });
       setData((current) =>
-        current
-          ? { ...current, note: saved, name: saved.nickname || current.realName }
-          : current,
+        current ? { ...current, note: saved, name: saved.nickname || current.realName } : current,
       );
       setEditing(false);
     } finally {
@@ -159,10 +156,7 @@ function WithPersonPage() {
   return (
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-        <Link
-          to="/people"
-          className="text-sm text-muted-foreground underline underline-offset-4"
-        >
+        <Link to="/people" className="text-sm text-muted-foreground underline underline-offset-4">
           People
         </Link>
         <h1 className="mt-6 text-4xl leading-tight">You and {name}</h1>
@@ -172,9 +166,7 @@ function WithPersonPage() {
         <p className="mt-3 text-sm text-muted-foreground">
           {[
             data?.met,
-            sessions.length === 1
-              ? "1 session together"
-              : `${sessions.length} sessions together`,
+            sessions.length === 1 ? "1 session together" : `${sessions.length} sessions together`,
             lastTalked ? `Last talked ${ago(lastTalked)}` : "",
           ]
             .filter(Boolean)
@@ -199,10 +191,7 @@ function WithPersonPage() {
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {topics.map((topic) => (
-                <span
-                  key={topic}
-                  className="rounded-full border border-border px-4 py-2 text-base"
-                >
+                <span key={topic} className="rounded-full border border-border px-4 py-2 text-base">
                   {topic}
                 </span>
               ))}
@@ -264,7 +253,11 @@ function WithPersonPage() {
               onClick={() => setEditing((open) => !open)}
               className="text-sm text-muted-foreground underline underline-offset-4"
             >
-              {editing ? "Cancel" : data?.note.nickname || data?.note.contact || data?.note.note ? "Edit" : "Add"}
+              {editing
+                ? "Cancel"
+                : data?.note.nickname || data?.note.contact || data?.note.note
+                  ? "Edit"
+                  : "Add"}
             </button>
           </div>
 

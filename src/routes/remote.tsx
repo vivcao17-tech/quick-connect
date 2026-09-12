@@ -7,14 +7,9 @@ import { TopicCloud } from "@/components/TopicCloud";
 import type { CloudTopic } from "@/components/TopicCloud";
 import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
-import {
-  answerAsSender,
-  createRemoteSession,
-  listTopicQuestions,
-} from "@/lib/remote.functions";
+import { answerAsSender, createRemoteSession, listTopicQuestions } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 import { useViewer } from "@/lib/viewer";
-
 
 export const Route = createFileRoute("/remote")({
   validateSearch: (search: Record<string, unknown>): { impression?: string } =>
@@ -47,8 +42,6 @@ export const Route = createFileRoute("/remote")({
 type Topic = { id: string; slug: string; label: string };
 type Candidate = { id: string; text: string; options: { key: OptionKey; label: string }[] };
 
-
-
 function RemotePage() {
   const { impression: impressionQuestionId } = Route.useSearch();
   const viewer = useViewer();
@@ -74,7 +67,6 @@ function RemotePage() {
   const createSession = useServerFn(createRemoteSession);
   const answer = useServerFn(answerAsSender);
 
-
   useEffect(() => {
     setGuestToken(getGuestToken());
     setName(window.localStorage.getItem("beside.name") ?? "");
@@ -92,7 +84,9 @@ function RemotePage() {
     setBusy(true);
     setError("");
     try {
-      const result = await loadQuestions({ data: { topicSlug: topic.slug, ...(guestToken ? { guestToken } : {}) } });
+      const result = await loadQuestions({
+        data: { topicSlug: topic.slug, ...(guestToken ? { guestToken } : {}) },
+      });
       setTopicLabel(result.topic.label);
       setTopicSlug(result.topic.slug);
       setCandidates(result.questions);
@@ -135,9 +129,7 @@ function RemotePage() {
       setSessionId(result.sessionId);
       // A question they've already answered (the wall question they're re-asking)
       // isn't asked again.
-      setQuestions(
-        result.questions.filter((q) => !result.prefilled.includes(q.sessionQuestionId)),
-      );
+      setQuestions(result.questions.filter((q) => !result.prefilled.includes(q.sessionQuestionId)));
       setIndex(0);
       setPicked(null);
       setTally(null);
@@ -185,8 +177,6 @@ function RemotePage() {
     void navigate({ to: "/send/$sessionId", params: { sessionId } });
   }
 
-
-
   const totals = useMemo(() => {
     if (!tally || !current) return null;
     const sum = tally.reduce((acc, row) => acc + row.votes, 0) || 1;
@@ -214,7 +204,9 @@ function RemotePage() {
               topics={topics}
               selectedIds={[]}
               disabled={busy}
-              onToggle={(topic: CloudTopic) => void pickTopic(topics.find((t) => t.id === topic.id)!)}
+              onToggle={(topic: CloudTopic) =>
+                void pickTopic(topics.find((t) => t.id === topic.id)!)
+              }
             />
           </div>
 
@@ -304,7 +296,6 @@ function RemotePage() {
                 placeholder="Why? (one line, optional)"
                 className="mt-6 w-full rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
               />
-
             </>
           )}
 
@@ -340,8 +331,6 @@ function RemotePage() {
           {error && <p className="mt-6 text-sm text-primary">{error}</p>}
         </section>
       )}
-
     </main>
   );
 }
-

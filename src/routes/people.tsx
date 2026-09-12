@@ -8,7 +8,6 @@ import { getWallLinks } from "@/lib/profile.functions";
 import { ago } from "@/routes/with.$participantId.index";
 import { useViewer } from "@/lib/viewer";
 
-
 export const Route = createFileRoute("/people")({
   component: PeoplePage,
   head: () => ({
@@ -127,7 +126,11 @@ function PeoplePage() {
             <GoogleSignIn redirectPath="/people" />
             <p className="mt-3 text-sm text-muted-foreground">
               Keeps your answers if you switch phones.{" "}
-              <Link to="/auth" search={{ redirect: "/people" }} className="underline underline-offset-4">
+              <Link
+                to="/auth"
+                search={{ redirect: "/people" }}
+                className="underline underline-offset-4"
+              >
                 or use email
               </Link>
             </p>

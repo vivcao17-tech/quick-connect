@@ -26,10 +26,7 @@ export const getMyProfile = createServerFn({ method: "POST" })
     // A handle is created on first view so the share link always exists.
     if (!profile.handle) {
       for (let attempt = 0; attempt < 5; attempt += 1) {
-        const candidate = handleFrom(
-          profile.displayName,
-          Math.random().toString(36).slice(2, 8),
-        );
+        const candidate = handleFrom(profile.displayName, Math.random().toString(36).slice(2, 8));
         const { error: hError } = await supabaseAdmin
           .from("profiles")
           .update({ handle: candidate })
@@ -116,10 +113,12 @@ export const setImpressionVisibility = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("profile_impression_prefs").upsert(
-      { profile_id: context.userId, question_id: data.questionId, hidden: data.hidden },
-      { onConflict: "profile_id,question_id" },
-    );
+    const { error } = await supabaseAdmin
+      .from("profile_impression_prefs")
+      .upsert(
+        { profile_id: context.userId, question_id: data.questionId, hidden: data.hidden },
+        { onConflict: "profile_id,question_id" },
+      );
     if (error) throw error;
     return { ok: true };
   });
