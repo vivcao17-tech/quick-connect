@@ -167,7 +167,7 @@ function MyProfile() {
         </div>
       ) : (
         <div className="mt-12 flex flex-col gap-10">
-          {sorted.map((imp) => (
+          {shown.map((imp) => (
             <ImpressionCard
               key={imp.questionId}
               imp={imp}
@@ -178,6 +178,14 @@ function MyProfile() {
               }}
             />
           ))}
+          {!showAll && sorted.length > 5 && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="self-start text-sm text-muted-foreground underline underline-offset-4"
+            >
+              See all {sorted.length}
+            </button>
+          )}
         </div>
       )}
 
