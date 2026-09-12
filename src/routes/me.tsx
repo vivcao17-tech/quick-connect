@@ -281,15 +281,19 @@ function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: (
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-4">
+      {/* Sends this exact question as the third one, to whoever they name. */}
+      <Link
+        to="/remote"
+        search={{ impression: imp.questionId }}
+        className="mt-6 inline-block rounded-full border-2 border-primary px-5 py-2 text-base text-primary"
+      >
+        Ask more people
+      </Link>
+
+      <div className="mt-4 flex flex-wrap items-center gap-4">
         <button onClick={onToggle} className="text-sm underline underline-offset-4">
           {imp.hidden ? "Hidden — show it" : "Showing — hide it"}
         </button>
-        {imp.total < 3 && (
-          <Link to="/start" className="text-sm text-primary underline underline-offset-4">
-            Ask a few more people this one
-          </Link>
-        )}
       </div>
     </div>
   );
