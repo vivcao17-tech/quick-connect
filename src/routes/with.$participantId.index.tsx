@@ -171,8 +171,81 @@ function WithPersonPage() {
             .join(" · ")}
         </p>
 
+        {/* Their wall comes first — seeing how others read someone is the pull. */}
+        {wallHandle && (
+          <Link
+            to="/p/$handle"
+            params={{ handle: wallHandle }}
+            className="mt-8 block rounded-2xl border-2 border-primary px-6 py-5 text-center text-xl text-primary"
+          >
+            How people read {name}
+          </Link>
+        )}
+
+        {topics.length > 0 && (
+          <div className="mt-10">
+            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+              Topics you've answered together
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {topics.map((topic) => (
+                <span
+                  key={topic}
+                  className="rounded-full border border-border px-4 py-2 text-base"
+                >
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {data && sessions.length === 0 && (
+          <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
+        )}
+
+        <div className="mt-10 flex flex-col gap-3">
+          {visible.map((session) => (
+            <Link
+              key={session.sessionId}
+              to="/with/$participantId/$sessionId"
+              params={{ participantId, sessionId: session.sessionId }}
+              search={{}}
+              className="card-soft block px-6 py-5"
+            >
+              <p className="text-lg">{session.topic || "Three questions"}</p>
+              <p className="mt-3 text-xl">
+                {session.different === 0 ? (
+                  "Same answers"
+                ) : (
+                  <span className="text-primary">
+                    {session.different} of {session.total} different
+                  </span>
+                )}
+              </p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {session.messageCount === 0
+                  ? "Nothing said yet"
+                  : `${session.messageCount} ${session.messageCount === 1 ? "line" : "lines"}`}
+                {" · "}
+                {ago(session.lastActivity)}
+                {session.unread > 0 && <span className="text-primary"> · new</span>}
+              </p>
+            </Link>
+          ))}
+        </div>
+
+        {!showAll && sessions.length > 3 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="mt-8 text-sm text-muted-foreground underline underline-offset-4"
+          >
+            See earlier
+          </button>
+        )}
+
         {/* Private annotations — only ever shown to whoever wrote them. */}
-        <div className="card-soft mt-8 px-6 py-5">
+        <div className="card-soft mt-12 px-6 py-5">
           <div className="flex items-baseline justify-between gap-4">
             <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
               Just for you
@@ -269,51 +342,6 @@ function WithPersonPage() {
               ))}
             </div>
           </div>
-        )}
-
-        {data && sessions.length === 0 && (
-          <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
-        )}
-
-        <div className="mt-10 flex flex-col gap-3">
-          {visible.map((session) => (
-            <Link
-              key={session.sessionId}
-              to="/with/$participantId/$sessionId"
-              params={{ participantId, sessionId: session.sessionId }}
-              search={{}}
-
-              className="card-soft block px-6 py-5"
-            >
-              <p className="text-lg">{session.topic || "Three questions"}</p>
-              <p className="mt-3 text-xl">
-                {session.different === 0 ? (
-                  "Same answers"
-                ) : (
-                  <span className="text-primary">
-                    {session.different} of {session.total} different
-                  </span>
-                )}
-              </p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                {session.messageCount === 0
-                  ? "Nothing said yet"
-                  : `${session.messageCount} ${session.messageCount === 1 ? "line" : "lines"}`}
-                {" · "}
-                {ago(session.lastActivity)}
-                {session.unread > 0 && <span className="text-primary"> · new</span>}
-              </p>
-            </Link>
-          ))}
-        </div>
-
-        {!showAll && sessions.length > 3 && (
-          <button
-            onClick={() => setShowAll(true)}
-            className="mt-8 text-sm text-muted-foreground underline underline-offset-4"
-          >
-            See earlier
-          </button>
         )}
       </section>
     </main>
