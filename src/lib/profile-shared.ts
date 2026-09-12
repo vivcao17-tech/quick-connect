@@ -32,7 +32,10 @@ export function handleFrom(name: string, salt: string) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "")
       .slice(0, 14) || "friend";
-  return `${base}-${salt.replace(/[^a-z0-9]/gi, "").slice(0, 6).toLowerCase()}`;
+  return `${base}-${salt
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 6)
+    .toLowerCase()}`;
 }
 
 export type ProfileImpression = {
@@ -70,6 +73,13 @@ export function topOption(imp: ProfileImpression) {
     if (!best || count > best.count) best = { key: option.key, count };
   }
   return best;
+}
+
+/** Share of reads that landed on a different side than the person's own answer. */
+export function mismatchRate(imp: ProfileImpression) {
+  if (!imp.selfKey || imp.total === 0) return 0;
+  const agreed = imp.counts[imp.selfKey] ?? 0;
+  return (imp.total - agreed) / imp.total;
 }
 
 export function isMismatch(imp: ProfileImpression) {

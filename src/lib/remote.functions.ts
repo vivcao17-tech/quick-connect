@@ -44,15 +44,17 @@ export const listTopicQuestions = createServerFn({ method: "POST" })
     };
   });
 
-
 export const createRemoteSession = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
       .object({
         guestToken: guest,
+        profileId: z.string().uuid().optional(),
         displayName: z.string().min(1).max(40),
         topicSlug: z.string().min(1),
         questionIds: z.array(z.string().uuid()).min(3).max(5),
+        /** Asking more people the same wall question overrides the impression slot. */
+        impressionQuestionId: z.string().uuid().optional(),
       })
       .parse(input),
   )
@@ -61,15 +63,28 @@ export const createRemoteSession = createServerFn({ method: "POST" })
 
     // The third question is always an impression question.
     const questionIds = [...data.questionIds];
-    // Scoped to this sender so they aren't handed the same read twice.
-    const impression = await pickImpressionQuestion(supabaseAdmin, questionIds, {
-      guestTokens: [data.guestToken],
-    });
-    if (impression) questionIds[2] = impression.id;
+    if (data.impressionQuestionId) {
+      const { data: chosen } = await supabaseAdmin
+        .from("questions")
+        .select("id, question_type")
+        .eq("id", data.impressionQuestionId)
+        .eq("question_type", "impression")
+        .maybeSingle();
+      if (chosen) questionIds[2] = chosen.id;
+    }
+    if (questionIds[2] !== data.impressionQuestionId) {
+      // Scoped to this sender so they aren't handed the same read twice.
+      const impression = await pickImpressionQuestion(supabaseAdmin, questionIds, {
+        guestTokens: [data.guestToken],
+      });
+      if (impression) questionIds[2] = impression.id;
+    }
 
     const { data: questions, error: qError } = await supabaseAdmin
       .from("questions")
-      .select("id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, follow_up, reason_chips(id, option_key, text)")
+      .select(
+        "id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, follow_up, reason_chips(id, option_key, text)",
+      )
       .in("id", questionIds);
     if (qError) throw qError;
     if (!questions || questions.length !== questionIds.length) {
@@ -78,7 +93,11 @@ export const createRemoteSession = createServerFn({ method: "POST" })
 
     const { data: session, error: sError } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "remote", status: "active", is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }) })
+      .insert({
+        kind: "remote",
+        status: "active",
+        is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }),
+      })
       .select("id")
       .single();
     if (sError) throw sError;
@@ -111,6 +130,40 @@ export const createRemoteSession = createServerFn({ method: "POST" })
       .select("id, question_id, order_index, snapshot");
     if (sqError) throw sqError;
 
+    // Asking more people the same wall question: they already answered it about
+    // themselves, so carry that answer over instead of asking again.
+    const prefilled: string[] = [];
+    if (data.impressionQuestionId && questionIds[2] === data.impressionQuestionId) {
+      const { myParticipants } = await import("@/lib/identity.server");
+      const mine = await myParticipants(supabaseAdmin, {
+        guestToken: data.guestToken,
+        ...(data.profileId ? { profileId: data.profileId } : {}),
+      });
+      const ids = mine.map((row) => row.id);
+      const target = (sqs ?? []).find((sq) => sq.question_id === data.impressionQuestionId);
+      if (ids.length > 0 && target) {
+        const { data: prior } = await supabaseAdmin
+          .from("answers")
+          .select("option_key")
+          .eq("question_id", data.impressionQuestionId)
+          .neq("answer_role", "about_other")
+          .in("participant_id", ids)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (prior) {
+          await supabaseAdmin.from("answers").insert({
+            session_question_id: target.id,
+            participant_id: participant.id,
+            question_id: data.impressionQuestionId,
+            option_key: prior.option_key,
+            visibility: "session",
+          });
+          prefilled.push(target.id);
+        }
+      }
+    }
+
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
       session_id: session.id,
@@ -121,6 +174,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
     return {
       sessionId: session.id,
       participantId: participant.id,
+      prefilled,
       questions: (sqs ?? []).sort((a, b) => a.order_index - b.order_index).map(toPlay),
     };
   });
@@ -217,7 +271,6 @@ export const createInvites = createServerFn({ method: "POST" })
     });
     if (!participant) throw new Error("Not your session");
 
-
     const { data: invites, error } = await supabaseAdmin
       .from("invites")
       .insert(
@@ -298,7 +351,6 @@ export const listSessionInvites = createServerFn({ method: "POST" })
     };
   });
 
-
 /**
  * Just the names, for the link preview card. Read-only on purpose: unlike
  * getInvite it must not mark the invite as opened when a chat app fetches it.
@@ -331,7 +383,9 @@ export const getInvite = createServerFn({ method: "POST" })
 
     const { data: invite } = await supabaseAdmin
       .from("invites")
-      .select("id, session_id, personal_note, recipient_label, completed_at, inviter_participant_id")
+      .select(
+        "id, session_id, personal_note, recipient_label, completed_at, inviter_participant_id",
+      )
       .eq("token", data.token)
       .maybeSingle();
     if (!invite) throw new Error("This link doesn't exist");
@@ -386,9 +440,7 @@ export const getInvite = createServerFn({ method: "POST" })
 /** Optional: the recipient can leave an email to hear about replies. Skippable. */
 export const saveRecipientEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z
-      .object({ token: z.string().min(4).max(40), email: z.string().email().max(160) })
-      .parse(input),
+    z.object({ token: z.string().min(4).max(40), email: z.string().email().max(160) }).parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -412,9 +464,8 @@ export const saveRecipientEmail = createServerFn({ method: "POST" })
 
     // Always re-send: the point of this email is handing them the link back.
     const sessionId = invite.child_session_id ?? invite.session_id;
-    const { ensureSessionLink, describeSessionForParticipant } = await import(
-      "@/lib/session-link.server"
-    );
+    const { ensureSessionLink, describeSessionForParticipant } =
+      await import("@/lib/session-link.server");
     const [linkToken, target] = await Promise.all([
       ensureSessionLink(supabaseAdmin, {
         sessionId,
@@ -444,8 +495,6 @@ export const saveRecipientEmail = createServerFn({ method: "POST" })
 
     return { saved: true, sent: result.sent };
   });
-
-
 
 export const startInvite = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -506,7 +555,9 @@ export const startInvite = createServerFn({ method: "POST" })
     // The sender answered these before any link existed — the recipient answers the same three.
     const { data: senderAnswers } = await supabaseAdmin
       .from("answers")
-      .select("session_question_id, question_id, option_key, reason_text, reason_chip_id, created_at")
+      .select(
+        "session_question_id, question_id, option_key, reason_text, reason_chip_id, created_at",
+      )
       .eq("participant_id", invite.inviter_participant_id ?? "")
       .order("created_at");
 
@@ -628,7 +679,6 @@ export const startInvite = createServerFn({ method: "POST" })
       questions: ordered.map(toPlay),
     };
   });
-
 
 export const answerAsRecipient = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -951,21 +1001,18 @@ export const getThread = createServerFn({ method: "POST" })
     const readAt = readRow?.read_at ?? null;
     const firstUnread = (rows ?? []).find(
       (row) =>
-        row.participant_id !== me.id &&
-        (!readAt || new Date(row.created_at) > new Date(readAt)),
+        row.participant_id !== me.id && (!readAt || new Date(row.created_at) > new Date(readAt)),
     );
 
     // Opening the thread clears its unread state and any pending notifications.
-    await supabaseAdmin
-      .from("thread_reads")
-      .upsert(
-        {
-          participant_id: me.id,
-          session_question_id: sq.id,
-          read_at: new Date().toISOString(),
-        },
-        { onConflict: "participant_id,session_question_id" },
-      );
+    await supabaseAdmin.from("thread_reads").upsert(
+      {
+        participant_id: me.id,
+        session_question_id: sq.id,
+        read_at: new Date().toISOString(),
+      },
+      { onConflict: "participant_id,session_question_id" },
+    );
     await supabaseAdmin
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
@@ -1000,7 +1047,6 @@ export const getThread = createServerFn({ method: "POST" })
     };
   });
 
-
 export const getSenderResults = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
@@ -1034,9 +1080,7 @@ export const getSenderResults = createServerFn({ method: "POST" })
 
     const questions = (parentQs ?? []).map((q) => {
       const snap = q.snapshot as Snapshot;
-      const mine = [...(myAnswers ?? [])]
-        .reverse()
-        .find((a) => a.session_question_id === q.id);
+      const mine = [...(myAnswers ?? [])].reverse().find((a) => a.session_question_id === q.id);
       return {
         index: q.order_index,
         text: snap.text,
@@ -1048,7 +1092,9 @@ export const getSenderResults = createServerFn({ method: "POST" })
 
     const { data: invites } = await supabaseAdmin
       .from("invites")
-      .select("token, recipient_label, personal_note, child_session_id, opened_at, completed_at, created_at")
+      .select(
+        "token, recipient_label, personal_note, child_session_id, opened_at, completed_at, created_at",
+      )
       .eq("session_id", data.sessionId)
       .order("created_at");
 
@@ -1148,7 +1194,8 @@ export const getSenderResults = createServerFn({ method: "POST" })
               cq.revealed_at && theirOption && mine?.option_key && theirOption !== mine.option_key,
             ),
             sessionQuestionId: cq.revealed_at ? cq.id : null,
-            threadCount: (childMessages ?? []).filter((m) => m.session_question_id === cq.id).length,
+            threadCount: (childMessages ?? []).filter((m) => m.session_question_id === cq.id)
+              .length,
           };
         });
         row.differences = row.answers.filter((a) => a.differs).length;
@@ -1164,7 +1211,10 @@ export const getSenderResults = createServerFn({ method: "POST" })
     recipients.sort((a, b) => b.differences - a.differences);
 
     const headlines: string[] = [];
-    const byText = new Map<string, { label: string; option: OptionKey; optionLabel: string; mine: string }[]>();
+    const byText = new Map<
+      string,
+      { label: string; option: OptionKey; optionLabel: string; mine: string }[]
+    >();
     for (const recipient of recipients) {
       for (const answer of recipient.answers) {
         if (!answer.theirOption) continue;
@@ -1205,7 +1255,6 @@ export const getSenderResults = createServerFn({ method: "POST" })
     };
   });
 
-
 /** Everything the sender has sent out: one row per recipient, with unread replies. */
 export const getInbox = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -1213,9 +1262,8 @@ export const getInbox = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { myParticipants: findParticipants, linkProfileToGuestRows } = await import(
-      "@/lib/identity.server"
-    );
+    const { myParticipants: findParticipants, linkProfileToGuestRows } =
+      await import("@/lib/identity.server");
 
     const identity = { guestToken: data.guestToken, profileId: data.profileId };
     await linkProfileToGuestRows(supabaseAdmin as never, identity);
@@ -1253,14 +1301,24 @@ export const getInbox = createServerFn({ method: "POST" })
           .select("session_question_id, participant_id, option_key, answer_role, created_at")
           .in("session_question_id", sqIds)
           .order("created_at")
-      : { data: [] as { session_question_id: string; participant_id: string; option_key: string; answer_role: string; created_at: string }[] };
+      : {
+          data: [] as {
+            session_question_id: string;
+            participant_id: string;
+            option_key: string;
+            answer_role: string;
+            created_at: string;
+          }[],
+        };
 
     const { data: messages } = sqIds.length
       ? await supabaseAdmin
           .from("thread_messages")
           .select("session_question_id, participant_id, created_at")
           .in("session_question_id", sqIds)
-      : { data: [] as { session_question_id: string; participant_id: string; created_at: string }[] };
+      : {
+          data: [] as { session_question_id: string; participant_id: string; created_at: string }[],
+        };
 
     const { data: reads } = sqIds.length
       ? await supabaseAdmin
@@ -1326,9 +1384,7 @@ export const getInbox = createServerFn({ method: "POST" })
  */
 export const listMyAnswerSets = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z
-      .object({ guestToken: guest, profileId: z.string().uuid().optional() })
-      .parse(input),
+    z.object({ guestToken: guest, profileId: z.string().uuid().optional() }).parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -1356,9 +1412,7 @@ export const listMyAnswerSets = createServerFn({ method: "POST" })
       .from("invites")
       .select("child_session_id")
       .in("child_session_id", sessionIds);
-    const childIds = new Set(
-      (childLinks ?? []).map((row) => row.child_session_id).filter(Boolean),
-    );
+    const childIds = new Set((childLinks ?? []).map((row) => row.child_session_id).filter(Boolean));
     const ownSessions = (sessions ?? []).filter((row) => !childIds.has(row.id));
     const ownIds = ownSessions.map((row) => row.id);
     if (ownIds.length === 0) return { sets: [] };
@@ -1378,7 +1432,10 @@ export const listMyAnswerSets = createServerFn({ method: "POST" })
     const { data: topicRows } = await supabaseAdmin
       .from("topics")
       .select("id, label")
-      .in("id", topicIds.length ? (topicIds as string[]) : ["00000000-0000-0000-0000-000000000000"]);
+      .in(
+        "id",
+        topicIds.length ? (topicIds as string[]) : ["00000000-0000-0000-0000-000000000000"],
+      );
     const topicOf = new Map((topicRows ?? []).map((t) => [t.id, t.label]));
     const questionTopic = new Map(
       (questions ?? []).map((q) => [q.id, q.topic_id ? (topicOf.get(q.topic_id) ?? "") : ""]),
@@ -1467,9 +1524,7 @@ export const getAnswerSet = createServerFn({ method: "POST" })
       senderName: participant.display_name ?? "A friend",
       questions: (sqs ?? []).map((row) => {
         const snap = row.snapshot as Snapshot;
-        const mine = [...(answers ?? [])]
-          .reverse()
-          .find((a) => a.session_question_id === row.id);
+        const mine = [...(answers ?? [])].reverse().find((a) => a.session_question_id === row.id);
         const key = (mine?.option_key ?? null) as OptionKey | null;
         return {
           sessionQuestionId: row.id,

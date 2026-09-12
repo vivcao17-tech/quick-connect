@@ -26,10 +26,7 @@ export const getMyProfile = createServerFn({ method: "POST" })
     // A handle is created on first view so the share link always exists.
     if (!profile.handle) {
       for (let attempt = 0; attempt < 5; attempt += 1) {
-        const candidate = handleFrom(
-          profile.displayName,
-          Math.random().toString(36).slice(2, 8),
-        );
+        const candidate = handleFrom(profile.displayName, Math.random().toString(36).slice(2, 8));
         const { error: hError } = await supabaseAdmin
           .from("profiles")
           .update({ handle: candidate })
@@ -59,6 +56,30 @@ export const getProfileBadge = createServerFn({ method: "POST" })
       displayName: profile?.displayName ?? "",
       newSince: profile?.newSince ?? 0,
     };
+  });
+
+/**
+ * Which of these people have a public wall. Person keys are profile ids for
+ * signed-in people; guests simply have no wall yet.
+ */
+export const getWallLinks = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ personKeys: z.array(z.string()).max(200) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const ids = data.personKeys.filter((key) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key),
+    );
+    if (ids.length === 0) return { walls: {} as Record<string, string> };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("profiles")
+      .select("id, handle")
+      .in("id", ids)
+      .not("handle", "is", null);
+    const walls: Record<string, string> = {};
+    for (const row of rows ?? []) if (row.handle) walls[row.id] = row.handle;
+    return { walls };
   });
 
 export const markImpressionsSeen = createServerFn({ method: "POST" })
@@ -92,10 +113,12 @@ export const setImpressionVisibility = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("profile_impression_prefs").upsert(
-      { profile_id: context.userId, question_id: data.questionId, hidden: data.hidden },
-      { onConflict: "profile_id,question_id" },
-    );
+    const { error } = await supabaseAdmin
+      .from("profile_impression_prefs")
+      .upsert(
+        { profile_id: context.userId, question_id: data.questionId, hidden: data.hidden },
+        { onConflict: "profile_id,question_id" },
+      );
     if (error) throw error;
     return { ok: true };
   });

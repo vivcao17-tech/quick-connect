@@ -6,6 +6,7 @@ import { getPersonSessions } from "@/lib/conversations.functions";
 import { savePersonNote } from "@/lib/notes.functions";
 import { listMyAnswerSets } from "@/lib/remote.functions";
 import { contactLink } from "@/lib/contact-link";
+import { getWallLinks } from "@/lib/profile.functions";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/with/$participantId/")({
@@ -42,7 +43,6 @@ type Data = {
   sessions: Awaited<ReturnType<typeof getPersonSessions>>["sessions"];
 };
 
-
 export function ago(iso: string) {
   if (!iso) return "";
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -70,6 +70,14 @@ function WithPersonPage() {
   const [saving, setSaving] = useState(false);
 
   const [sets, setSets] = useState<Awaited<ReturnType<typeof listMyAnswerSets>>["sets"]>([]);
+  const [wallHandle, setWallHandle] = useState("");
+
+  const loadWalls = useServerFn(getWallLinks);
+  useEffect(() => {
+    void loadWalls({ data: { personKeys: [participantId] } })
+      .then((result) => setWallHandle(result.walls[participantId] ?? ""))
+      .catch(() => setWallHandle(""));
+  }, [loadWalls, participantId]);
 
   const load = useServerFn(getPersonSessions);
   const loadSets = useServerFn(listMyAnswerSets);
@@ -130,9 +138,7 @@ function WithPersonPage() {
         },
       });
       setData((current) =>
-        current
-          ? { ...current, note: saved, name: saved.nickname || current.realName }
-          : current,
+        current ? { ...current, note: saved, name: saved.nickname || current.realName } : current,
       );
       setEditing(false);
     } finally {
@@ -142,6 +148,7 @@ function WithPersonPage() {
 
   const sessions = data?.sessions ?? [];
   const name = data?.name || "them";
+  const topics = [...new Set(sessions.map((s) => s.topic).filter(Boolean))] as string[];
   const visible = showAll ? sessions : sessions.slice(0, 3);
   const link = contactLink(data?.note.contact ?? "");
   const lastTalked = sessions[0]?.lastActivity ?? "";
@@ -149,10 +156,7 @@ function WithPersonPage() {
   return (
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-        <Link
-          to="/people"
-          className="text-sm text-muted-foreground underline underline-offset-4"
-        >
+        <Link to="/people" className="text-sm text-muted-foreground underline underline-offset-4">
           People
         </Link>
         <h1 className="mt-6 text-4xl leading-tight">You and {name}</h1>
@@ -162,17 +166,85 @@ function WithPersonPage() {
         <p className="mt-3 text-sm text-muted-foreground">
           {[
             data?.met,
-            sessions.length === 1
-              ? "1 session together"
-              : `${sessions.length} sessions together`,
+            sessions.length === 1 ? "1 session together" : `${sessions.length} sessions together`,
             lastTalked ? `Last talked ${ago(lastTalked)}` : "",
           ]
             .filter(Boolean)
             .join(" · ")}
         </p>
 
+        {/* Their wall comes first — seeing how others read someone is the pull. */}
+        {wallHandle && (
+          <Link
+            to="/p/$handle"
+            params={{ handle: wallHandle }}
+            className="mt-8 block rounded-2xl border-2 border-primary px-6 py-5 text-center text-xl text-primary"
+          >
+            How people read {name}
+          </Link>
+        )}
+
+        {topics.length > 0 && (
+          <div className="mt-10">
+            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+              Topics you've answered together
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {topics.map((topic) => (
+                <span key={topic} className="rounded-full border border-border px-4 py-2 text-base">
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {data && sessions.length === 0 && (
+          <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
+        )}
+
+        <div className="mt-10 flex flex-col gap-3">
+          {visible.map((session) => (
+            <Link
+              key={session.sessionId}
+              to="/with/$participantId/$sessionId"
+              params={{ participantId, sessionId: session.sessionId }}
+              search={{}}
+              className="card-soft block px-6 py-5"
+            >
+              <p className="text-lg">{session.topic || "Three questions"}</p>
+              <p className="mt-3 text-xl">
+                {session.different === 0 ? (
+                  "Same answers"
+                ) : (
+                  <span className="text-primary">
+                    {session.different} of {session.total} different
+                  </span>
+                )}
+              </p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {session.messageCount === 0
+                  ? "Nothing said yet"
+                  : `${session.messageCount} ${session.messageCount === 1 ? "line" : "lines"}`}
+                {" · "}
+                {ago(session.lastActivity)}
+                {session.unread > 0 && <span className="text-primary"> · new</span>}
+              </p>
+            </Link>
+          ))}
+        </div>
+
+        {!showAll && sessions.length > 3 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="mt-8 text-sm text-muted-foreground underline underline-offset-4"
+          >
+            See earlier
+          </button>
+        )}
+
         {/* Private annotations — only ever shown to whoever wrote them. */}
-        <div className="card-soft mt-8 px-6 py-5">
+        <div className="card-soft mt-12 px-6 py-5">
           <div className="flex items-baseline justify-between gap-4">
             <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
               Just for you
@@ -181,7 +253,11 @@ function WithPersonPage() {
               onClick={() => setEditing((open) => !open)}
               className="text-sm text-muted-foreground underline underline-offset-4"
             >
-              {editing ? "Cancel" : data?.note.nickname || data?.note.contact || data?.note.note ? "Edit" : "Add"}
+              {editing
+                ? "Cancel"
+                : data?.note.nickname || data?.note.contact || data?.note.note
+                  ? "Edit"
+                  : "Add"}
             </button>
           </div>
 
@@ -269,51 +345,6 @@ function WithPersonPage() {
               ))}
             </div>
           </div>
-        )}
-
-        {data && sessions.length === 0 && (
-          <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
-        )}
-
-        <div className="mt-10 flex flex-col gap-3">
-          {visible.map((session) => (
-            <Link
-              key={session.sessionId}
-              to="/with/$participantId/$sessionId"
-              params={{ participantId, sessionId: session.sessionId }}
-              search={{}}
-
-              className="card-soft block px-6 py-5"
-            >
-              <p className="text-lg">{session.topic || "Three questions"}</p>
-              <p className="mt-3 text-xl">
-                {session.different === 0 ? (
-                  "Same answers"
-                ) : (
-                  <span className="text-primary">
-                    {session.different} of {session.total} different
-                  </span>
-                )}
-              </p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                {session.messageCount === 0
-                  ? "Nothing said yet"
-                  : `${session.messageCount} ${session.messageCount === 1 ? "line" : "lines"}`}
-                {" · "}
-                {ago(session.lastActivity)}
-                {session.unread > 0 && <span className="text-primary"> · new</span>}
-              </p>
-            </Link>
-          ))}
-        </div>
-
-        {!showAll && sessions.length > 3 && (
-          <button
-            onClick={() => setShowAll(true)}
-            className="mt-8 text-sm text-muted-foreground underline underline-offset-4"
-          >
-            See earlier
-          </button>
         )}
       </section>
     </main>

@@ -9,7 +9,14 @@ import {
   setImpressionVisibility,
   setProfileHandle,
 } from "@/lib/profile.functions";
-import { isMismatch, labelOf, PROFILE_PROMPTS, share, topOption } from "@/lib/profile-shared";
+import {
+  isMismatch,
+  labelOf,
+  mismatchRate,
+  PROFILE_PROMPTS,
+  share,
+  topOption,
+} from "@/lib/profile-shared";
 import type { ProfileImpression } from "@/lib/profile-shared";
 
 export const Route = createFileRoute("/me")({
@@ -22,11 +29,17 @@ export const Route = createFileRoute("/me")({
         content: "How the people you've answered with read you, next to how you read yourself.",
       },
       { property: "og:title", content: "Their read on you — NoSure" },
-      { property: "og:description", content: "How people read you, next to how you read yourself." },
+      {
+        property: "og:description",
+        content: "How people read you, next to how you read yourself.",
+      },
       { property: "og:type", content: "profile" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Their read on you — NoSure" },
-      { name: "twitter:description", content: "How people read you, next to how you read yourself." },
+      {
+        name: "twitter:description",
+        content: "How people read you, next to how you read yourself.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -47,6 +60,7 @@ function MyProfile() {
   const [handleNote, setHandleNote] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -96,17 +110,17 @@ function MyProfile() {
       ? `${window.location.origin}/p/${profile.handle}`
       : "";
 
+  // Where people read you most differently from how you read yourself, first.
   const sorted = [...profile.impressions].sort((a, b) => {
-    const mismatch = Number(isMismatch(b)) - Number(isMismatch(a));
-    if (mismatch !== 0) return mismatch;
+    const rate = mismatchRate(b) - mismatchRate(a);
+    if (rate !== 0) return rate;
     return b.total - a.total;
   });
+  const shown = showAll ? sorted : sorted.slice(0, 5);
 
   return (
     <Shell>
-      <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
-        Their read on you
-      </p>
+      <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Their read on you</p>
       <h1 className="mt-6 text-5xl leading-[1.05]">{profile.displayName}</h1>
       <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
 
@@ -157,7 +171,7 @@ function MyProfile() {
         </div>
       ) : (
         <div className="mt-12 flex flex-col gap-10">
-          {sorted.map((imp) => (
+          {shown.map((imp) => (
             <ImpressionCard
               key={imp.questionId}
               imp={imp}
@@ -168,6 +182,14 @@ function MyProfile() {
               }}
             />
           ))}
+          {!showAll && sorted.length > 5 && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="self-start text-sm text-muted-foreground underline underline-offset-4"
+            >
+              See all {sorted.length}
+            </button>
+          )}
         </div>
       )}
 
@@ -263,15 +285,19 @@ function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: (
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-4">
+      {/* Sends this exact question as the third one, to whoever they name. */}
+      <Link
+        to="/remote"
+        search={{ impression: imp.questionId }}
+        className="mt-6 inline-block rounded-full border-2 border-primary px-5 py-2 text-base text-primary"
+      >
+        Ask more people
+      </Link>
+
+      <div className="mt-4 flex flex-wrap items-center gap-4">
         <button onClick={onToggle} className="text-sm underline underline-offset-4">
           {imp.hidden ? "Hidden — show it" : "Showing — hide it"}
         </button>
-        {imp.total < 3 && (
-          <Link to="/start" className="text-sm text-primary underline underline-offset-4">
-            Ask a few more people this one
-          </Link>
-        )}
       </div>
     </div>
   );
@@ -280,7 +306,9 @@ function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: (
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="paper min-h-screen bg-background">
-      <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-16">{children}</section>
+      <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-16">
+        {children}
+      </section>
     </main>
   );
 }
