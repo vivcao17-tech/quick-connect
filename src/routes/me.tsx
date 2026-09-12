@@ -96,11 +96,13 @@ function MyProfile() {
       ? `${window.location.origin}/p/${profile.handle}`
       : "";
 
+  // Where people read you most differently from how you read yourself, first.
   const sorted = [...profile.impressions].sort((a, b) => {
-    const mismatch = Number(isMismatch(b)) - Number(isMismatch(a));
-    if (mismatch !== 0) return mismatch;
+    const rate = mismatchRate(b) - mismatchRate(a);
+    if (rate !== 0) return rate;
     return b.total - a.total;
   });
+  const shown = showAll ? sorted : sorted.slice(0, 5);
 
   return (
     <Shell>
