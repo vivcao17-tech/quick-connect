@@ -9,7 +9,14 @@ import {
   setImpressionVisibility,
   setProfileHandle,
 } from "@/lib/profile.functions";
-import { isMismatch, labelOf, PROFILE_PROMPTS, share, topOption } from "@/lib/profile-shared";
+import {
+  isMismatch,
+  labelOf,
+  mismatchRate,
+  PROFILE_PROMPTS,
+  share,
+  topOption,
+} from "@/lib/profile-shared";
 import type { ProfileImpression } from "@/lib/profile-shared";
 
 export const Route = createFileRoute("/me")({
@@ -47,6 +54,7 @@ function MyProfile() {
   const [handleNote, setHandleNote] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
