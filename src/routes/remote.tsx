@@ -16,6 +16,8 @@ import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 
 
 export const Route = createFileRoute("/remote")({
+  validateSearch: (search: Record<string, unknown>): { impression?: string } =>
+    typeof search["impression"] === "string" ? { impression: search["impression"] } : {},
   component: RemotePage,
   head: () => ({
     meta: [
