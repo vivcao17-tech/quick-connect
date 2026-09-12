@@ -72,6 +72,13 @@ export function topOption(imp: ProfileImpression) {
   return best;
 }
 
+/** Share of reads that landed on a different side than the person's own answer. */
+export function mismatchRate(imp: ProfileImpression) {
+  if (!imp.selfKey || imp.total === 0) return 0;
+  const agreed = imp.counts[imp.selfKey] ?? 0;
+  return (imp.total - agreed) / imp.total;
+}
+
 export function isMismatch(imp: ProfileImpression) {
   const top = topOption(imp);
   return Boolean(imp.selfKey && top && top.count > 0 && top.key !== imp.selfKey);
