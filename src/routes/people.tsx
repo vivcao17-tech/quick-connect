@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { listPeople } from "@/lib/conversations.functions";
+import { getWallLinks } from "@/lib/profile.functions";
 import { ago } from "@/routes/with.$participantId.index";
 import { useViewer } from "@/lib/viewer";
 
@@ -38,8 +39,18 @@ type People = Awaited<ReturnType<typeof listPeople>>["people"];
 
 function PeoplePage() {
   const [people, setPeople] = useState<People | null>(null);
+  const [walls, setWalls] = useState<Record<string, string>>({});
   const load = useServerFn(listPeople);
+  const loadWalls = useServerFn(getWallLinks);
   const viewer = useViewer();
+
+  // Seeing how others read someone is the strongest pull toward your own wall.
+  useEffect(() => {
+    if (!people || people.length === 0) return;
+    void loadWalls({ data: { personKeys: people.map((p) => p.personKey) } })
+      .then((result) => setWalls(result.walls))
+      .catch(() => setWalls({}));
+  }, [people, loadWalls]);
 
   useEffect(() => {
     if (!viewer.ready || !viewer.guestToken) return;
