@@ -6,6 +6,7 @@ import { getPersonSessions } from "@/lib/conversations.functions";
 import { savePersonNote } from "@/lib/notes.functions";
 import { listMyAnswerSets } from "@/lib/remote.functions";
 import { contactLink } from "@/lib/contact-link";
+import { getWallLinks } from "@/lib/profile.functions";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/with/$participantId/")({
@@ -70,6 +71,14 @@ function WithPersonPage() {
   const [saving, setSaving] = useState(false);
 
   const [sets, setSets] = useState<Awaited<ReturnType<typeof listMyAnswerSets>>["sets"]>([]);
+  const [wallHandle, setWallHandle] = useState("");
+
+  const loadWalls = useServerFn(getWallLinks);
+  useEffect(() => {
+    void loadWalls({ data: { personKeys: [participantId] } })
+      .then((result) => setWallHandle(result.walls[participantId] ?? ""))
+      .catch(() => setWallHandle(""));
+  }, [loadWalls, participantId]);
 
   const load = useServerFn(getPersonSessions);
   const loadSets = useServerFn(listMyAnswerSets);
@@ -142,6 +151,7 @@ function WithPersonPage() {
 
   const sessions = data?.sessions ?? [];
   const name = data?.name || "them";
+  const topics = [...new Set(sessions.map((s) => s.topic).filter(Boolean))] as string[];
   const visible = showAll ? sessions : sessions.slice(0, 3);
   const link = contactLink(data?.note.contact ?? "");
   const lastTalked = sessions[0]?.lastActivity ?? "";
