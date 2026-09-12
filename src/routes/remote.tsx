@@ -128,10 +128,16 @@ function RemotePage() {
           displayName,
           topicSlug,
           questionIds: candidates.filter((q) => chosen.includes(q.id)).map((q) => q.id),
+          ...(impressionQuestionId ? { impressionQuestionId } : {}),
+          ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
         },
       });
       setSessionId(result.sessionId);
-      setQuestions(result.questions);
+      // A question they've already answered (the wall question they're re-asking)
+      // isn't asked again.
+      setQuestions(
+        result.questions.filter((q) => !result.prefilled.includes(q.sessionQuestionId)),
+      );
       setIndex(0);
       setPicked(null);
       setTally(null);
