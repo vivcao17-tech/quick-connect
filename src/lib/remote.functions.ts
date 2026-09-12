@@ -125,6 +125,40 @@ export const createRemoteSession = createServerFn({ method: "POST" })
       .select("id, question_id, order_index, snapshot");
     if (sqError) throw sqError;
 
+    // Asking more people the same wall question: they already answered it about
+    // themselves, so carry that answer over instead of asking again.
+    const prefilled: string[] = [];
+    if (data.impressionQuestionId && questionIds[2] === data.impressionQuestionId) {
+      const { myParticipants } = await import("@/lib/identity.server");
+      const mine = await myParticipants(supabaseAdmin, {
+        guestToken: data.guestToken,
+        ...(data.profileId ? { profileId: data.profileId } : {}),
+      });
+      const ids = mine.map((row) => row.id);
+      const target = (sqs ?? []).find((sq) => sq.question_id === data.impressionQuestionId);
+      if (ids.length > 0 && target) {
+        const { data: prior } = await supabaseAdmin
+          .from("answers")
+          .select("option_key")
+          .eq("question_id", data.impressionQuestionId)
+          .neq("answer_role", "about_other")
+          .in("participant_id", ids)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (prior) {
+          await supabaseAdmin.from("answers").insert({
+            session_question_id: target.id,
+            participant_id: participant.id,
+            question_id: data.impressionQuestionId,
+            option_key: prior.option_key,
+            visibility: "session",
+          });
+          prefilled.push(target.id);
+        }
+      }
+    }
+
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
       session_id: session.id,
@@ -135,6 +169,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
     return {
       sessionId: session.id,
       participantId: participant.id,
+      prefilled,
       questions: (sqs ?? []).sort((a, b) => a.order_index - b.order_index).map(toPlay),
     };
   });
