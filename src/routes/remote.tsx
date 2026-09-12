@@ -13,6 +13,7 @@ import {
   listTopicQuestions,
 } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
+import { useViewer } from "@/lib/viewer";
 
 
 export const Route = createFileRoute("/remote")({
@@ -49,6 +50,8 @@ type Candidate = { id: string; text: string; options: { key: OptionKey; label: s
 
 
 function RemotePage() {
+  const { impression: impressionQuestionId } = Route.useSearch();
+  const viewer = useViewer();
   const [stage, setStage] = useState<"topics" | "pick" | "play">("topics");
   const [topics, setTopics] = useState<Topic[]>([]);
   const [guestToken, setGuestToken] = useState("");
