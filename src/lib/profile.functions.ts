@@ -61,6 +61,30 @@ export const getProfileBadge = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Which of these people have a public wall. Person keys are profile ids for
+ * signed-in people; guests simply have no wall yet.
+ */
+export const getWallLinks = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ personKeys: z.array(z.string()).max(200) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const ids = data.personKeys.filter((key) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key),
+    );
+    if (ids.length === 0) return { walls: {} as Record<string, string> };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("profiles")
+      .select("id, handle")
+      .in("id", ids)
+      .not("handle", "is", null);
+    const walls: Record<string, string> = {};
+    for (const row of rows ?? []) if (row.handle) walls[row.id] = row.handle;
+    return { walls };
+  });
+
 export const markImpressionsSeen = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
