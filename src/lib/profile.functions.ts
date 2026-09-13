@@ -44,7 +44,53 @@ export const getMyProfile = createServerFn({ method: "POST" })
       }
     }
 
-    return { ...profile, promptLibrary: PROFILE_PROMPTS };
+    // Curation: any saved show/hide choice means the owner picked their wall.
+    const { data: prefs } = await supabaseAdmin
+      .from("profile_impression_prefs")
+      .select("question_id, hidden")
+      .eq("profile_id", context.userId);
+    const curated = (prefs?.length ?? 0) > 0;
+
+    // Questions that would be displayed publicly without scrolling past "See all".
+    const shownIds = new Set(
+      curated
+        ? (prefs ?? []).filter((p) => !p.hidden).map((p) => p.question_id)
+        : [...profile.impressions].sort(byMismatch).slice(0, WALL_PREVIEW_COUNT).map((i) => i.questionId),
+    );
+
+    // New reads landing on questions outside the current public selection.
+    let undisplayedNew = 0;
+    if (profile.newSince > 0) {
+      const { data: rows } = await supabaseAdmin
+        .from("profile_impression_prefs")
+        .select("question_id")
+        .eq("profile_id", context.userId);
+      void rows; // prefs already loaded above
+    }
+    if (profile.newSince > 0) {
+      const { data: participants } = await supabaseAdmin.rpc("profile_participants", {
+        _profile_id: context.userId,
+      });
+      const participantIds = (participants ?? []).map((p: { id: string }) => p.id);
+      if (participantIds.length > 0) {
+        const { data: seenRow } = await supabaseAdmin
+          .from("profiles")
+          .select("impressions_seen_at")
+          .eq("id", context.userId)
+          .single();
+        const seenAt = seenRow?.impressions_seen_at ?? "1970-01-01T00:00:00Z";
+        const { data: fresh } = await supabaseAdmin
+          .from("answers")
+          .select("question_id")
+          .eq("answer_role", "about_other")
+          .in("about_participant_id", participantIds)
+          .gt("created_at", seenAt);
+        const freshIds = new Set((fresh ?? []).map((f: { question_id: string }) => f.question_id));
+        undisplayedNew = [...freshIds].filter((id) => !shownIds.has(id)).length;
+      }
+    }
+
+    return { ...profile, curated, undisplayedNew, promptLibrary: PROFILE_PROMPTS };
   });
 
 /** Just enough for the home page dot: is there something new to look at. */
