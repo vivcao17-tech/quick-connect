@@ -9,9 +9,6 @@ import { getProfileBadge } from "@/lib/profile.functions";
 import { listMyAnswerSets } from "@/lib/remote.functions";
 import { useViewer } from "@/lib/viewer";
 
-
-
-
 export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
@@ -95,7 +92,10 @@ function Home() {
   }, [viewer.ready, viewer.profileId, loadBadge]);
 
   function onCode(value: string) {
-    const next = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 4);
+    const next = value
+      .replace(/[^a-zA-Z]/g, "")
+      .toUpperCase()
+      .slice(0, 4);
     setCode(next);
     if (next.length === 4) {
       void navigate({ to: "/join/$code", params: { code: next } });

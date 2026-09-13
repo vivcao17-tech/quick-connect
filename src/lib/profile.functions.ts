@@ -55,7 +55,10 @@ export const getMyProfile = createServerFn({ method: "POST" })
     const shownIds = new Set(
       curated
         ? (prefs ?? []).filter((p) => !p.hidden).map((p) => p.question_id)
-        : [...profile.impressions].sort(byMismatch).slice(0, WALL_PREVIEW_COUNT).map((i) => i.questionId),
+        : [...profile.impressions]
+            .sort(byMismatch)
+            .slice(0, WALL_PREVIEW_COUNT)
+            .map((i) => i.questionId),
     );
 
     // New reads landing on questions outside the current public selection.
@@ -230,9 +233,7 @@ export const getPublicProfile = createServerFn({ method: "GET" })
       .select("question_id, hidden")
       .eq("profile_id", profileId);
     const curated = (prefs?.length ?? 0) > 0;
-    const selected = new Set(
-      (prefs ?? []).filter((p) => !p.hidden).map((p) => p.question_id),
-    );
+    const selected = new Set((prefs ?? []).filter((p) => !p.hidden).map((p) => p.question_id));
 
     return {
       handle: result.handle,

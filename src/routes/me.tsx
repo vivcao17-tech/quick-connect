@@ -157,9 +157,12 @@ function MyProfile() {
       )}
 
       {(profile.undisplayedNew ?? 0) > 0 && (
-        <a href="#wall-edit" className="mt-6 self-start text-base text-primary underline underline-offset-4">
-          {profile.undisplayedNew} new {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"}{" "}
-          on your wall yet
+        <a
+          href="#wall-edit"
+          className="mt-6 self-start text-base text-primary underline underline-offset-4"
+        >
+          {profile.undisplayedNew} new{" "}
+          {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"} on your wall yet
         </a>
       )}
 

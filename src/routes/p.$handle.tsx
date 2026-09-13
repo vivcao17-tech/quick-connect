@@ -72,7 +72,9 @@ function PublicProfile() {
       <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
         no<span className="text-primary">/</span>sure
       </p>
-      <h1 className="mt-8 text-5xl leading-[1.05]">How {profile.displayName}'s friends read them</h1>
+      <h1 className="mt-8 text-5xl leading-[1.05]">
+        How {profile.displayName}'s friends read them
+      </h1>
       <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
 
       <div className="mt-12 flex flex-col gap-10">
@@ -108,7 +110,9 @@ function PublicProfile() {
               </div>
               {imp.selfKey && top && (
                 <div className="mt-6">
-                  <p className={gap ? "text-3xl leading-snug text-primary" : "text-2xl leading-snug"}>
+                  <p
+                    className={gap ? "text-3xl leading-snug text-primary" : "text-2xl leading-snug"}
+                  >
                     They read {profile.displayName} as {labelOf(imp, top.key)}.
                   </p>
                   <p className="mt-2 text-2xl leading-snug">
@@ -172,7 +176,9 @@ function PublicProfile() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="paper min-h-screen bg-background">
-      <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-16">{children}</section>
+      <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-16">
+        {children}
+      </section>
     </main>
   );
 }
