@@ -61,13 +61,6 @@ export const getMyProfile = createServerFn({ method: "POST" })
     // New reads landing on questions outside the current public selection.
     let undisplayedNew = 0;
     if (profile.newSince > 0) {
-      const { data: rows } = await supabaseAdmin
-        .from("profile_impression_prefs")
-        .select("question_id")
-        .eq("profile_id", context.userId);
-      void rows; // prefs already loaded above
-    }
-    if (profile.newSince > 0) {
       const { data: participants } = await supabaseAdmin.rpc("profile_participants", {
         _profile_id: context.userId,
       });
