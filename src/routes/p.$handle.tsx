@@ -1,10 +1,17 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { track } from "@/lib/track";
 
 import { getPublicProfile } from "@/lib/profile.functions";
-import { isMismatch, labelOf, share, topOption } from "@/lib/profile-shared";
+import {
+  byMismatch,
+  isMismatch,
+  labelOf,
+  share,
+  topOption,
+  WALL_PREVIEW_COUNT,
+} from "@/lib/profile-shared";
 
 export const Route = createFileRoute("/p/$handle")({
   loader: async ({ params }) => {
@@ -50,11 +57,15 @@ function PublicProfile() {
     track("profile_view", { handle: profile.handle });
   }, [profile.handle]);
 
-  const sorted = [...profile.impressions].sort((a, b) => {
-    const mismatch = Number(isMismatch(b)) - Number(isMismatch(a));
-    if (mismatch !== 0) return mismatch;
-    return b.total - a.total;
-  });
+  const [showAllImpressions, setShowAllImpressions] = useState(false);
+  const [showAllPrompts, setShowAllPrompts] = useState(false);
+
+  // Most surprising first; agreements stay on the wall below, never hidden.
+  const sorted = [...profile.impressions].sort(byMismatch);
+  const shown = showAllImpressions ? sorted : sorted.slice(0, WALL_PREVIEW_COUNT);
+  const promptsShown = showAllPrompts
+    ? profile.prompts
+    : profile.prompts.slice(0, WALL_PREVIEW_COUNT);
 
   return (
     <Shell>
