@@ -10,12 +10,13 @@ import {
   setProfileHandle,
 } from "@/lib/profile.functions";
 import {
+  byMismatch,
   isMismatch,
   labelOf,
-  mismatchRate,
   PROFILE_PROMPTS,
   share,
   topOption,
+  WALL_PREVIEW_COUNT,
 } from "@/lib/profile-shared";
 import type { ProfileImpression } from "@/lib/profile-shared";
 
@@ -111,12 +112,8 @@ function MyProfile() {
       : "";
 
   // Where people read you most differently from how you read yourself, first.
-  const sorted = [...profile.impressions].sort((a, b) => {
-    const rate = mismatchRate(b) - mismatchRate(a);
-    if (rate !== 0) return rate;
-    return b.total - a.total;
-  });
-  const shown = showAll ? sorted : sorted.slice(0, 5);
+  const sorted = [...profile.impressions].sort(byMismatch);
+  const shown = showAll ? sorted : sorted.slice(0, WALL_PREVIEW_COUNT);
 
   return (
     <Shell>
@@ -159,6 +156,16 @@ function MyProfile() {
         </div>
       )}
 
+      {(profile.undisplayedNew ?? 0) > 0 && (
+        <a
+          href="#wall-edit"
+          className="mt-6 self-start text-base text-primary underline underline-offset-4"
+        >
+          {profile.undisplayedNew} new{" "}
+          {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"} on your wall yet
+        </a>
+      )}
+
       {sorted.length === 0 ? (
         <div className="card-soft mt-10 px-6 py-8">
           <p className="text-2xl leading-snug">Send a set to a few people and this fills up.</p>
@@ -170,7 +177,7 @@ function MyProfile() {
           </Link>
         </div>
       ) : (
-        <div className="mt-12 flex flex-col gap-10">
+        <div id="wall-edit" className="mt-12 flex scroll-mt-10 flex-col gap-10">
           {shown.map((imp) => (
             <ImpressionCard
               key={imp.questionId}
@@ -182,7 +189,7 @@ function MyProfile() {
               }}
             />
           ))}
-          {!showAll && sorted.length > 5 && (
+          {!showAll && sorted.length > WALL_PREVIEW_COUNT && (
             <button
               onClick={() => setShowAll(true)}
               className="self-start text-sm text-muted-foreground underline underline-offset-4"
@@ -282,6 +289,11 @@ function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: (
             They read you as {labelOf(imp, top.key)}.
           </p>
           <p className="mt-2 text-2xl leading-snug">You said {labelOf(imp, imp.selfKey)}.</p>
+          {!gap && (
+            <p className="mt-3 text-sm tracking-[0.14em] text-muted-foreground uppercase">
+              They got this one right
+            </p>
+          )}
         </div>
       )}
 

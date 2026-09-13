@@ -1,10 +1,17 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { track } from "@/lib/track";
 
 import { getPublicProfile } from "@/lib/profile.functions";
-import { isMismatch, labelOf, share, topOption } from "@/lib/profile-shared";
+import {
+  byMismatch,
+  isMismatch,
+  labelOf,
+  share,
+  topOption,
+  WALL_PREVIEW_COUNT,
+} from "@/lib/profile-shared";
 
 export const Route = createFileRoute("/p/$handle")({
   loader: async ({ params }) => {
@@ -50,22 +57,28 @@ function PublicProfile() {
     track("profile_view", { handle: profile.handle });
   }, [profile.handle]);
 
-  const sorted = [...profile.impressions].sort((a, b) => {
-    const mismatch = Number(isMismatch(b)) - Number(isMismatch(a));
-    if (mismatch !== 0) return mismatch;
-    return b.total - a.total;
-  });
+  const [showAllImpressions, setShowAllImpressions] = useState(false);
+  const [showAllPrompts, setShowAllPrompts] = useState(false);
+
+  // Most surprising first; agreements stay on the wall below, never hidden.
+  const sorted = [...profile.impressions].sort(byMismatch);
+  const shown = showAllImpressions ? sorted : sorted.slice(0, WALL_PREVIEW_COUNT);
+  const promptsShown = showAllPrompts
+    ? profile.prompts
+    : profile.prompts.slice(0, WALL_PREVIEW_COUNT);
 
   return (
     <Shell>
       <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
         no<span className="text-primary">/</span>sure
       </p>
-      <h1 className="mt-8 text-5xl leading-[1.05]">How {profile.displayName}'s friends read them</h1>
+      <h1 className="mt-8 text-5xl leading-[1.05]">
+        How {profile.displayName}'s friends read them
+      </h1>
       <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
 
       <div className="mt-12 flex flex-col gap-10">
-        {sorted.map((imp) => {
+        {shown.map((imp) => {
           const top = topOption(imp);
           const gap = isMismatch(imp);
           return (
@@ -97,28 +110,51 @@ function PublicProfile() {
               </div>
               {imp.selfKey && top && (
                 <div className="mt-6">
-                  <p className={gap ? "text-3xl leading-snug text-primary" : "text-2xl leading-snug"}>
+                  <p
+                    className={gap ? "text-3xl leading-snug text-primary" : "text-2xl leading-snug"}
+                  >
                     They read {profile.displayName} as {labelOf(imp, top.key)}.
                   </p>
                   <p className="mt-2 text-2xl leading-snug">
                     {profile.displayName} said {labelOf(imp, imp.selfKey)}.
                   </p>
+                  {!gap && (
+                    <p className="mt-3 text-sm tracking-[0.14em] text-muted-foreground uppercase">
+                      They got this one right
+                    </p>
+                  )}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+      {!showAllImpressions && sorted.length > WALL_PREVIEW_COUNT && (
+        <button
+          onClick={() => setShowAllImpressions(true)}
+          className="mt-8 self-start text-sm text-muted-foreground underline underline-offset-4"
+        >
+          See all {sorted.length}
+        </button>
+      )}
 
       {profile.prompts.length > 0 && (
         <div className="mt-14 flex flex-col gap-5">
           <h2 className="text-3xl">In their own words</h2>
-          {profile.prompts.map((prompt) => (
+          {promptsShown.map((prompt) => (
             <div key={prompt.key} className="card-soft px-6 py-5">
               <p className="text-base text-muted-foreground">{prompt.key.replace(/_/g, " ")}</p>
               <p className="mt-2 text-xl leading-snug">{prompt.answer}</p>
             </div>
           ))}
+          {!showAllPrompts && profile.prompts.length > WALL_PREVIEW_COUNT && (
+            <button
+              onClick={() => setShowAllPrompts(true)}
+              className="self-start text-sm text-muted-foreground underline underline-offset-4"
+            >
+              See all {profile.prompts.length}
+            </button>
+          )}
         </div>
       )}
 
@@ -140,7 +176,9 @@ function PublicProfile() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="paper min-h-screen bg-background">
-      <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-16">{children}</section>
+      <section className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-16">
+        {children}
+      </section>
     </main>
   );
 }

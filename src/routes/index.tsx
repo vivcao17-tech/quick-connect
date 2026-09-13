@@ -9,9 +9,6 @@ import { getProfileBadge } from "@/lib/profile.functions";
 import { listMyAnswerSets } from "@/lib/remote.functions";
 import { useViewer } from "@/lib/viewer";
 
-
-
-
 export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
@@ -95,7 +92,10 @@ function Home() {
   }, [viewer.ready, viewer.profileId, loadBadge]);
 
   function onCode(value: string) {
-    const next = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 4);
+    const next = value
+      .replace(/[^a-zA-Z]/g, "")
+      .toUpperCase()
+      .slice(0, 4);
     setCode(next);
     if (next.length === 4) {
       void navigate({ to: "/join/$code", params: { code: next } });
@@ -178,10 +178,8 @@ function Home() {
           </p>
         </div>
 
-        <Link
-          to={badge && badge.newSince > 0 ? "/me" : "/start"}
-          className="mt-10 block"
-        >
+        {/* Permanent entry: only the copy and the dot depend on state. */}
+        <Link to="/me" className="mt-10 block">
           <div className="flex w-full items-center justify-between rounded-full border-2 border-primary px-6 py-4 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
             <span className="text-base font-medium">
               {badge && badge.newSince > 0
