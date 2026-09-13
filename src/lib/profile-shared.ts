@@ -57,7 +57,21 @@ export type ProfileData = {
   impressions: ProfileImpression[];
   prompts: { key: string; answer: string; visible: boolean }[];
   newSince: number;
+  /** True once the owner has made any show/hide choice; then only their picks publish. */
+  curated?: boolean;
+  /** Owner-only: new reads on questions that aren't on the public wall right now. */
+  undisplayedNew?: number;
 };
+
+/** How many impression questions a public wall shows before "See all". */
+export const WALL_PREVIEW_COUNT = 4;
+
+/** Mismatch first (most surprising first), ties broken by sample size. */
+export function byMismatch(a: ProfileImpression, b: ProfileImpression) {
+  const rate = mismatchRate(b) - mismatchRate(a);
+  if (rate !== 0) return rate;
+  return b.total - a.total;
+}
 
 /** Percentage with the sample size alongside — "2 of 2", never a bare 100%. */
 export function share(count: number, total: number) {
