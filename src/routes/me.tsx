@@ -174,7 +174,7 @@ function MyProfile() {
           </Link>
         </div>
       ) : (
-        <div className="mt-12 flex flex-col gap-10">
+        <div id="wall-edit" className="mt-12 flex scroll-mt-10 flex-col gap-10">
           {shown.map((imp) => (
             <ImpressionCard
               key={imp.questionId}
@@ -286,6 +286,11 @@ function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: (
             They read you as {labelOf(imp, top.key)}.
           </p>
           <p className="mt-2 text-2xl leading-snug">You said {labelOf(imp, imp.selfKey)}.</p>
+          {!gap && (
+            <p className="mt-3 text-sm tracking-[0.14em] text-muted-foreground uppercase">
+              They got this one right
+            </p>
+          )}
         </div>
       )}
 
