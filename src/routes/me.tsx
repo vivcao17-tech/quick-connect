@@ -179,7 +179,7 @@ function MyProfile() {
               }}
             />
           ))}
-          {!showAll && sorted.length > 5 && (
+          {!showAll && sorted.length > WALL_PREVIEW_COUNT && (
             <button
               onClick={() => setShowAll(true)}
               className="self-start text-sm text-muted-foreground underline underline-offset-4"
