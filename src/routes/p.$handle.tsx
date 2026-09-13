@@ -76,7 +76,7 @@ function PublicProfile() {
       <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
 
       <div className="mt-12 flex flex-col gap-10">
-        {sorted.map((imp) => {
+        {shown.map((imp) => {
           const top = topOption(imp);
           const gap = isMismatch(imp);
           return (
@@ -114,6 +114,11 @@ function PublicProfile() {
                   <p className="mt-2 text-2xl leading-snug">
                     {profile.displayName} said {labelOf(imp, imp.selfKey)}.
                   </p>
+                  {!gap && (
+                    <p className="mt-3 text-sm tracking-[0.14em] text-muted-foreground uppercase">
+                      They got this one right
+                    </p>
+                  )}
                 </div>
               )}
             </div>

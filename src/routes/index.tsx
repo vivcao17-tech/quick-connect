@@ -178,10 +178,8 @@ function Home() {
           </p>
         </div>
 
-        <Link
-          to={badge && badge.newSince > 0 ? "/me" : "/start"}
-          className="mt-10 block"
-        >
+        {/* Permanent entry: only the copy and the dot depend on state. */}
+        <Link to="/me" className="mt-10 block">
           <div className="flex w-full items-center justify-between rounded-full border-2 border-primary px-6 py-4 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
             <span className="text-base font-medium">
               {badge && badge.newSince > 0
