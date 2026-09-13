@@ -112,12 +112,8 @@ function MyProfile() {
       : "";
 
   // Where people read you most differently from how you read yourself, first.
-  const sorted = [...profile.impressions].sort((a, b) => {
-    const rate = mismatchRate(b) - mismatchRate(a);
-    if (rate !== 0) return rate;
-    return b.total - a.total;
-  });
-  const shown = showAll ? sorted : sorted.slice(0, 5);
+  const sorted = [...profile.impressions].sort(byMismatch);
+  const shown = showAll ? sorted : sorted.slice(0, WALL_PREVIEW_COUNT);
 
   return (
     <Shell>
