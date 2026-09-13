@@ -20,7 +20,7 @@
 ## Profile wall display rules
 
 - [ ] Restore `/me` navigation for signed-in owners after unread reads are cleared
-- [ ] Apply uncurated mismatch-only top-four display and curated exact-selection rules
+- [ ] Apply uncurated mismatch-first top-four display (agreements stay, labeled "they got this one right") and curated exact-selection rules
 - [ ] Add owner-only undisplayed-new-reads nudge
 - [ ] Trim visible self-authored prompts to four with “See all”
 - [ ] Verify owner and public wall behavior

@@ -3,7 +3,7 @@
 ## What will change
 
 - Fix the home action so a signed-in owner with existing impression results always reaches `/me`; the unread count will only control the dot and teaser wording.
-- Treat a wall with no saved visibility choices as uncurated: rank questions by mismatch rate, exclude zero-mismatch questions, show four initially, and put additional mismatches behind “See all.”
+- Treat a wall with no saved visibility choices as uncurated: rank questions by mismatch rate so the surprising ones come first; agreements stay visible below with a distinct "they got this one right" treatment; show four initially, rest behind “See all.”
 - Treat a wall with saved visibility choices as curated: publish only questions the owner explicitly selected, without automatically adding other questions.
 - Apply the same four-item initial limit and “See all” behavior to visible self-authored prompts.
 - On `/me`, show a one-line count of new reads on questions outside the current public selection, linking to the wall-editing section. Never show this nudge publicly.
@@ -23,5 +23,5 @@
 
 - Return explicit curation state and the owner-only undisplayed-new-read count from the existing protected profile function.
 - Filter public profile data server-side so non-selected curated questions never leave the server.
-- Keep mismatch sorting deterministic by using response count as the tie-breaker.
+- Keep mismatch sorting deterministic by using response count as the tie-breaker; zero-mismatch questions are never filtered out.
 - Verify signed-in home navigation, owner wall, public wall, and “See all” behavior.
