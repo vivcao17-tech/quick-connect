@@ -223,10 +223,22 @@ export const getPublicProfile = createServerFn({ method: "GET" })
     const result = (profile ?? null) as unknown as ProfileData | null;
     if (!result) return null;
 
+    // Curated walls publish exactly the owner's picks — nothing auto-inserted.
+    const { data: prefs } = await supabaseAdmin
+      .from("profile_impression_prefs")
+      .select("question_id, hidden")
+      .eq("profile_id", profileId);
+    const curated = (prefs?.length ?? 0) > 0;
+    const selected = new Set(
+      (prefs ?? []).filter((p) => !p.hidden).map((p) => p.question_id),
+    );
+
     return {
       handle: result.handle,
       displayName: result.displayName,
-      impressions: result.impressions,
+      impressions: curated
+        ? result.impressions.filter((i) => selected.has(i.questionId))
+        : result.impressions,
       prompts: result.prompts.filter((p) => p.visible),
     };
   });
