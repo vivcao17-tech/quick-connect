@@ -10,12 +10,13 @@ import {
   setProfileHandle,
 } from "@/lib/profile.functions";
 import {
+  byMismatch,
   isMismatch,
   labelOf,
-  mismatchRate,
   PROFILE_PROMPTS,
   share,
   topOption,
+  WALL_PREVIEW_COUNT,
 } from "@/lib/profile-shared";
 import type { ProfileImpression } from "@/lib/profile-shared";
 
