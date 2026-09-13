@@ -125,16 +125,32 @@ function PublicProfile() {
           );
         })}
       </div>
+      {!showAllImpressions && sorted.length > WALL_PREVIEW_COUNT && (
+        <button
+          onClick={() => setShowAllImpressions(true)}
+          className="mt-8 self-start text-sm text-muted-foreground underline underline-offset-4"
+        >
+          See all {sorted.length}
+        </button>
+      )}
 
       {profile.prompts.length > 0 && (
         <div className="mt-14 flex flex-col gap-5">
           <h2 className="text-3xl">In their own words</h2>
-          {profile.prompts.map((prompt) => (
+          {promptsShown.map((prompt) => (
             <div key={prompt.key} className="card-soft px-6 py-5">
               <p className="text-base text-muted-foreground">{prompt.key.replace(/_/g, " ")}</p>
               <p className="mt-2 text-xl leading-snug">{prompt.answer}</p>
             </div>
           ))}
+          {!showAllPrompts && profile.prompts.length > WALL_PREVIEW_COUNT && (
+            <button
+              onClick={() => setShowAllPrompts(true)}
+              className="self-start text-sm text-muted-foreground underline underline-offset-4"
+            >
+              See all {profile.prompts.length}
+            </button>
+          )}
         </div>
       )}
 
