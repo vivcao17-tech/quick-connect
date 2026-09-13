@@ -2,7 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { cleanPromptAnswer, handleFrom, PROFILE_PROMPTS } from "@/lib/profile-shared";
+import {
+  byMismatch,
+  cleanPromptAnswer,
+  handleFrom,
+  PROFILE_PROMPTS,
+  WALL_PREVIEW_COUNT,
+} from "@/lib/profile-shared";
 import type { ProfileData } from "@/lib/profile-shared";
 
 const handleShape = z
