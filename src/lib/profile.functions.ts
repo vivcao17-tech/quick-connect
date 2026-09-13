@@ -78,8 +78,9 @@ export const getMyProfile = createServerFn({ method: "POST" })
           .eq("answer_role", "about_other")
           .in("about_participant_id", participantIds)
           .gt("created_at", seenAt);
-        const freshIds = new Set((fresh ?? []).map((f: { question_id: string }) => f.question_id));
-        undisplayedNew = [...freshIds].filter((id) => !shownIds.has(id)).length;
+        undisplayedNew = (fresh ?? []).filter(
+          (f: { question_id: string }) => !shownIds.has(f.question_id),
+        ).length;
       }
     }
 
