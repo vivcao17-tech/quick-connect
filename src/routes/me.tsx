@@ -156,6 +156,14 @@ function MyProfile() {
         </div>
       )}
 
+      {(profile.undisplayedNew ?? 0) > 0 && (
+        <a href="#wall-edit" className="mt-6 self-start text-base text-primary underline underline-offset-4">
+          {profile.undisplayedNew}{" "}
+          {profile.undisplayedNew === 1 ? "question has new reads" : "questions have new reads"} that
+          aren't on your wall yet
+        </a>
+      )}
+
       {sorted.length === 0 ? (
         <div className="card-soft mt-10 px-6 py-8">
           <p className="text-2xl leading-snug">Send a set to a few people and this fills up.</p>
