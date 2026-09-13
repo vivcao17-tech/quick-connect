@@ -24,3 +24,8 @@
 - [ ] Add owner-only undisplayed-new-reads nudge
 - [ ] Trim visible self-authored prompts to four with “See all”
 - [ ] Verify owner and public wall behavior
+
+## Permanent wall entry
+
+- [ ] Home profile entry link always present and always navigates to `/me`; state only changes dot/teaser copy
+- [ ] Save principle to memory: wall reachability never depends on state
