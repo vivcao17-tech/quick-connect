@@ -19,13 +19,13 @@
 
 ## Profile wall display rules
 
-- [ ] Restore `/me` navigation for signed-in owners after unread reads are cleared
-- [ ] Apply uncurated mismatch-first top-four display (agreements stay, labeled "they got this one right") and curated exact-selection rules
-- [ ] Add owner-only undisplayed-new-reads nudge
+- [x] Restore `/me` navigation for signed-in owners after unread reads are cleared
+- [x] Apply uncurated mismatch-first top-four display (agreements stay, labeled "they got this one right") and curated exact-selection rules
+- [x] Add owner-only undisplayed-new-reads nudge
 - [ ] Trim visible self-authored prompts to four with “See all”
 - [ ] Verify owner and public wall behavior
 
 ## Permanent wall entry
 
-- [ ] Home profile entry link always present and always navigates to `/me`; state only changes dot/teaser copy
-- [ ] Save principle to memory: wall reachability never depends on state
+- [x] Home profile entry link always present and always navigates to `/me`; state only changes dot/teaser copy
+- [x] Save principle to memory: wall reachability never depends on state
