@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
+import { supabase } from "@/integrations/supabase/client";
 import { trackVisit } from "@/lib/track";
 
 import { listUnreadThreads } from "@/lib/conversations.functions";
@@ -84,11 +85,26 @@ function Home() {
   }, [viewer.ready, viewer.guestToken, viewer.profileId, loadSets]);
 
   // Signed-in people get their own page, with a dot when someone has read them.
+  // Only ask once a live token exists — without it the call is rejected server-side.
   useEffect(() => {
     if (!viewer.ready || !viewer.profileId) return;
-    void loadBadge()
-      .then((result) => setBadge({ name: result.displayName, newSince: result.newSince }))
-      .catch(() => setBadge(null));
+    let alive = true;
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!alive || !data.session?.access_token) return;
+        return loadBadge()
+          .then((result) => {
+            if (alive) setBadge({ name: result.displayName, newSince: result.newSince });
+          })
+          .catch(() => {
+            if (alive) setBadge(null);
+          });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
   }, [viewer.ready, viewer.profileId, loadBadge]);
 
   function onCode(value: string) {
