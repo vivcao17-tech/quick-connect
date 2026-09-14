@@ -32,7 +32,7 @@
 
 ## Group friend history by topic
 
-- [ ] Return each question’s stored topic ID and label in the existing relationship detail
-- [ ] Group and deduplicate friend-history questions by topic, sorted by latest activity
-- [ ] Link every question row to its existing thread
-- [ ] Verify desktop and mobile friend-detail layouts and thread navigation
+- [x] Return each question’s stored topic ID and label in the existing relationship detail
+- [x] Group and deduplicate friend-history questions by topic, sorted by latest activity
+- [x] Link every question row to its existing thread
+- [x] Verify desktop and mobile friend-detail layouts and thread navigation

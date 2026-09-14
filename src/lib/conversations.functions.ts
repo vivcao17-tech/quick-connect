@@ -59,7 +59,13 @@ export const getPersonSessions = createServerFn({ method: "POST" })
     const detail = await loadDetail(supabaseAdmin as never, data.guestToken, data.profileId);
     const person = detail.people.find((p) => p.personKey === data.personKey);
     if (!person) {
-      return { name: "", realName: "", note: { nickname: "", contact: "", note: "" }, met: "", sessions: [] };
+      return {
+        name: "",
+        realName: "",
+        note: { nickname: "", contact: "", note: "" },
+        met: "",
+        sessions: [],
+      };
     }
     const oldest = person.sessions[person.sessions.length - 1];
     return {
@@ -75,6 +81,7 @@ export const getPersonSessions = createServerFn({ method: "POST" })
         messageCount: session.messageCount,
         unread: session.unread,
         lastActivity: session.lastActivity,
+        questions: session.questions,
       })),
     };
   });
@@ -134,9 +141,6 @@ export const listUnreadThreads = createServerFn({ method: "POST" })
     };
   });
 
-
-
-
 /**
  * Everyone the person has any tie to, whatever the origin: a remote block, an
  * in-person room, or someone they added during a group session.
@@ -176,7 +180,10 @@ export const listPeople = createServerFn({ method: "POST" })
         rpc: (
           fn: string,
           args: Record<string, unknown>,
-        ) => Promise<{ data: { people?: OverviewRow[] } | null; error: { message: string } | null }>;
+        ) => Promise<{
+          data: { people?: OverviewRow[] } | null;
+          error: { message: string } | null;
+        }>;
       }
     ).rpc("people_overview", {
       _guest_token: data.guestToken,

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { getPersonSessions } from "@/lib/conversations.functions";
 import { savePersonNote } from "@/lib/notes.functions";
@@ -43,6 +43,46 @@ type Data = {
   sessions: Awaited<ReturnType<typeof getPersonSessions>>["sessions"];
 };
 
+type Session = Data["sessions"][number];
+type HistoryQuestion = Session["questions"][number];
+type TopicGroup = {
+  id: string;
+  name: string;
+  lastActivity: string;
+  questions: HistoryQuestion[];
+};
+
+function groupQuestionsByTopic(sessions: Session[]): TopicGroup[] {
+  const topics = new Map<string, TopicGroup>();
+  const seen = new Set<string>();
+
+  for (const session of sessions) {
+    for (const question of session.questions) {
+      if (seen.has(question.sessionQuestionId)) continue;
+      seen.add(question.sessionQuestionId);
+
+      const topicKey = question.topicId ?? "uncategorized";
+      const current = topics.get(topicKey) ?? {
+        id: topicKey,
+        name: question.topic || "Other",
+        lastActivity: question.lastActivity,
+        questions: [],
+      };
+      current.questions.push(question);
+      if (current.lastActivity < question.lastActivity) {
+        current.lastActivity = question.lastActivity;
+      }
+      topics.set(topicKey, current);
+    }
+  }
+
+  for (const topic of topics.values()) {
+    topic.questions.sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
+  }
+
+  return [...topics.values()].sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
+}
+
 export function ago(iso: string) {
   if (!iso) return "";
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -62,7 +102,6 @@ function WithPersonPage() {
   const { participantId } = Route.useParams();
   const viewer = useViewer();
   const [data, setData] = useState<Data | null>(null);
-  const [showAll, setShowAll] = useState(false);
   const [editing, setEditing] = useState(false);
   const [nickname, setNickname] = useState("");
   const [contact, setContact] = useState("");
@@ -148,8 +187,7 @@ function WithPersonPage() {
 
   const sessions = data?.sessions ?? [];
   const name = data?.name || "them";
-  const topics = [...new Set(sessions.map((s) => s.topic).filter(Boolean))] as string[];
-  const visible = showAll ? sessions : sessions.slice(0, 3);
+  const topicGroups = useMemo(() => groupQuestionsByTopic(sessions), [sessions]);
   const link = contactLink(data?.note.contact ?? "");
   const lastTalked = sessions[0]?.lastActivity ?? "";
 
@@ -184,63 +222,69 @@ function WithPersonPage() {
           </Link>
         )}
 
-        {topics.length > 0 && (
-          <div className="mt-10">
-            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-              Topics you've answered together
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {topics.map((topic) => (
-                <span key={topic} className="rounded-full border border-border px-4 py-2 text-base">
-                  {topic}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {data && sessions.length === 0 && (
           <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
         )}
 
-        <div className="mt-10 flex flex-col gap-3">
-          {visible.map((session) => (
-            <Link
-              key={session.sessionId}
-              to="/with/$participantId/$sessionId"
-              params={{ participantId, sessionId: session.sessionId }}
-              search={{}}
-              className="card-soft block px-6 py-5"
-            >
-              <p className="text-lg">{session.topic || "Three questions"}</p>
-              <p className="mt-3 text-xl">
-                {session.different === 0 ? (
-                  "Same answers"
-                ) : (
-                  <span className="text-primary">
-                    {session.different} of {session.total} different
-                  </span>
-                )}
-              </p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                {session.messageCount === 0
-                  ? "Nothing said yet"
-                  : `${session.messageCount} ${session.messageCount === 1 ? "line" : "lines"}`}
-                {" · "}
-                {ago(session.lastActivity)}
-                {session.unread > 0 && <span className="text-primary"> · new</span>}
-              </p>
-            </Link>
-          ))}
-        </div>
-
-        {!showAll && sessions.length > 3 && (
-          <button
-            onClick={() => setShowAll(true)}
-            className="mt-8 text-sm text-muted-foreground underline underline-offset-4"
-          >
-            See earlier
-          </button>
+        {topicGroups.length > 0 && (
+          <div className="mt-10">
+            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+              Topics you've discussed
+            </p>
+            <div className="mt-4 flex flex-col gap-4">
+              {topicGroups.map((topic) => (
+                <section key={topic.id} className="card-soft overflow-hidden px-5 sm:px-6">
+                  <header className="flex items-end justify-between gap-4 py-5">
+                    <h2 className="text-xl leading-tight">{topic.name}</h2>
+                    <p className="shrink-0 text-xs text-muted-foreground">
+                      {topic.questions.length}{" "}
+                      {topic.questions.length === 1 ? "question" : "questions"}
+                      {topic.lastActivity ? ` · ${ago(topic.lastActivity)}` : ""}
+                    </p>
+                  </header>
+                  <div className="border-t border-border">
+                    {topic.questions.map((question) => (
+                      <Link
+                        key={question.sessionQuestionId}
+                        to="/with/$participantId/$sessionId"
+                        params={{ participantId, sessionId: question.sessionId }}
+                        search={{ q: question.sessionQuestionId }}
+                        className="group flex min-w-0 items-start gap-3 border-b border-border py-5 last:border-b-0"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-lg leading-snug transition-colors group-hover:text-primary">
+                            {question.text}
+                          </span>
+                          <span className="mt-3 block text-sm leading-relaxed text-muted-foreground">
+                            <span className="block">You: {question.myLabel || "—"}</span>
+                            <span className="block">
+                              {name}:{" "}
+                              {question.revealed
+                                ? question.theirLabel || "—"
+                                : `Waiting for ${name}`}
+                            </span>
+                          </span>
+                          {(question.messageCount > 0 || question.unread > 0) && (
+                            <span className="mt-2 block text-xs text-muted-foreground">
+                              {question.messageCount}{" "}
+                              {question.messageCount === 1 ? "line" : "lines"}
+                              {question.unread > 0 && <span className="text-primary"> · new</span>}
+                            </span>
+                          )}
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="mt-1 shrink-0 text-lg text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+                        >
+                          →
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Private annotations — only ever shown to whoever wrote them. */}

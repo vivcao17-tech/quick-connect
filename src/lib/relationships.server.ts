@@ -11,13 +11,19 @@ type Admin = {
   rpc: (
     fn: string,
     args: Record<string, unknown>,
-  ) => Promise<{ data: { people?: DetailPerson[]; waiting?: DetailWaiting[] } | null; error: { message: string } | null }>;
+  ) => Promise<{
+    data: { people?: DetailPerson[]; waiting?: DetailWaiting[] } | null;
+    error: { message: string } | null;
+  }>;
 };
 
 /** One question inside a session: both answers plus its thread. */
 export type DetailQuestion = {
   sessionQuestionId: string;
   sessionId: string;
+  questionId: string;
+  topicId: string | null;
+  topic: string;
   text: string;
   revealed: boolean;
   myLabel: string;
