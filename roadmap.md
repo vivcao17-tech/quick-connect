@@ -29,3 +29,10 @@
 
 - [x] Home profile entry link always present and always navigates to `/me`; state only changes dot/teaser copy
 - [x] Save principle to memory: wall reachability never depends on state
+
+## Group friend history by topic
+
+- [ ] Return each question’s stored topic ID and label in the existing relationship detail
+- [ ] Group and deduplicate friend-history questions by topic, sorted by latest activity
+- [ ] Link every question row to its existing thread
+- [ ] Verify desktop and mobile friend-detail layouts and thread navigation
