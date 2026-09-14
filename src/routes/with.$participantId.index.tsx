@@ -237,7 +237,8 @@ function WithPersonPage() {
                   <header className="flex items-end justify-between gap-4 py-5">
                     <h2 className="text-xl leading-tight">{topic.name}</h2>
                     <p className="shrink-0 text-xs text-muted-foreground">
-                      {topic.questions.length} {topic.questions.length === 1 ? "question" : "questions"}
+                      {topic.questions.length}{" "}
+                      {topic.questions.length === 1 ? "question" : "questions"}
                       {topic.lastActivity ? ` · ${ago(topic.lastActivity)}` : ""}
                     </p>
                   </header>
@@ -257,12 +258,16 @@ function WithPersonPage() {
                           <span className="mt-3 block text-sm leading-relaxed text-muted-foreground">
                             <span className="block">You: {question.myLabel || "—"}</span>
                             <span className="block">
-                              {name}: {question.revealed ? question.theirLabel || "—" : `Waiting for ${name}`}
+                              {name}:{" "}
+                              {question.revealed
+                                ? question.theirLabel || "—"
+                                : `Waiting for ${name}`}
                             </span>
                           </span>
                           {(question.messageCount > 0 || question.unread > 0) && (
                             <span className="mt-2 block text-xs text-muted-foreground">
-                              {question.messageCount} {question.messageCount === 1 ? "line" : "lines"}
+                              {question.messageCount}{" "}
+                              {question.messageCount === 1 ? "line" : "lines"}
                               {question.unread > 0 && <span className="text-primary"> · new</span>}
                             </span>
                           )}
