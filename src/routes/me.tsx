@@ -65,6 +65,12 @@ function MyProfile() {
 
   const refresh = useCallback(async () => {
     try {
+      // Without a live token the call is rejected server-side, so ask first.
+      const { data } = await supabase.auth.getSession();
+      if (!data.session?.access_token) {
+        setSignedOut(true);
+        return;
+      }
       const result = await load();
       setProfile(result);
       setHandle(result.handle ?? "");
