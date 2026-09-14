@@ -75,6 +75,7 @@ export const getPersonSessions = createServerFn({ method: "POST" })
         messageCount: session.messageCount,
         unread: session.unread,
         lastActivity: session.lastActivity,
+        questions: session.questions,
       })),
     };
   });

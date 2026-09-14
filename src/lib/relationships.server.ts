@@ -18,6 +18,9 @@ type Admin = {
 export type DetailQuestion = {
   sessionQuestionId: string;
   sessionId: string;
+  questionId: string;
+  topicId: string | null;
+  topic: string;
   text: string;
   revealed: boolean;
   myLabel: string;
