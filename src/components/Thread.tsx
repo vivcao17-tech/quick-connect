@@ -28,6 +28,7 @@ export function Thread({
   autoFocus,
   bare,
   compactRemote,
+  becauseAnswer,
   prefill,
   showFollowUp,
 }: {
@@ -51,6 +52,8 @@ export function Thread({
   bare?: boolean | undefined;
   /** Remote reveal: one fallback chip and one separated closing reaction. */
   compactRemote?: boolean | undefined;
+  /** Remote reveal: turn the composer into one continuous “You picked… Because…” thought. */
+  becauseAnswer?: string | undefined;
   /** A parent action can place editable text into the composer without sending it. */
   prefill?: { text: string; nonce: number } | undefined;
   /** Follow-ups stay inside the thread and appear only after it has been opened. */
@@ -245,6 +248,40 @@ export function Thread({
           <p className="mt-2 text-2xl leading-snug">{followUp.text}</p>
         </div>
       )}
+
+      {becauseAnswer && (
+        <div className="mb-7">
+          <p className="text-lg leading-snug">You picked &quot;{becauseAnswer}&quot;</p>
+          <form
+            className="mt-3 flex min-w-0 items-center gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void send("text", draft);
+            }}
+          >
+            <label htmlFor={`because-${sessionQuestionId}`} className="shrink-0 text-lg">
+              Because
+            </label>
+            <input
+              id={`because-${sessionQuestionId}`}
+              ref={inputRef}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              aria-label="Because"
+              className="min-w-0 flex-1 border-0 border-b border-border bg-transparent px-1 py-2 text-base outline-none focus:border-primary"
+            />
+            <button
+              type="submit"
+              aria-label="Send"
+              disabled={busy || !draft.trim()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-xl hover:border-primary disabled:opacity-30"
+            >
+              →
+            </button>
+          </form>
+        </div>
+      )}
+
       {rows.length > 0 && (
         <div className="mb-6 flex flex-col gap-3">
           {rows.map((row) => (
@@ -287,7 +324,7 @@ export function Thread({
       )}
 
       {/* Continuation prompts: specific to this question, tapped into the box. */}
-      {!bare && allPrompts.length > 0 && (
+      {!bare && !becauseAnswer && allPrompts.length > 0 && (
         <div className="rounded-2xl bg-secondary/40 px-4 py-4">
           <p className="mb-3 text-xs tracking-[0.18em] text-muted-foreground uppercase">
             {rows.length === 0 ? "Want to ask why?" : "Tap to start a reply"}
@@ -334,6 +371,7 @@ export function Thread({
       {/* Closing reactions sit apart from the writing choices. */}
       <div
         className={`${allPrompts.length > 0 ? "mt-8" : ""} mb-8 ${bare ? "hidden" : ""} ${compactRemote ? "text-right" : ""}`}
+        hidden={Boolean(becauseAnswer)}
       >
         <div className={`flex flex-wrap gap-2 ${compactRemote ? "justify-end" : ""}`}>
           {(compactRemote ? CLOSERS.slice(0, 1) : CLOSERS).map((closer) => (
@@ -359,6 +397,7 @@ export function Thread({
       {/* Composer — anchored at the bottom of the thread view */}
       <form
         className="sticky bottom-0 z-10 mt-7 flex gap-2 border-t border-border bg-background pt-4 pb-4"
+        hidden={Boolean(becauseAnswer)}
         onSubmit={(event) => {
           event.preventDefault();
           void send("text", draft);

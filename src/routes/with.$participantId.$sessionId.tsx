@@ -3,13 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
 import { Thread } from "@/components/Thread";
-import {
-  mergeRemoteOpening,
-  pairRevealGuidance,
-  RevealGuidance,
-} from "@/components/RevealGuidance";
 import { getSessionBlock } from "@/lib/conversations.functions";
-import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/with/$participantId/$sessionId")({
@@ -152,13 +146,6 @@ function QuestionView({
   guestToken: string;
   onBack: () => void;
 }) {
-  const ai = useRevealPrompts(guestToken, question.sessionQuestionId, question.revealed);
-  const [prefill, setPrefill] = useState<{ text: string; nonce: number }>();
-  const opening = mergeRemoteOpening(
-    ai.observation,
-    pairRevealGuidance(name, question.matched === true),
-  );
-
   return (
     <div>
       {/* Question and both answers stay pinned while the thread scrolls. */}
@@ -189,20 +176,12 @@ function QuestionView({
       </div>
 
       {question.revealed ? (
-        <>
-          <RevealGuidance
-            text={opening}
-            interactive
-            onActivate={() => setPrefill({ text: opening, nonce: Date.now() })}
-          />
-          <Thread
-            guestToken={guestToken}
-            sessionQuestionId={question.sessionQuestionId}
-            prompts={ai.prompts[0] ? [ai.prompts[0]] : ["What made you pick that?"]}
-            compactRemote
-            prefill={prefill}
-          />
-        </>
+        <Thread
+          guestToken={guestToken}
+          sessionQuestionId={question.sessionQuestionId}
+          compactRemote
+          becauseAnswer={question.myLabel || "—"}
+        />
       ) : (
         <p className="mt-8 text-lg text-muted-foreground italic">Waiting for {name}.</p>
       )}

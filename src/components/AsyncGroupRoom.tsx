@@ -6,7 +6,6 @@ import { track } from "@/lib/track";
 
 import { Thread } from "@/components/Thread";
 import { withName } from "@/components/QuestionText";
-import { groupRevealGuidance, RevealGuidance } from "@/components/RevealGuidance";
 import {
   answerInAsyncGroup,
   getAsyncGroupState,
@@ -33,7 +32,6 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
   const [email, setEmail] = useState("");
   const [emailDone, setEmailDone] = useState(false);
   const [openQuestion, setOpenQuestion] = useState("");
-  const [prefill, setPrefill] = useState<{ text: string; nonce: number }>();
   const saveRef = useEndScreenTracking("group_async", Boolean(state?.revealed), { sessionId });
 
   useEffect(() => setGuestToken(getGuestToken()), []);
@@ -238,11 +236,6 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
   }
 
   const open = state.blocks.find((block) => block.sessionQuestionId === openQuestion);
-  const guidanceFor = (block: Loaded["blocks"][number]) =>
-    groupRevealGuidance(
-      block.options.map((option) => ({ names: option.names, mine: option.mine })),
-    );
-
   if (open) {
     return (
       <main className="paper flex h-screen flex-col bg-background">
@@ -268,21 +261,14 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
               </div>
             ))}
           </div>
-          <RevealGuidance
-            text={guidanceFor(open)}
-            interactive
-            onActivate={() => setPrefill({ text: guidanceFor(open), nonce: Date.now() })}
-          />
         </header>
         <div className="min-h-0 flex-1">
           <Thread
             guestToken={guestToken}
             sessionQuestionId={open.sessionQuestionId}
-            prompts={open.prompts[0] ? [open.prompts[0]] : ["What made you pick that?"]}
             sessionId={sessionId}
-            promptSource={open.prompts?.length ? "ai" : "template"}
             compactRemote
-            prefill={prefill}
+            becauseAnswer={open.options.find((option) => option.mine)?.label ?? "—"}
           />
         </div>
       </main>
@@ -317,14 +303,6 @@ export function AsyncGroupRoom({ sessionId }: { sessionId: string }) {
                 ))}
               </div>
             </button>
-            <RevealGuidance
-              text={guidanceFor(block)}
-              interactive
-              onActivate={() => {
-                setPrefill({ text: guidanceFor(block), nonce: Date.now() });
-                setOpenQuestion(block.sessionQuestionId);
-              }}
-            />
           </div>
         ))}
       </div>
