@@ -78,7 +78,7 @@ function SessionBlockPage() {
             question={open}
             name={name}
             guestToken={viewer.guestToken}
-             profileId={viewer.profileId}
+            profileId={viewer.profileId}
             onBack={() => {
               setOpenId("");
               refresh();

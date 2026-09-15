@@ -186,7 +186,13 @@ export function Thread({
     setBusy(true);
     try {
       await post({
-        data: { guestToken, sessionQuestionId, kind, body: clean, ...(profileId ? { profileId } : {}) },
+        data: {
+          guestToken,
+          sessionQuestionId,
+          kind,
+          body: clean,
+          ...(profileId ? { profileId } : {}),
+        },
       });
       track(
         kind === "reaction" ? "reaction_sent" : "thread_message_sent",
