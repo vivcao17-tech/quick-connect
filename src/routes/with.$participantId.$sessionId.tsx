@@ -78,6 +78,7 @@ function SessionBlockPage() {
             question={open}
             name={name}
             guestToken={viewer.guestToken}
+             profileId={viewer.profileId}
             onBack={() => {
               setOpenId("");
               refresh();
@@ -139,11 +140,13 @@ function QuestionView({
   question,
   name,
   guestToken,
+  profileId,
   onBack,
 }: {
   question: Question;
   name: string;
   guestToken: string;
+  profileId?: string | undefined;
   onBack: () => void;
 }) {
   return (
@@ -178,6 +181,7 @@ function QuestionView({
       {question.revealed ? (
         <Thread
           guestToken={guestToken}
+          profileId={profileId}
           sessionQuestionId={question.sessionQuestionId}
           compactRemote
           becauseAnswer={question.myLabel || "—"}

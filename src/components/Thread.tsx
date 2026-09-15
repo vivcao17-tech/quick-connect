@@ -17,6 +17,7 @@ function initialOf(name: string) {
 
 export function Thread({
   guestToken,
+  profileId,
   sessionQuestionId,
   prompts,
   extraPrompts,
@@ -33,6 +34,7 @@ export function Thread({
   showFollowUp,
 }: {
   guestToken: string;
+  profileId?: string | undefined;
   sessionQuestionId: string;
   /** Analytics only: which room this thread belongs to. */
   sessionId?: string | undefined;
@@ -84,7 +86,7 @@ export function Thread({
     settled.current = false;
     lastCount.current = 0;
     const pull = () =>
-      void load({ data: { guestToken, sessionQuestionId } })
+      void load({ data: { guestToken, sessionQuestionId, ...(profileId ? { profileId } : {}) } })
         .then((result) => {
           if (!alive) return;
           setMessages(result.messages as Message[]);
@@ -97,7 +99,7 @@ export function Thread({
       alive = false;
       window.clearInterval(timer);
     };
-  }, [guestToken, sessionQuestionId, load]);
+  }, [guestToken, profileId, sessionQuestionId, load]);
 
   /* Opening: land on the first unread line when there is one, otherwise stay at
      the top so the question and both answers are read first. After that, only a
@@ -183,7 +185,9 @@ export function Thread({
     if (!clean || busy) return;
     setBusy(true);
     try {
-      await post({ data: { guestToken, sessionQuestionId, kind, body: clean } });
+      await post({
+        data: { guestToken, sessionQuestionId, kind, body: clean, ...(profileId ? { profileId } : {}) },
+      });
       track(
         kind === "reaction" ? "reaction_sent" : "thread_message_sent",
         {
@@ -210,7 +214,9 @@ export function Thread({
         );
       }
       sentRef.current = true;
-      const result = await load({ data: { guestToken, sessionQuestionId } });
+      const result = await load({
+        data: { guestToken, sessionQuestionId, ...(profileId ? { profileId } : {}) },
+      });
       setMessages(result.messages as Message[]);
       setDraft("");
     } finally {

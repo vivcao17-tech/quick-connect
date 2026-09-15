@@ -184,6 +184,7 @@ export const answerAsSender = createServerFn({ method: "POST" })
     z
       .object({
         guestToken: guest,
+        profileId: z.string().uuid().optional(),
         sessionQuestionId: z.string().uuid(),
         optionKey: z.enum(["a", "b", "c"]),
         reasonText: z.string().max(240).optional(),
@@ -927,13 +928,10 @@ export const postThreadMessage = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!sq) throw new Error("Unknown question");
 
-    const { data: mine } = await supabaseAdmin
-      .from("session_participants")
-      .select("id, display_name")
-      .eq("session_id", sq.session_id)
-      .eq("guest_token", data.guestToken)
-      .limit(1);
-    const me = mine?.[0];
+    const { myParticipantIn, linkProfileToGuestRows } = await import("@/lib/identity.server");
+    const identity = { guestToken: data.guestToken, profileId: data.profileId };
+    await linkProfileToGuestRows(supabaseAdmin as never, identity);
+    const me = await myParticipantIn(supabaseAdmin as never, sq.session_id, identity);
     if (!me) throw new Error("Not your conversation");
 
     const { error } = await supabaseAdmin.from("thread_messages").insert({
@@ -964,7 +962,13 @@ export const postThreadMessage = createServerFn({ method: "POST" })
 
 export const getThread = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ guestToken: guest, sessionQuestionId: z.string().uuid() }).parse(input),
+    z
+      .object({
+        guestToken: guest,
+        profileId: z.string().uuid().optional(),
+        sessionQuestionId: z.string().uuid(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -981,7 +985,11 @@ export const getThread = createServerFn({ method: "POST" })
       .select("id, display_name, guest_token, profile_id")
       .eq("session_id", sq.session_id);
 
-    const me = (participants ?? []).find((p) => p.guest_token === data.guestToken);
+    const me = (participants ?? []).find(
+      (p) =>
+        p.guest_token === data.guestToken ||
+        (data.profileId !== undefined && p.profile_id === data.profileId),
+    );
     if (!me) return { messages: [] };
 
     const { data: rows } = await supabaseAdmin
