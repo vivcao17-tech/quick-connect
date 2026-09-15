@@ -5,11 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { PairSummary } from "@/components/PairSummary";
 import { impressionStem, subjectName, withName } from "@/components/QuestionText";
-import {
-  mergeRemoteOpening,
-  pairRevealGuidance,
-  RevealGuidance,
-} from "@/components/RevealGuidance";
 import { Thread } from "@/components/Thread";
 import { track } from "@/lib/track";
 import { useEndScreenTracking } from "@/lib/end-tracking";
@@ -22,7 +17,6 @@ import {
   startInvite,
 } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
-import { useRevealPrompts } from "@/lib/use-reveal-prompts";
 
 export const Route = createFileRoute("/i/$token")({
   component: InvitePage,
@@ -98,9 +92,6 @@ function InvitePage() {
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const [half, setHalf] = useState<"other" | "self">("other");
   const saveRef = useEndScreenTracking("remote", stage === "summary", { sessionId });
-  /** True once "Spill the tea" is tapped: the follow-up takes over the screen. */
-  const [spill, setSpill] = useState(false);
-  const [prefill, setPrefill] = useState<{ text: string; nonce: number }>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -227,7 +218,6 @@ function InvitePage() {
     setReason("");
     setReveal(null);
     setHalf("other");
-    setSpill(false);
     setStage("summary");
   }
 
@@ -246,7 +236,6 @@ function InvitePage() {
     setReason("");
     setReveal(null);
     setHalf("other");
-    setSpill(false);
     if (index + 1 < questions.length) setIndex(index + 1);
     else void openSummary();
   }
@@ -264,12 +253,6 @@ function InvitePage() {
     const top = [...rows].sort((a, b) => b.votes - a.votes)[0];
     return { rows, withMost: top?.key === reveal.mine?.optionKey };
   }, [reveal, current]);
-
-  const ai = useRevealPrompts(
-    guestToken,
-    current?.sessionQuestionId ?? "",
-    Boolean(reveal?.revealed),
-  );
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -453,46 +436,13 @@ function InvitePage() {
                     </div>
                   )}
 
-                  {ai.observation && <></>}
-                  {(() => {
-                    const matched =
-                      reveal.kind === "impression"
-                        ? Boolean(reveal.impression?.match && reveal.impression?.readMatch)
-                        : reveal.mine?.optionKey === reveal.sender?.optionKey;
-                    const guidance = pairRevealGuidance(reveal.senderName, matched);
-                    const opening = mergeRemoteOpening(ai.observation, guidance);
-                    return (
-                      <>
-                        <RevealGuidance
-                          text={opening}
-                          interactive
-                          onActivate={() => {
-                            setSpill(true);
-                            setPrefill({ text: opening, nonce: Date.now() });
-                          }}
-                        />
-                        <Thread
-                          guestToken={guestToken}
-                          sessionQuestionId={current.sessionQuestionId}
-                          prompts={ai.prompts[0] ? [ai.prompts[0]] : ["What made you pick that?"]}
-                          sessionId={sessionId}
-                          promptSource={ai.prompts?.length ? "ai" : "template"}
-                          compactRemote
-                          autoFocus={spill}
-                          prefill={prefill}
-                          showFollowUp={spill}
-                          {...(current.followUp
-                            ? {
-                                followUp: {
-                                  questionId: current.questionId,
-                                  text: current.followUp,
-                                },
-                              }
-                            : {})}
-                        />
-                      </>
-                    );
-                  })()}
+                  <Thread
+                    guestToken={guestToken}
+                    sessionQuestionId={current.sessionQuestionId}
+                    sessionId={sessionId}
+                    compactRemote
+                    becauseAnswer={labelOf(reveal.mine?.optionKey)}
+                  />
                 </>
               ) : (
                 <p className="mt-10 text-lg text-muted-foreground italic">

@@ -16,6 +16,7 @@
 - [x] Reduce remote reveals to one opening line, one fallback chip, and one 👀 reaction
 - [x] Move remote follow-up questions inside the opened thread
 - [x] Verify unanimous, even, minority-viewer, majority-viewer, and 1:1 states on mobile and desktop
+- [x] Replace narrated remote reveal guidance with the inline “Because” first-message composer
 
 ## Profile wall display rules
 
