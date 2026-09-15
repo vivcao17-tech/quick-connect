@@ -912,6 +912,7 @@ export const postThreadMessage = createServerFn({ method: "POST" })
     z
       .object({
         guestToken: guest,
+        profileId: z.string().uuid().optional(),
         sessionQuestionId: z.string().uuid(),
         kind: z.enum(["reaction", "text", "quick_ask", "starter"]),
         body: z.string().min(1).max(240),
