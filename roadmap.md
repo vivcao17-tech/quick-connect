@@ -23,7 +23,9 @@
 - [x] Restore `/me` navigation for signed-in owners after unread reads are cleared
 - [x] Apply uncurated mismatch-first top-four display (agreements stay, labeled "they got this one right") and curated exact-selection rules
 - [x] Add owner-only undisplayed-new-reads nudge
-- [ ] Trim visible self-authored prompts to four with “See all”
+- [x] Show all owner impression cards with explicit wall visibility and summary counts
+- [x] Trim visible self-authored prompts to three with “More about me”
+- [x] Give saved self-authored prompts explicit wall visibility controls and summary counts
 - [x] Verify owner and public wall behavior
 
 ## Permanent wall entry

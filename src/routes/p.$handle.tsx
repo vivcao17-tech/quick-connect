@@ -8,6 +8,7 @@ import {
   byMismatch,
   isMismatch,
   labelOf,
+  PUBLIC_PROMPT_PREVIEW_COUNT,
   share,
   topOption,
   WALL_PREVIEW_COUNT,
@@ -65,7 +66,7 @@ function PublicProfile() {
   const shown = showAllImpressions ? sorted : sorted.slice(0, WALL_PREVIEW_COUNT);
   const promptsShown = showAllPrompts
     ? profile.prompts
-    : profile.prompts.slice(0, WALL_PREVIEW_COUNT);
+    : profile.prompts.slice(0, PUBLIC_PROMPT_PREVIEW_COUNT);
 
   return (
     <Shell>
@@ -147,12 +148,12 @@ function PublicProfile() {
               <p className="mt-2 text-xl leading-snug">{prompt.answer}</p>
             </div>
           ))}
-          {!showAllPrompts && profile.prompts.length > WALL_PREVIEW_COUNT && (
+          {!showAllPrompts && profile.prompts.length > PUBLIC_PROMPT_PREVIEW_COUNT && (
             <button
               onClick={() => setShowAllPrompts(true)}
               className="self-start text-sm text-muted-foreground underline underline-offset-4"
             >
-              See all {profile.prompts.length}
+              More about me
             </button>
           )}
         </div>

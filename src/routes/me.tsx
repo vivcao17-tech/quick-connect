@@ -17,7 +17,6 @@ import {
   PROFILE_PROMPTS,
   share,
   topOption,
-  WALL_PREVIEW_COUNT,
 } from "@/lib/profile-shared";
 import type { ProfileImpression } from "@/lib/profile-shared";
 
@@ -62,7 +61,6 @@ function MyProfile() {
   const [handleNote, setHandleNote] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
-  const [showAll, setShowAll] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -120,7 +118,11 @@ function MyProfile() {
 
   // Where people read you most differently from how you read yourself, first.
   const sorted = [...profile.impressions].sort(byMismatch);
-  const shown = showAll ? sorted : sorted.slice(0, WALL_PREVIEW_COUNT);
+  const impressionsOnWall = sorted.filter((imp) => !imp.hidden).length;
+  const impressionsHidden = sorted.length - impressionsOnWall;
+  const savedPrompts = profile.prompts.filter((prompt) => prompt.answer.trim().length > 0);
+  const promptsOnWall = savedPrompts.filter((prompt) => prompt.visible).length;
+  const promptsHidden = savedPrompts.length - promptsOnWall;
 
   return (
     <Shell>
@@ -185,7 +187,10 @@ function MyProfile() {
         </div>
       ) : (
         <div id="wall-edit" className="mt-12 flex scroll-mt-10 flex-col gap-10">
-          {shown.map((imp) => (
+          <p className="text-base text-muted-foreground">
+            {impressionsOnWall} on your wall, {impressionsHidden} hidden
+          </p>
+          {sorted.map((imp) => (
             <ImpressionCard
               key={imp.questionId}
               imp={imp}
@@ -196,18 +201,13 @@ function MyProfile() {
               }}
             />
           ))}
-          {!showAll && sorted.length > WALL_PREVIEW_COUNT && (
-            <button
-              onClick={() => setShowAll(true)}
-              className="self-start text-sm text-muted-foreground underline underline-offset-4"
-            >
-              See all {sorted.length}
-            </button>
-          )}
         </div>
       )}
 
       <h2 className="mt-16 text-3xl">In your own words</h2>
+      <p className="mt-3 text-base text-muted-foreground">
+        {promptsOnWall} on your wall, {promptsHidden} hidden
+      </p>
       <div className="mt-6 flex flex-col gap-5">
         {PROFILE_PROMPTS.map((prompt) => {
           const saved = profile.prompts.find((p) => p.key === prompt.key);
@@ -232,9 +232,18 @@ function MyProfile() {
                 placeholder="Short answer"
                 className="mt-3 w-full rounded-2xl border border-border bg-card px-4 py-3 text-base outline-none focus:border-primary"
               />
-              {saved && (
+              <div className="mt-4 flex items-center justify-between gap-4">
+                <span className="text-sm font-medium">
+                  {saved?.visible ? "On your wall" : "Hidden"}
+                </span>
                 <button
+                  type="button"
+                  role="switch"
+                  aria-checked={saved?.visible ?? false}
+                  aria-label={`${saved?.visible ? "Hide" : "Show"} ${prompt.label} on your wall`}
+                  disabled={!saved}
                   onClick={() => {
+                    if (!saved) return;
                     void savePrompt({
                       data: {
                         promptKey: prompt.key,
@@ -243,11 +252,17 @@ function MyProfile() {
                       },
                     }).then(() => void refresh());
                   }}
-                  className="mt-3 text-sm text-muted-foreground underline underline-offset-4"
+                  className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                    saved?.visible ? "border-primary bg-primary" : "border-border bg-secondary"
+                  }`}
                 >
-                  {saved.visible ? "Showing on your link" : "Hidden from your link"}
+                  <span
+                    className={`absolute top-1 h-4 w-4 rounded-full bg-background transition-transform ${
+                      saved?.visible ? "left-6" : "left-1"
+                    }`}
+                  />
                 </button>
-              )}
+              </div>
             </div>
           );
         })}
@@ -313,9 +328,23 @@ function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: (
         Ask more people
       </Link>
 
-      <div className="mt-4 flex flex-wrap items-center gap-4">
-        <button onClick={onToggle} className="text-sm underline underline-offset-4">
-          {imp.hidden ? "Hidden — show it" : "Showing — hide it"}
+      <div className="mt-5 flex items-center justify-between gap-4 border-t border-border pt-4">
+        <span className="text-sm font-medium">{imp.hidden ? "Hidden" : "On your wall"}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={!imp.hidden}
+          aria-label={`${imp.hidden ? "Show" : "Hide"} this question on your wall`}
+          onClick={onToggle}
+          className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors ${
+            imp.hidden ? "border-border bg-secondary" : "border-primary bg-primary"
+          }`}
+        >
+          <span
+            className={`absolute top-1 h-4 w-4 rounded-full bg-background transition-transform ${
+              imp.hidden ? "left-1" : "left-6"
+            }`}
+          />
         </button>
       </div>
     </div>
