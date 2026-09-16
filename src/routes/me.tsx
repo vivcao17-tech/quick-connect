@@ -63,6 +63,7 @@ function MyProfile() {
   const [handleNote, setHandleNote] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [detailsLoaded, setDetailsLoaded] = useState(false);
   const started = useRef(false);
 
   const fillDetails = useCallback(async () => {
@@ -70,6 +71,7 @@ function MyProfile() {
       const details = await loadDetails();
       setProfile((current) => (current ? { ...current, ...details } : current));
       setDrafts(Object.fromEntries(details.prompts.map((prompt) => [prompt.key, prompt.answer])));
+      setDetailsLoaded(true);
     } catch {
       // Impression cards remain usable if secondary profile details fail.
     }
@@ -220,10 +222,16 @@ function MyProfile() {
       )}
 
       <h2 className="mt-16 text-3xl">In your own words</h2>
-      <p className="mt-3 text-base text-muted-foreground">
-        {promptsOnWall} on your wall, {promptsHidden} hidden
-      </p>
-      <div className="mt-6 flex flex-col gap-5">
+      {detailsLoaded ? (
+        <p className="mt-3 text-base text-muted-foreground">
+          {promptsOnWall} on your wall, {promptsHidden} hidden
+        </p>
+      ) : (
+        <p className="mt-3 text-base text-muted-foreground">Loading your answers…</p>
+      )}
+      <div
+        className={`mt-6 flex flex-col gap-5 transition-opacity ${detailsLoaded ? "opacity-100" : "pointer-events-none opacity-45"}`}
+      >
         {PROFILE_PROMPTS.map((prompt) => {
           const saved = profile.prompts.find((p) => p.key === prompt.key);
           return (
