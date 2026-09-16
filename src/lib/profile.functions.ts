@@ -2,13 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  byMismatch,
-  cleanPromptAnswer,
-  handleFrom,
-  PROFILE_PROMPTS,
-  WALL_PREVIEW_COUNT,
-} from "@/lib/profile-shared";
+import { cleanPromptAnswer, PROFILE_PROMPTS } from "@/lib/profile-shared";
 import type { ProfileData } from "@/lib/profile-shared";
 
 const handleShape = z
@@ -17,77 +11,40 @@ const handleShape = z
   .max(30)
   .regex(/^[a-z0-9-]+$/, "Letters, numbers and dashes only");
 
-/** The owner's own page: everything, including what they've chosen to hide. */
+/** The owner's impression wall. One database round trip, optimized for first paint. */
 export const getMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("profile_data", {
+    const { data, error } = await supabaseAdmin.rpc("profile_wall", {
       _profile_id: context.userId,
-      _include_hidden: true,
+      _phase: "impressions",
     });
     if (error) throw error;
-    const profile = data as unknown as ProfileData;
+    const profile = data as unknown as Pick<
+      ProfileData,
+      "profileId" | "handle" | "displayName" | "impressions" | "curated"
+    >;
+    return {
+      ...profile,
+      prompts: [] as ProfileData["prompts"],
+      newSince: 0 as number,
+      undisplayedNew: 0 as number,
+      promptLibrary: PROFILE_PROMPTS,
+    };
+  });
 
-    // A handle is created on first view so the share link always exists.
-    if (!profile.handle) {
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        const candidate = handleFrom(profile.displayName, Math.random().toString(36).slice(2, 8));
-        const { error: hError } = await supabaseAdmin
-          .from("profiles")
-          .update({ handle: candidate })
-          .eq("id", context.userId);
-        if (!hError) {
-          profile.handle = candidate;
-          break;
-        }
-      }
-    }
-
-    // Curation: any saved show/hide choice means the owner picked their wall.
-    const { data: prefs } = await supabaseAdmin
-      .from("profile_impression_prefs")
-      .select("question_id, hidden")
-      .eq("profile_id", context.userId);
-    const curated = (prefs?.length ?? 0) > 0;
-
-    // Questions that would be displayed publicly without scrolling past "See all".
-    const shownIds = new Set(
-      curated
-        ? (prefs ?? []).filter((p) => !p.hidden).map((p) => p.question_id)
-        : [...profile.impressions]
-            .sort(byMismatch)
-            .slice(0, WALL_PREVIEW_COUNT)
-            .map((i) => i.questionId),
-    );
-
-    // New reads landing on questions outside the current public selection.
-    let undisplayedNew = 0;
-    if (profile.newSince > 0) {
-      const { data: participants } = await supabaseAdmin.rpc("profile_participants", {
-        _profile_id: context.userId,
-      });
-      const participantIds = (participants ?? []).map((p: { id: string }) => p.id);
-      if (participantIds.length > 0) {
-        const { data: seenRow } = await supabaseAdmin
-          .from("profiles")
-          .select("impressions_seen_at")
-          .eq("id", context.userId)
-          .single();
-        const seenAt = seenRow?.impressions_seen_at ?? "1970-01-01T00:00:00Z";
-        const { data: fresh } = await supabaseAdmin
-          .from("answers")
-          .select("question_id")
-          .eq("answer_role", "about_other")
-          .in("about_participant_id", participantIds)
-          .gt("created_at", seenAt);
-        undisplayedNew = (fresh ?? []).filter(
-          (f: { question_id: string }) => !shownIds.has(f.question_id),
-        ).length;
-      }
-    }
-
-    return { ...profile, curated, undisplayedNew, promptLibrary: PROFILE_PROMPTS };
+/** Secondary wall data. It fills in after impression cards have rendered. */
+export const getMyProfileDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.rpc("profile_wall", {
+      _profile_id: context.userId,
+      _phase: "details",
+    });
+    if (error) throw error;
+    return data as unknown as Pick<ProfileData, "prompts" | "newSince" | "undisplayedNew">;
   });
 
 /** Just enough for the home page dot: is there something new to look at. */

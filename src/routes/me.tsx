@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyProfile,
+  getMyProfileDetails,
   markImpressionsSeen,
   saveProfilePrompt,
   setImpressionVisibility,
@@ -50,6 +51,7 @@ type Loaded = Awaited<ReturnType<typeof getMyProfile>>;
 
 function MyProfile() {
   const load = useServerFn(getMyProfile);
+  const loadDetails = useServerFn(getMyProfileDetails);
   const seen = useServerFn(markImpressionsSeen);
   const toggle = useServerFn(setImpressionVisibility);
   const savePrompt = useServerFn(saveProfilePrompt);
@@ -61,6 +63,19 @@ function MyProfile() {
   const [handleNote, setHandleNote] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [detailsLoaded, setDetailsLoaded] = useState(false);
+  const started = useRef(false);
+
+  const fillDetails = useCallback(async () => {
+    try {
+      const details = await loadDetails();
+      setProfile((current) => (current ? { ...current, ...details } : current));
+      setDrafts(Object.fromEntries(details.prompts.map((prompt) => [prompt.key, prompt.answer])));
+      setDetailsLoaded(true);
+    } catch {
+      // Impression cards remain usable if secondary profile details fail.
+    }
+  }, [loadDetails]);
 
   const refresh = useCallback(async () => {
     try {
@@ -73,13 +88,15 @@ function MyProfile() {
       const result = await load();
       setProfile(result);
       setHandle(result.handle ?? "");
-      setDrafts(Object.fromEntries(result.prompts.map((p) => [p.key, p.answer])));
+      void fillDetails();
     } catch {
       setSignedOut(true);
     }
-  }, [load]);
+  }, [fillDetails, load]);
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
     void refresh();
   }, [refresh]);
 
@@ -205,10 +222,16 @@ function MyProfile() {
       )}
 
       <h2 className="mt-16 text-3xl">In your own words</h2>
-      <p className="mt-3 text-base text-muted-foreground">
-        {promptsOnWall} on your wall, {promptsHidden} hidden
-      </p>
-      <div className="mt-6 flex flex-col gap-5">
+      {detailsLoaded ? (
+        <p className="mt-3 text-base text-muted-foreground">
+          {promptsOnWall} on your wall, {promptsHidden} hidden
+        </p>
+      ) : (
+        <p className="mt-3 text-base text-muted-foreground">Loading your answers…</p>
+      )}
+      <div
+        className={`mt-6 flex flex-col gap-5 transition-opacity ${detailsLoaded ? "opacity-100" : "pointer-events-none opacity-45"}`}
+      >
         {PROFILE_PROMPTS.map((prompt) => {
           const saved = profile.prompts.find((p) => p.key === prompt.key);
           return (

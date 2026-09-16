@@ -1132,6 +1132,10 @@ export type Database = {
           id: string
         }[]
       }
+      profile_wall: {
+        Args: { _phase?: string; _profile_id: string }
+        Returns: Json
+      }
       question_tally: {
         Args: { _question_id: string }
         Returns: {
