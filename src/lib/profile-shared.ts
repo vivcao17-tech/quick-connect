@@ -66,6 +66,9 @@ export type ProfileData = {
 /** How many impression questions a public wall shows before "See all". */
 export const WALL_PREVIEW_COUNT = 4;
 
+/** How many self-authored prompts a public wall shows before "More about me". */
+export const PUBLIC_PROMPT_PREVIEW_COUNT = 3;
+
 /** Mismatch first (most surprising first), ties broken by sample size. */
 export function byMismatch(a: ProfileImpression, b: ProfileImpression) {
   const rate = mismatchRate(b) - mismatchRate(a);

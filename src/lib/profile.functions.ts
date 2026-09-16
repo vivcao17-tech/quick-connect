@@ -162,6 +162,33 @@ export const setImpressionVisibility = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // The first visibility change turns an uncurated wall into an explicit
+    // selection. Preserve every currently visible question before changing one,
+    // so the labels on /me always match what the public wall receives.
+    const { count: preferenceCount } = await supabaseAdmin
+      .from("profile_impression_prefs")
+      .select("question_id", { count: "exact", head: true })
+      .eq("profile_id", context.userId);
+    if ((preferenceCount ?? 0) === 0) {
+      const { data: current } = await supabaseAdmin.rpc("profile_data", {
+        _profile_id: context.userId,
+        _include_hidden: true,
+      });
+      const profile = (current ?? null) as unknown as ProfileData | null;
+      const initialSelection = (profile?.impressions ?? []).map((impression) => ({
+        profile_id: context.userId,
+        question_id: impression.questionId,
+        hidden: false,
+      }));
+      if (initialSelection.length > 0) {
+        const { error: initialError } = await supabaseAdmin
+          .from("profile_impression_prefs")
+          .upsert(initialSelection, { onConflict: "profile_id,question_id" });
+        if (initialError) throw initialError;
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from("profile_impression_prefs")
       .upsert(
