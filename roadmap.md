@@ -5,7 +5,7 @@
 - [x] Trace browser and database round trips before changing the wall
 - [x] Consolidate wall reads into one phased Postgres function
 - [x] Render impression cards before prompts and owner-only counts
-- [ ] Verify first-card render under 500 ms and one database call per phase
+- [x] Verify first-card render under 500 ms and one database call per phase
 
 ## Speed up topic → first question
 
