@@ -2,13 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  byMismatch,
-  cleanPromptAnswer,
-  handleFrom,
-  PROFILE_PROMPTS,
-  WALL_PREVIEW_COUNT,
-} from "@/lib/profile-shared";
+import { cleanPromptAnswer, PROFILE_PROMPTS } from "@/lib/profile-shared";
 import type { ProfileData } from "@/lib/profile-shared";
 
 const handleShape = z
@@ -34,8 +28,8 @@ export const getMyProfile = createServerFn({ method: "POST" })
     return {
       ...profile,
       prompts: [] as ProfileData["prompts"],
-      newSince: 0,
-      undisplayedNew: 0,
+      newSince: 0 as number,
+      undisplayedNew: 0 as number,
       promptLibrary: PROFILE_PROMPTS,
     };
   });
