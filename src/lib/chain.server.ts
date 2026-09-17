@@ -240,7 +240,6 @@ export async function claimSubject(
   row: GuessRow,
   subjectKey: string,
 ): Promise<GuessRow> {
-  if (row.subject_key === subjectKey && row.opened_at !== undefined) return row;
   const answer = await myAnswer(admin, row.week_id, subjectKey);
   const actual = row.subject_actual_option ?? answer?.option ?? null;
   await admin
