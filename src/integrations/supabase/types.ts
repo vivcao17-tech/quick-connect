@@ -95,6 +95,195 @@ export type Database = {
           },
         ]
       }
+      chain_answers: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          is_test: boolean
+          option_key: string
+          person_key: string
+          profile_id: string | null
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_test?: boolean
+          option_key: string
+          person_key: string
+          profile_id?: string | null
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_test?: boolean
+          option_key?: string
+          person_key?: string
+          profile_id?: string | null
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chain_answers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chain_answers_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "chain_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chain_guesses: {
+        Row: {
+          because_text: string | null
+          created_at: string
+          guessed_option: string
+          guesser_key: string
+          guesser_name: string
+          guesser_profile_id: string | null
+          id: string
+          is_test: boolean
+          matched: boolean | null
+          opened_at: string | null
+          question_id: string
+          subject_actual_option: string | null
+          subject_key: string | null
+          subject_name: string
+          token: string
+          week_id: string
+        }
+        Insert: {
+          because_text?: string | null
+          created_at?: string
+          guessed_option: string
+          guesser_key: string
+          guesser_name: string
+          guesser_profile_id?: string | null
+          id?: string
+          is_test?: boolean
+          matched?: boolean | null
+          opened_at?: string | null
+          question_id: string
+          subject_actual_option?: string | null
+          subject_key?: string | null
+          subject_name: string
+          token: string
+          week_id: string
+        }
+        Update: {
+          because_text?: string | null
+          created_at?: string
+          guessed_option?: string
+          guesser_key?: string
+          guesser_name?: string
+          guesser_profile_id?: string | null
+          id?: string
+          is_test?: boolean
+          matched?: boolean | null
+          opened_at?: string | null
+          question_id?: string
+          subject_actual_option?: string | null
+          subject_key?: string | null
+          subject_name?: string
+          token?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chain_guesses_guesser_profile_id_fkey"
+            columns: ["guesser_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chain_guesses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "chain_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chain_guesses_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "chain_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chain_questions: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          option_a: string
+          option_b: string
+          sort_order: number
+          text: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          option_a: string
+          option_b: string
+          sort_order: number
+          text: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          option_a?: string
+          option_b?: string
+          sort_order?: number
+          text?: string
+        }
+        Relationships: []
+      }
+      chain_weeks: {
+        Row: {
+          created_at: string
+          id: string
+          opens_at: string
+          question_id: string
+          settles_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          opens_at: string
+          question_id: string
+          settles_at: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          opens_at?: string
+          question_id?: string
+          settles_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chain_weeks_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "chain_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connections: {
         Row: {
           created_at: string
