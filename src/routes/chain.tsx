@@ -196,7 +196,22 @@ function ChainPage() {
         ) : (
           <>
             <h1 className="mt-6 text-3xl leading-snug">Now guess a friend.</h1>
-            <ChainGuess question={question} onDone={(value) => void guess(value)} busy={busy} />
+            {/* Your name travels with the link — "Amy guessed you" needs a name. */}
+            {!myName.trim() ? (
+              <input
+                value={myName}
+                onChange={(event) => {
+                  setMyName(event.target.value);
+                  window.localStorage.setItem("beside.name", event.target.value);
+                }}
+                placeholder="Your name"
+                maxLength={40}
+                autoFocus
+                className="mt-8 w-full rounded-full border border-border bg-card px-6 py-4 text-lg outline-none focus:border-primary"
+              />
+            ) : (
+              <ChainGuess question={question} onDone={(value) => void guess(value)} busy={busy} />
+            )}
           </>
         )}
 
