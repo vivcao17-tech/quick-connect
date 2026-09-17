@@ -194,6 +194,14 @@ function Home() {
           </p>
         </div>
 
+        {/* Permanent entry: the week's question is always reachable. */}
+        <Link to="/chain" className="card-soft mt-6 block px-6 py-5 hover:border-primary">
+          <p className="text-xl">This week's read</p>
+          <p className="mt-1 text-base text-muted-foreground">
+            One question · Guess a friend · 30 seconds
+          </p>
+        </Link>
+
         {/* Permanent entry: only the copy and the dot depend on state. */}
         <Link to="/me" className="mt-10 block">
           <div className="flex w-full items-center justify-between rounded-full border-2 border-primary px-6 py-4 text-primary transition-colors hover:bg-primary hover:text-primary-foreground">

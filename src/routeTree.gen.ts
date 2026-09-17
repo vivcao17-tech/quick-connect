@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ChainRouteImport } from './routes/chain'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as GremoteRouteImport } from './routes/gremote'
 import { Route as GroupRouteImport } from './routes/group'
@@ -22,6 +23,8 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as CTokenRouteImport } from './routes/c.$token'
+import { Route as ChainWeekRouteImport } from './routes/chain.week'
 import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
 import { Route as GaSessionIdRouteImport } from './routes/ga.$sessionId'
 import { Route as GiTokenRouteImport } from './routes/gi.$token'
@@ -53,6 +56,11 @@ const AdminRoute = AdminRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChainRoute = ChainRouteImport.update({
+  id: '/chain',
+  path: '/chain',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConversationsRoute = ConversationsRouteImport.update({
@@ -104,6 +112,16 @@ const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CTokenRoute = CTokenRouteImport.update({
+  id: '/c/$token',
+  path: '/c/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChainWeekRoute = ChainWeekRouteImport.update({
+  id: '/week',
+  path: '/week',
+  getParentRoute: () => ChainRoute,
 } as any)
 const GSessionIdRoute = GSessionIdRouteImport.update({
   id: '/g/$sessionId',
@@ -197,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/chain': typeof ChainRouteWithChildren
   '/conversations': typeof ConversationsRoute
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
@@ -207,6 +226,8 @@ export interface FileRoutesByFullPath {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/c/$token': typeof CTokenRoute
+  '/chain/week': typeof ChainWeekRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -229,6 +250,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/chain': typeof ChainRouteWithChildren
   '/conversations': typeof ConversationsRoute
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
@@ -239,6 +261,8 @@ export interface FileRoutesByTo {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/c/$token': typeof CTokenRoute
+  '/chain/week': typeof ChainWeekRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -262,6 +286,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/chain': typeof ChainRouteWithChildren
   '/conversations': typeof ConversationsRoute
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
@@ -272,6 +297,8 @@ export interface FileRoutesById {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/c/$token': typeof CTokenRoute
+  '/chain/week': typeof ChainWeekRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -296,6 +323,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/chain'
     | '/conversations'
     | '/gremote'
     | '/group'
@@ -306,6 +334,8 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/c/$token'
+    | '/chain/week'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -328,6 +358,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/chain'
     | '/conversations'
     | '/gremote'
     | '/group'
@@ -338,6 +369,8 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/c/$token'
+    | '/chain/week'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -360,6 +393,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/chain'
     | '/conversations'
     | '/gremote'
     | '/group'
@@ -370,6 +404,8 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/c/$token'
+    | '/chain/week'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -393,6 +429,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  ChainRoute: typeof ChainRouteWithChildren
   ConversationsRoute: typeof ConversationsRoute
   GremoteRoute: typeof GremoteRoute
   GroupRoute: typeof GroupRoute
@@ -403,6 +440,7 @@ export interface RootRouteChildren {
   RemoteRoute: typeof RemoteRoute
   StartRoute: typeof StartRoute
   TermsRoute: typeof TermsRoute
+  CTokenRoute: typeof CTokenRoute
   GSessionIdRoute: typeof GSessionIdRoute
   GaSessionIdRoute: typeof GaSessionIdRoute
   GiTokenRoute: typeof GiTokenRoute
@@ -443,6 +481,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chain': {
+      id: '/chain'
+      path: '/chain'
+      fullPath: '/chain'
+      preLoaderRoute: typeof ChainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/conversations': {
@@ -514,6 +559,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/c/$token': {
+      id: '/c/$token'
+      path: '/c/$token'
+      fullPath: '/c/$token'
+      preLoaderRoute: typeof CTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chain/week': {
+      id: '/chain/week'
+      path: '/week'
+      fullPath: '/chain/week'
+      preLoaderRoute: typeof ChainWeekRouteImport
+      parentRoute: typeof ChainRoute
     }
     '/g/$sessionId': {
       id: '/g/$sessionId'
@@ -637,10 +696,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ChainRouteChildren {
+  ChainWeekRoute: typeof ChainWeekRoute
+}
+
+const ChainRouteChildren: ChainRouteChildren = {
+  ChainWeekRoute: ChainWeekRoute,
+}
+
+const ChainRouteWithChildren = ChainRoute._addFileChildren(ChainRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  ChainRoute: ChainRouteWithChildren,
   ConversationsRoute: ConversationsRoute,
   GremoteRoute: GremoteRoute,
   GroupRoute: GroupRoute,
@@ -651,6 +721,7 @@ const rootRouteChildren: RootRouteChildren = {
   RemoteRoute: RemoteRoute,
   StartRoute: StartRoute,
   TermsRoute: TermsRoute,
+  CTokenRoute: CTokenRoute,
   GSessionIdRoute: GSessionIdRoute,
   GaSessionIdRoute: GaSessionIdRoute,
   GiTokenRoute: GiTokenRoute,
