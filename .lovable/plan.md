@@ -47,6 +47,36 @@ You read her. She didn't read you.
 
 Whatever name was typed is what the recipient sees on the link preview and landing page ("Amy guessed you").
 
+## The "because" line
+
+Every guess — A's, B's, every pass-on — is followed by an optional one-line input, using the same inline pattern as the thread composer:
+
+```text
+You guessed Tim asks questions
+Because  [                    ]
+```
+
+Skippable, never required, never blocking. It is stored with the guess and shown on the reveal directly beneath that guess:
+
+```text
+Amy guessed you louder
+"you were talking the whole time at that party lol"
+You said quieter
+```
+
+It also carries into the settlement lines where present. This is what makes a correct guess worth reacting to.
+
+## Being guessed more than once in a week
+
+Someone's self-answer for the week is stored once. If they have already answered and a second person guesses them, they are never asked again. The landing page skips straight to the accumulated view, listed as lines rather than counts:
+
+```text
+Amy guessed louder — you said quieter
+Ben guessed quieter — he was right
+```
+
+New guesses append to that list, each with its "because" line if one was written. The pass-on step and the reveal bridge still appear as normal, so a second read is an addition, not a repeat of the whole flow.
+
 ## Sunday settlement
 
 At `/chain/week`, two blocks, no counts anywhere:
