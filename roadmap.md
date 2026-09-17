@@ -46,3 +46,13 @@
 - [x] Group and deduplicate friend-history questions by topic, sorted by latest activity
 - [x] Link every question row to its existing thread
 - [x] Verify desktop and mobile friend-detail layouts and thread navigation
+
+## Chain (weekly passed question)
+
+- [ ] Chain schema: question bank, weekly schedule, self-answers, guesses with optional reason
+- [ ] Server functions: current week, start, open link, guess, self-answer, pass on, reveal, settlement
+- [ ] Routes /chain, /c/$token, /chain/week and the permanent home entry
+- [ ] Optional "because" line on every guess, shown under the guess on reveal
+- [ ] Repeat guesses in one week accumulate as lines, never re-ask the self-answer
+- [ ] Reveal-screen bridge into a normal 1:1 three-question invite
+- [ ] Instrumentation events and verification on mobile and desktop
