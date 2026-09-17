@@ -16,7 +16,8 @@ export const Route = createFileRoute("/c/$token")({
       { title: "Someone guessed you — NoSure" },
       {
         name: "description",
-        content: "One question. Someone made a guess about you. Guess them back and you both find out at once.",
+        content:
+          "One question. Someone made a guess about you. Guess them back and you both find out at once.",
       },
       { property: "og:title", content: "Someone guessed you" },
       { property: "og:description", content: "One question. 30 seconds. No signup." },

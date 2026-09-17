@@ -13,7 +13,12 @@ export type ChainLine = { text: string; because: string | null };
 
 function readLine(
   question: ChainQuestion,
-  row: { guesser_name: string; guessed_option: ChainOption; subject_actual_option: ChainOption | null; because_text: string | null },
+  row: {
+    guesser_name: string;
+    guessed_option: ChainOption;
+    subject_actual_option: ChainOption | null;
+    because_text: string | null;
+  },
 ): ChainLine {
   const guessed = optionLabel(question, row.guessed_option);
   const actual = optionLabel(question, row.subject_actual_option);
@@ -27,7 +32,12 @@ function readLine(
 
 function sentLine(
   question: ChainQuestion,
-  row: { subject_name: string; guessed_option: ChainOption; subject_actual_option: ChainOption | null; because_text: string | null },
+  row: {
+    subject_name: string;
+    guessed_option: ChainOption;
+    subject_actual_option: ChainOption | null;
+    because_text: string | null;
+  },
 ): ChainLine {
   const guessed = optionLabel(question, row.guessed_option);
   const actual = optionLabel(question, row.subject_actual_option);
@@ -42,7 +52,9 @@ function sentLine(
 /** This week's question plus whatever has already happened to this person in it. */
 export const getChainWeek = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ guestToken: guest.optional(), profileId: z.string().uuid().optional() }).parse(input),
+    z
+      .object({ guestToken: guest.optional(), profileId: z.string().uuid().optional() })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -50,7 +62,8 @@ export const getChainWeek = createServerFn({ method: "POST" })
     const week = await chain.currentWeek(supabaseAdmin);
     if (!week) return { week: null as ChainWeek | null, mine: null, reads: [], sent: [] };
 
-    if (!data.guestToken) return { week, mine: null, reads: [] as ChainLine[], sent: [] as ChainLine[] };
+    if (!data.guestToken)
+      return { week, mine: null, reads: [] as ChainLine[], sent: [] as ChainLine[] };
 
     const [mine, about, by] = await Promise.all([
       chain.myAnswer(supabaseAdmin, week.id, data.guestToken),
@@ -230,9 +243,7 @@ export const openChainLink = createServerFn({ method: "POST" })
         youReadThem: myGuess?.matched ?? null,
       }),
       passOn: passOn ? { name: passOn.subject_name, token: passOn.token } : null,
-      otherReads: about
-        .filter((g) => g.id !== row.id)
-        .map((g) => readLine(week.question, g)),
+      otherReads: about.filter((g) => g.id !== row.id).map((g) => readLine(week.question, g)),
     };
   });
 
@@ -259,7 +270,9 @@ export const getChainSettlement = createServerFn({ method: "POST" })
       data.guestToken
         ? chain.guessesAbout(supabaseAdmin, week.id, data.guestToken)
         : Promise.resolve([]),
-      data.guestToken ? chain.guessesBy(supabaseAdmin, week.id, data.guestToken) : Promise.resolve([]),
+      data.guestToken
+        ? chain.guessesBy(supabaseAdmin, week.id, data.guestToken)
+        : Promise.resolve([]),
       chain.weekSplits(supabaseAdmin, week.id),
     ]);
 

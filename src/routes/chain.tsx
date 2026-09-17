@@ -132,7 +132,9 @@ function ChainPage() {
   return (
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
-        <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">This week's read</p>
+        <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
+          This week's read
+        </p>
 
         {link ? (
           <div className="mt-8">

@@ -49,7 +49,7 @@
 
 ## Chain (weekly passed question)
 
-- [ ] Chain schema: question bank, weekly schedule, self-answers, guesses with optional reason
+- [x] Chain schema: question bank, weekly schedule, self-answers, guesses with optional reason
 - [ ] Server functions: current week, start, open link, guess, self-answer, pass on, reveal, settlement
 - [ ] Routes /chain, /c/$token, /chain/week and the permanent home entry
 - [ ] Optional "because" line on every guess, shown under the guess on reveal

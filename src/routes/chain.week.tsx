@@ -13,7 +13,8 @@ export const Route = createFileRoute("/chain/week")({
       { title: "How the week landed — NoSure" },
       {
         name: "description",
-        content: "What people guessed about you this week, and the gap between how people see themselves and how they read everyone else.",
+        content:
+          "What people guessed about you this week, and the gap between how people see themselves and how they read everyone else.",
       },
       { property: "og:title", content: "How the week landed — NoSure" },
       {
@@ -23,7 +24,10 @@ export const Route = createFileRoute("/chain/week")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "How the week landed — NoSure" },
-      { name: "twitter:description", content: "What people guessed about you, and this week's gap." },
+      {
+        name: "twitter:description",
+        content: "What people guessed about you, and this week's gap.",
+      },
     ],
   }),
 });
@@ -100,9 +104,7 @@ function ChainWeekPage() {
           </div>
         )}
 
-        {!gap && state?.friendSplit && (
-          <p className="mt-12 text-xl">{state.friendSplit}</p>
-        )}
+        {!gap && state?.friendSplit && <p className="mt-12 text-xl">{state.friendSplit}</p>}
 
         <Link to="/chain" className="btn-ink mt-14 w-full py-5 text-center text-lg">
           This week's read
