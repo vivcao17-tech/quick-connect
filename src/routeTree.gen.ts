@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ChainRouteImport } from './routes/chain'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as GremoteRouteImport } from './routes/gremote'
 import { Route as GroupRouteImport } from './routes/group'
@@ -53,6 +54,11 @@ const AdminRoute = AdminRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChainRoute = ChainRouteImport.update({
+  id: '/chain',
+  path: '/chain',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConversationsRoute = ConversationsRouteImport.update({
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/chain': typeof ChainRoute
   '/conversations': typeof ConversationsRoute
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/chain': typeof ChainRoute
   '/conversations': typeof ConversationsRoute
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
@@ -262,6 +270,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/chain': typeof ChainRoute
   '/conversations': typeof ConversationsRoute
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
@@ -296,6 +305,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/chain'
     | '/conversations'
     | '/gremote'
     | '/group'
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/chain'
     | '/conversations'
     | '/gremote'
     | '/group'
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/chain'
     | '/conversations'
     | '/gremote'
     | '/group'
@@ -393,6 +405,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  ChainRoute: typeof ChainRoute
   ConversationsRoute: typeof ConversationsRoute
   GremoteRoute: typeof GremoteRoute
   GroupRoute: typeof GroupRoute
@@ -443,6 +456,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chain': {
+      id: '/chain'
+      path: '/chain'
+      fullPath: '/chain'
+      preLoaderRoute: typeof ChainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/conversations': {
@@ -641,6 +661,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  ChainRoute: ChainRoute,
   ConversationsRoute: ConversationsRoute,
   GremoteRoute: GremoteRoute,
   GroupRoute: GroupRoute,
