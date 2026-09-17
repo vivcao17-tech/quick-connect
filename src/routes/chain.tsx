@@ -180,18 +180,6 @@ function ChainPage() {
                 {question.optionB}
               </button>
             </div>
-            {!myName && (
-              <input
-                value={myName}
-                onChange={(event) => {
-                  setMyName(event.target.value);
-                  window.localStorage.setItem("beside.name", event.target.value);
-                }}
-                placeholder="Your name"
-                maxLength={40}
-                className="mt-8 w-full rounded-full border border-border bg-card px-6 py-4 text-lg outline-none focus:border-primary"
-              />
-            )}
           </>
         ) : (
           <>
