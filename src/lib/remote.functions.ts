@@ -61,8 +61,10 @@ export const createRemoteSession = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // The third question is always an impression question.
+    // Every round closes on an impression read. The sender may have chosen it
+    // (pack rounds, or re-asking a wall question); otherwise one is drawn.
     const questionIds = [...data.questionIds];
+    let impressionId = "";
     if (data.impressionQuestionId) {
       const { data: chosen } = await supabaseAdmin
         .from("questions")
@@ -70,14 +72,18 @@ export const createRemoteSession = createServerFn({ method: "POST" })
         .eq("id", data.impressionQuestionId)
         .eq("question_type", "impression")
         .maybeSingle();
-      if (chosen) questionIds[2] = chosen.id;
+      if (chosen) impressionId = chosen.id;
     }
-    if (questionIds[2] !== data.impressionQuestionId) {
+    if (impressionId) {
+      const at = questionIds.indexOf(impressionId);
+      if (at >= 0) questionIds.splice(at, 1);
+      questionIds.push(impressionId);
+    } else {
       // Scoped to this sender so they aren't handed the same read twice.
       const impression = await pickImpressionQuestion(supabaseAdmin, questionIds, {
         guestTokens: [data.guestToken],
       });
-      if (impression) questionIds[2] = impression.id;
+      if (impression) questionIds.push(impression.id);
     }
 
     const { data: questions, error: qError } = await supabaseAdmin
