@@ -222,7 +222,7 @@ function Home() {
         <div className="mt-12 flex flex-col gap-4 text-sm text-muted-foreground">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Link to="/people" className="underline underline-offset-4">
-              People
+              You &amp; them
             </Link>
             <Link to="/conversations" className="underline underline-offset-4">
               Ask someone else{sets.length > 0 ? ` (${sets.length})` : ""}
