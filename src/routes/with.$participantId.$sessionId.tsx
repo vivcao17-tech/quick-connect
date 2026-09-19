@@ -131,6 +131,15 @@ function SessionBlockPage() {
             </button>
           ))}
         </div>
+
+        {viewer.guestToken && (
+          <NextPackBridge
+            guestToken={viewer.guestToken}
+            {...(viewer.profileId ? { profileId: viewer.profileId } : {})}
+            personKey={participantId}
+            name={name}
+          />
+        )}
       </section>
     </main>
   );
