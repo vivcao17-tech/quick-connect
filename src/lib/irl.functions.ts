@@ -316,6 +316,7 @@ export const getRoomState = createServerFn({ method: "POST" })
       sessionId: session.id,
       roomCode: session.room_code,
       status: session.status,
+      pack: ((packRow as { pack?: string | null } | null)?.pack ?? null) as string | null,
       currentIndex: session.current_index,
       spiceMax: session.spice_max,
       me: { participantId: me.id, name: me.display_name ?? "You" },
