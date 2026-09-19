@@ -121,3 +121,29 @@ export function PackBridge({ pack, name }: { pack: Pack; name: string }) {
     </Link>
   );
 }
+
+/** The bridge alone, for reveal pages: one tap into the pair's next round. */
+export function NextPackBridge({
+  guestToken,
+  profileId,
+  personKey,
+  name,
+}: {
+  guestToken: string;
+  profileId?: string | undefined;
+  personKey: string;
+  name: string;
+}) {
+  const load = useServerFn(getPairPreview);
+  const [next, setNext] = useState<Pack | null>(null);
+
+  useEffect(() => {
+    if (!guestToken) return;
+    void load({ data: { guestToken, personKey, ...(profileId ? { profileId } : {}) } })
+      .then((result) => setNext(result.next))
+      .catch(() => setNext(null));
+  }, [load, guestToken, profileId, personKey]);
+
+  if (!next) return null;
+  return <PackBridge pack={next} name={name} />;
+}
