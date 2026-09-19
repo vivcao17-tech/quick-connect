@@ -21,12 +21,23 @@ import { getGuestToken } from "@/lib/guest";
 import {
   advanceRoom,
   answerInRoom,
+  chooseRoomPack,
   fillQuestions,
+  getRoomCandidates,
   getRoomState,
+  pickRoomQuestion,
   pickTopics,
   saveSessionEmail,
   setSpice,
 } from "@/lib/irl.functions";
+import {
+  DEFAULT_PACK_LABEL,
+  DEFAULT_PACK_TAGLINE,
+  PACKS,
+  PACK_LABEL,
+  PACK_TAGLINE,
+  isPack,
+} from "@/lib/packs";
 import type { RoomState } from "@/lib/irl.functions";
 import { logEvent } from "@/lib/play.functions";
 
