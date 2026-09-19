@@ -164,17 +164,21 @@ function SendPage() {
               Your answers
             </p>
             <div className="mt-4 flex flex-col gap-4">
-              {answers.map((question) => (
-                <div key={question.sessionQuestionId}>
-                  <p className="text-base text-muted-foreground">{question.text}</p>
-                  <p className="text-lg">{question.myLabel}</p>
-                  {question.myReason && (
-                    <p className="mt-1 text-base italic text-muted-foreground">
-                      "{question.myReason}"
-                    </p>
-                  )}
-                </div>
-              ))}
+              {/* The read is asked again per recipient below, so its templated
+                  stem never appears here with an unfilled name. */}
+              {answers
+                .filter((question) => !question.text.includes("{name}"))
+                .map((question) => (
+                  <div key={question.sessionQuestionId}>
+                    <p className="text-base text-muted-foreground">{question.text}</p>
+                    <p className="text-lg">{question.myLabel}</p>
+                    {question.myReason && (
+                      <p className="mt-1 text-base italic text-muted-foreground">
+                        "{question.myReason}"
+                      </p>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         )}

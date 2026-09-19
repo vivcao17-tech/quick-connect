@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
+import { PackPreview } from "@/components/PackPreview";
 import { getPersonSessions } from "@/lib/conversations.functions";
 import { savePersonNote } from "@/lib/notes.functions";
 import { listMyAnswerSets } from "@/lib/remote.functions";
@@ -220,6 +221,15 @@ function WithPersonPage() {
           >
             How people read {name}
           </Link>
+        )}
+
+        {viewer.guestToken && (
+          <PackPreview
+            guestToken={viewer.guestToken}
+            {...(viewer.profileId ? { profileId: viewer.profileId } : {})}
+            personKey={participantId}
+            name={name}
+          />
         )}
 
         {data && sessions.length === 0 && (

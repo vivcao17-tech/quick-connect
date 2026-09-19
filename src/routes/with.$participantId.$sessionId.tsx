@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
+import { NextPackBridge } from "@/components/PackPreview";
 import { Thread } from "@/components/Thread";
 import { getSessionBlock } from "@/lib/conversations.functions";
 import { useViewer } from "@/lib/viewer";
@@ -131,6 +132,15 @@ function SessionBlockPage() {
             </button>
           ))}
         </div>
+
+        {viewer.guestToken && (
+          <NextPackBridge
+            guestToken={viewer.guestToken}
+            {...(viewer.profileId ? { profileId: viewer.profileId } : {})}
+            personKey={participantId}
+            name={name}
+          />
+        )}
       </section>
     </main>
   );

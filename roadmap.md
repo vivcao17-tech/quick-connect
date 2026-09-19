@@ -50,9 +50,18 @@
 ## Chain (weekly passed question)
 
 - [x] Chain schema: question bank, weekly schedule, self-answers, guesses with optional reason
-- [ ] Server functions: current week, start, open link, guess, self-answer, pass on, reveal, settlement
-- [ ] Routes /chain, /c/$token, /chain/week and the permanent home entry
-- [ ] Optional "because" line on every guess, shown under the guess on reveal
-- [ ] Repeat guesses in one week accumulate as lines, never re-ask the self-answer
-- [ ] Reveal-screen bridge into a normal 1:1 three-question invite
-- [ ] Instrumentation events and verification on mobile and desktop
+- [x] Server functions: current week, start, open link, guess, self-answer, pass on, reveal, settlement
+- [x] Routes /chain, /c/$token, /chain/week and the permanent home entry
+- [x] Optional "because" line on every guess, shown under the guess on reveal
+- [x] Repeat guesses in one week accumulate as lines, never re-ask the self-answer
+- [x] Reveal-screen bridge into a normal 1:1 three-question invite
+- [x] Instrumentation events and verification on mobile and desktop
+
+## Packs (1:1 rounds grouped into four packs)
+
+- [x] Question columns, `pack_config`, and the v2 pack question bank
+- [x] Pack + question selection in the remote 1:1 flow
+- [x] Pack and question selection screens in the in-person pair room
+- [x] Pack preview and unlock thresholds on the shared page
+- [x] Next-pack bridge from the reveal pages
+- [x] Verify the remote pack flow end to end on mobile

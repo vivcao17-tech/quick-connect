@@ -21,12 +21,23 @@ import { getGuestToken } from "@/lib/guest";
 import {
   advanceRoom,
   answerInRoom,
+  chooseRoomPack,
   fillQuestions,
+  getRoomCandidates,
   getRoomState,
+  pickRoomQuestion,
   pickTopics,
   saveSessionEmail,
   setSpice,
 } from "@/lib/irl.functions";
+import {
+  DEFAULT_PACK_LABEL,
+  DEFAULT_PACK_TAGLINE,
+  PACKS,
+  PACK_LABEL,
+  PACK_TAGLINE,
+  isPack,
+} from "@/lib/packs";
 import type { RoomState } from "@/lib/irl.functions";
 import { logEvent } from "@/lib/play.functions";
 
@@ -48,6 +59,9 @@ export function Room({ sessionId }: { sessionId: string }) {
   const changeSpice = useServerFn(setSpice);
   const saveEmail = useServerFn(saveSessionEmail);
   const track = useServerFn(logEvent);
+  const setPack = useServerFn(chooseRoomPack);
+  const loadCandidates = useServerFn(getRoomCandidates);
+  const pickQuestion = useServerFn(pickRoomQuestion);
 
   const [guestToken, setGuestToken] = useState("");
   const [state, setState] = useState<RoomState | null>(null);
@@ -61,6 +75,8 @@ export function Room({ sessionId }: { sessionId: string }) {
   /** Which question's follow-up the composer was opened for, in person. */
   const [spillSq, setSpillSq] = useState("");
   const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
+  const [candidates, setCandidates] = useState<{ id: string; text: string }[]>([]);
+  const [myPick, setMyPick] = useState("");
   const pending = useRef(false);
   const fetchPrompts = useServerFn(getRevealPrompts);
   const saveRef = useEndScreenTracking("irl_pair", state?.status === "ended", { sessionId });
@@ -133,6 +149,15 @@ export function Room({ sessionId }: { sessionId: string }) {
 
   const other = state?.others[0];
   const current = state?.questions[state.currentIndex];
+  const packLabel = isPack(state?.pack) ? PACK_LABEL[state.pack] : DEFAULT_PACK_LABEL;
+
+  // The four questions this person chooses one of, once the pack is set.
+  useEffect(() => {
+    if (state?.status !== "question_select" || !guestToken || candidates.length > 0) return;
+    void loadCandidates({ data: { guestToken, sessionId } })
+      .then((result) => setCandidates(result.questions))
+      .catch(() => setCandidates([]));
+  }, [state?.status, guestToken, sessionId, loadCandidates, candidates.length]);
 
   /* Play-by-play analytics. Timing is measured from when a question first
      appeared on this screen, which is the only honest place to measure it. */
@@ -327,6 +352,78 @@ export function Room({ sessionId }: { sessionId: string }) {
                     ? `${other.name} is still picking…`
                     : `${other.name} ${other.topicsDone ? "is ready" : "is picking too"}`}
             </p>
+          </div>
+        )}
+
+        {state.status === "pack_select" && (
+          <div>
+            <h2 className="text-3xl">What are you two doing?</h2>
+            <p className="mt-2 text-muted-foreground">Either of you can choose.</p>
+            <div className="mt-8 flex flex-col gap-3">
+              <button
+                disabled={busy}
+                onClick={() => void run(() => setPack({ data: { guestToken, sessionId } }))}
+                className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+              >
+                <p className="text-xl">{DEFAULT_PACK_LABEL}</p>
+                <p className="mt-1 text-base text-muted-foreground">{DEFAULT_PACK_TAGLINE}</p>
+              </button>
+              {PACKS.map((pack) => (
+                <button
+                  key={pack}
+                  disabled={busy}
+                  onClick={() => void run(() => setPack({ data: { guestToken, sessionId, pack } }))}
+                  className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+                >
+                  <p className="text-xl">{PACK_LABEL[pack]}</p>
+                  <p className="mt-1 text-base text-muted-foreground">{PACK_TAGLINE[pack]}</p>
+                </button>
+              ))}
+            </div>
+            {!other && (
+              <p className="mt-6 text-sm text-muted-foreground">Waiting for someone to join…</p>
+            )}
+          </div>
+        )}
+
+        {state.status === "question_select" && (
+          <div>
+            <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
+              {packLabel}
+            </p>
+            <h2 className="mt-4 text-3xl">Pick one for {other?.name ?? "them"}.</h2>
+            <p className="mt-2 text-muted-foreground">
+              You both answer everything that gets picked.
+            </p>
+            <div className="mt-8 flex flex-col gap-3">
+              {candidates.map((q) => (
+                <button
+                  key={q.id}
+                  disabled={busy || state.myVotesDone}
+                  onClick={() => {
+                    setMyPick(q.id);
+                    void run(() =>
+                      pickQuestion({ data: { guestToken, sessionId, questionId: q.id } }),
+                    );
+                  }}
+                  className={`card-soft px-6 py-5 text-left text-lg hover:border-primary disabled:opacity-40 ${
+                    myPick === q.id ? "border-primary" : ""
+                  }`}
+                >
+                  {q.text}
+                </button>
+              ))}
+              {candidates.length === 0 && (
+                <p className="text-muted-foreground">One moment…</p>
+              )}
+            </div>
+            {state.myVotesDone && (
+              <p className="mt-6 text-sm text-muted-foreground">
+                {other?.questionsDone
+                  ? "Both in — starting…"
+                  : `Waiting for ${other?.name ?? "them"}…`}
+              </p>
+            )}
           </div>
         )}
 

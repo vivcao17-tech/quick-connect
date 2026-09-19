@@ -51,8 +51,8 @@ export const createRemoteSession = createServerFn({ method: "POST" })
         guestToken: guest,
         profileId: z.string().uuid().optional(),
         displayName: z.string().min(1).max(40),
-        topicSlug: z.string().min(1),
-        questionIds: z.array(z.string().uuid()).min(3).max(5),
+        topicSlug: z.string().min(1).optional(),
+        questionIds: z.array(z.string().uuid()).min(2).max(6),
         /** Asking more people the same wall question overrides the impression slot. */
         impressionQuestionId: z.string().uuid().optional(),
       })
@@ -61,8 +61,10 @@ export const createRemoteSession = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // The third question is always an impression question.
+    // Every round closes on an impression read. The sender may have chosen it
+    // (pack rounds, or re-asking a wall question); otherwise one is drawn.
     const questionIds = [...data.questionIds];
+    let impressionId = "";
     if (data.impressionQuestionId) {
       const { data: chosen } = await supabaseAdmin
         .from("questions")
@@ -70,14 +72,18 @@ export const createRemoteSession = createServerFn({ method: "POST" })
         .eq("id", data.impressionQuestionId)
         .eq("question_type", "impression")
         .maybeSingle();
-      if (chosen) questionIds[2] = chosen.id;
+      if (chosen) impressionId = chosen.id;
     }
-    if (questionIds[2] !== data.impressionQuestionId) {
+    if (impressionId) {
+      const at = questionIds.indexOf(impressionId);
+      if (at >= 0) questionIds.splice(at, 1);
+      questionIds.push(impressionId);
+    } else {
       // Scoped to this sender so they aren't handed the same read twice.
       const impression = await pickImpressionQuestion(supabaseAdmin, questionIds, {
         guestTokens: [data.guestToken],
       });
-      if (impression) questionIds[2] = impression.id;
+      if (impression) questionIds.push(impression.id);
     }
 
     const { data: questions, error: qError } = await supabaseAdmin
@@ -133,7 +139,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
     // Asking more people the same wall question: they already answered it about
     // themselves, so carry that answer over instead of asking again.
     const prefilled: string[] = [];
-    if (data.impressionQuestionId && questionIds[2] === data.impressionQuestionId) {
+    if (data.impressionQuestionId && questionIds.at(-1) === data.impressionQuestionId) {
       const { myParticipants } = await import("@/lib/identity.server");
       const mine = await myParticipants(supabaseAdmin, {
         guestToken: data.guestToken,

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { firstName } from "@/lib/packs";
+
 /**
  * Impression questions switch subject between two people, so the person being
  * asked about is named inside the stem itself — never "they".
@@ -33,14 +35,13 @@ export function impressionStem(
   step: "other" | "self",
   otherName?: string | null,
 ) {
-  if (step === "self") return question.stemSelf ?? question.text;
+  if (step === "self") return question.stemSelf || "And you?";
   const template = question.stemOther ?? question.text;
-  const name = (otherName ?? "").trim() || UNKNOWN_SUBJECT;
-  return template.replace(/\{name\}/g, name);
+  return template.replace(/\{name\}/g, subjectName("other", otherName));
 }
 
 /** The name actually rendered inside a step-1 stem, for highlighting. */
 export function subjectName(step: "other" | "self", otherName?: string | null) {
   if (step === "self") return "";
-  return (otherName ?? "").trim() || UNKNOWN_SUBJECT;
+  return firstName(otherName) || UNKNOWN_SUBJECT;
 }
