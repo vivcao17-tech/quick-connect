@@ -222,6 +222,15 @@ function WithPersonPage() {
           </Link>
         )}
 
+        {viewer.guestToken && (
+          <PackPreview
+            guestToken={viewer.guestToken}
+            {...(viewer.profileId ? { profileId: viewer.profileId } : {})}
+            personKey={participantId}
+            name={name}
+          />
+        )}
+
         {data && sessions.length === 0 && (
           <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
         )}
