@@ -149,6 +149,15 @@ export function Room({ sessionId }: { sessionId: string }) {
 
   const other = state?.others[0];
   const current = state?.questions[state.currentIndex];
+  const packLabel = isPack(state?.pack) ? PACK_LABEL[state.pack] : DEFAULT_PACK_LABEL;
+
+  // The four questions this person chooses one of, once the pack is set.
+  useEffect(() => {
+    if (state?.status !== "question_select" || !guestToken || candidates.length > 0) return;
+    void loadCandidates({ data: { guestToken, sessionId } })
+      .then((result) => setCandidates(result.questions))
+      .catch(() => setCandidates([]));
+  }, [state?.status, guestToken, sessionId, loadCandidates, candidates.length]);
 
   /* Play-by-play analytics. Timing is measured from when a question first
      appeared on this screen, which is the only honest place to measure it. */
