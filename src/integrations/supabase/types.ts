@@ -1133,6 +1133,7 @@ export type Database = {
           id: string
           is_test: boolean
           kind: string
+          pack: string | null
           room_code: string | null
           spice_max: number
           status: string
@@ -1145,6 +1146,7 @@ export type Database = {
           id?: string
           is_test?: boolean
           kind?: string
+          pack?: string | null
           room_code?: string | null
           spice_max?: number
           status?: string
@@ -1157,6 +1159,7 @@ export type Database = {
           id?: string
           is_test?: boolean
           kind?: string
+          pack?: string | null
           room_code?: string | null
           spice_max?: number
           status?: string
