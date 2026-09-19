@@ -75,6 +75,8 @@ export function Room({ sessionId }: { sessionId: string }) {
   /** Which question's follow-up the composer was opened for, in person. */
   const [spillSq, setSpillSq] = useState("");
   const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
+  const [candidates, setCandidates] = useState<{ id: string; text: string }[]>([]);
+  const [myPick, setMyPick] = useState("");
   const pending = useRef(false);
   const fetchPrompts = useServerFn(getRevealPrompts);
   const saveRef = useEndScreenTracking("irl_pair", state?.status === "ended", { sessionId });
