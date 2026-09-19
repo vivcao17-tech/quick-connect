@@ -604,6 +604,30 @@ export type Database = {
           },
         ]
       }
+      pack_config: {
+        Row: {
+          created_at: string
+          display_order: number
+          pack: string
+          unlock_threshold: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order: number
+          pack: string
+          unlock_threshold: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          pack?: string
+          unlock_threshold?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       participant_emails: {
         Row: {
           created_at: string
@@ -774,15 +798,21 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          first_round_role: string | null
           follow_up: string | null
           id: string
           impression_pool: boolean
           is_featured: boolean
+          is_values: boolean
           mode: string
           option_a: string
           option_b: string
           option_c: string | null
+          pack: string | null
+          question_key: string | null
           question_type: string
+          self_prompt: string | null
+          source: string | null
           spice_level: number
           stem_other: string | null
           stem_self: string | null
@@ -792,15 +822,21 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          first_round_role?: string | null
           follow_up?: string | null
           id?: string
           impression_pool?: boolean
           is_featured?: boolean
+          is_values?: boolean
           mode?: string
           option_a: string
           option_b: string
           option_c?: string | null
+          pack?: string | null
+          question_key?: string | null
           question_type?: string
+          self_prompt?: string | null
+          source?: string | null
           spice_level?: number
           stem_other?: string | null
           stem_self?: string | null
@@ -810,15 +846,21 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          first_round_role?: string | null
           follow_up?: string | null
           id?: string
           impression_pool?: boolean
           is_featured?: boolean
+          is_values?: boolean
           mode?: string
           option_a?: string
           option_b?: string
           option_c?: string | null
+          pack?: string | null
+          question_key?: string | null
           question_type?: string
+          self_prompt?: string | null
+          source?: string | null
           spice_level?: number
           stem_other?: string | null
           stem_self?: string | null
