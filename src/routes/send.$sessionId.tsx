@@ -169,16 +169,16 @@ function SendPage() {
               {answers
                 .filter((question) => !question.text.includes("{name}"))
                 .map((question) => (
-                <div key={question.sessionQuestionId}>
-                  <p className="text-base text-muted-foreground">{question.text}</p>
-                  <p className="text-lg">{question.myLabel}</p>
-                  {question.myReason && (
-                    <p className="mt-1 text-base italic text-muted-foreground">
-                      "{question.myReason}"
-                    </p>
-                  )}
-                </div>
-              ))}
+                  <div key={question.sessionQuestionId}>
+                    <p className="text-base text-muted-foreground">{question.text}</p>
+                    <p className="text-lg">{question.myLabel}</p>
+                    {question.myReason && (
+                      <p className="mt-1 text-base italic text-muted-foreground">
+                        "{question.myReason}"
+                      </p>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         )}
