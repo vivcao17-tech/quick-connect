@@ -400,11 +400,12 @@ export function Room({ sessionId }: { sessionId: string }) {
                 <button
                   key={q.id}
                   disabled={busy || state.myVotesDone}
-                  onClick={() =>
+                  onClick={() => {
+                    setMyPick(q.id);
                     void run(() =>
                       pickQuestion({ data: { guestToken, sessionId, questionId: q.id } }),
-                    )
-                  }
+                    );
+                  }}
                   className={`card-soft px-6 py-5 text-left text-lg hover:border-primary disabled:opacity-40 ${
                     myPick === q.id ? "border-primary" : ""
                   }`}
