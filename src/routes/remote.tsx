@@ -3,17 +3,26 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { impressionStem, withName } from "@/components/QuestionText";
-import { TopicCloud } from "@/components/TopicCloud";
-import type { CloudTopic } from "@/components/TopicCloud";
-import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
-import { answerAsSender, createRemoteSession, listTopicQuestions } from "@/lib/remote.functions";
+import {
+  DEFAULT_PACK_LABEL,
+  DEFAULT_PACK_TAGLINE,
+  PACKS,
+  PACK_LABEL,
+  PACK_TAGLINE,
+  isPack,
+} from "@/lib/packs";
+import type { Pack } from "@/lib/packs";
+import { listPackCandidates } from "@/lib/packs.functions";
+import { answerAsSender, createRemoteSession } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/remote")({
-  validateSearch: (search: Record<string, unknown>): { impression?: string } =>
-    typeof search["impression"] === "string" ? { impression: search["impression"] } : {},
+  validateSearch: (search: Record<string, unknown>): { impression?: string; pack?: string } => ({
+    ...(typeof search["impression"] === "string" ? { impression: search["impression"] } : {}),
+    ...(typeof search["pack"] === "string" ? { pack: search["pack"] } : {}),
+  }),
   component: RemotePage,
   head: () => ({
     meta: [
@@ -39,20 +48,26 @@ export const Route = createFileRoute("/remote")({
   }),
 });
 
-type Topic = { id: string; slug: string; label: string };
-type Candidate = { id: string; text: string; options: { key: OptionKey; label: string }[] };
+type Candidate = {
+  id: string;
+  text: string;
+  questionType: string;
+  stemOther?: string | null;
+  stemSelf?: string | null;
+  options: { key: OptionKey; label: string }[];
+};
 
 function RemotePage() {
-  const { impression: impressionQuestionId } = Route.useSearch();
+  const { impression: impressionQuestionId, pack: packParam } = Route.useSearch();
   const viewer = useViewer();
-  const [stage, setStage] = useState<"topics" | "pick" | "play">("topics");
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [stage, setStage] = useState<"pack" | "pick" | "play">("pack");
   const [guestToken, setGuestToken] = useState("");
   const [name, setName] = useState("");
-  const [topicLabel, setTopicLabel] = useState("");
-  const [topicSlug, setTopicSlug] = useState("");
+  const [packLabel, setPackLabel] = useState(DEFAULT_PACK_LABEL);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [impressions, setImpressions] = useState<Candidate[]>([]);
   const [chosen, setChosen] = useState<string[]>([]);
+  const [chosenImpression, setChosenImpression] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<PlayQuestion[]>([]);
   const [index, setIndex] = useState(0);
@@ -63,34 +78,34 @@ function RemotePage() {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
-  const loadQuestions = useServerFn(listTopicQuestions);
+  const loadCandidates = useServerFn(listPackCandidates);
   const createSession = useServerFn(createRemoteSession);
   const answer = useServerFn(answerAsSender);
 
   useEffect(() => {
     setGuestToken(getGuestToken());
     setName(window.localStorage.getItem("beside.name") ?? "");
-    supabase
-      .from("topics")
-      .select("id, slug, label")
-      .eq("active", true)
-      .order("sort_order")
-      .then(({ data }) => setTopics((data as Topic[]) ?? []));
   }, []);
 
   const current = questions[index];
 
-  async function pickTopic(topic: Topic) {
+  async function choosePack(pack: Pack | null) {
     setBusy(true);
     setError("");
     try {
-      const result = await loadQuestions({
-        data: { topicSlug: topic.slug, ...(guestToken ? { guestToken } : {}) },
+      const result = await loadCandidates({
+        data: {
+          ...(pack ? { pack } : {}),
+          ...(guestToken ? { guestToken } : {}),
+          ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+          count: 4,
+        },
       });
-      setTopicLabel(result.topic.label);
-      setTopicSlug(result.topic.slug);
-      setCandidates(result.questions);
-      setChosen(result.questions.slice(0, 3).map((q) => q.id));
+      setPackLabel(pack ? PACK_LABEL[pack] : DEFAULT_PACK_LABEL);
+      setCandidates(result.questions as Candidate[]);
+      setImpressions(result.impressions as Candidate[]);
+      setChosen(result.questions.slice(0, 2).map((q) => q.id));
+      setChosenImpression(result.impressions[0]?.id ?? "");
       setStage("pick");
     } catch {
       setError("That didn't load. Try again.");
@@ -99,30 +114,41 @@ function RemotePage() {
     }
   }
 
+  // A pack link from the shared page goes straight to its questions.
+  useEffect(() => {
+    if (stage !== "pack" || !isPack(packParam) || candidates.length > 0) return;
+    void choosePack(packParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packParam, stage]);
+
   function toggle(id: string) {
     setChosen((prev) =>
       prev.includes(id)
         ? prev.filter((item) => item !== id)
-        : prev.length >= 5
+        : prev.length >= 4
           ? prev
           : [...prev, id],
     );
   }
 
   async function begin() {
-    if (chosen.length < 3 || !guestToken) return;
+    if (chosen.length < 2 || !guestToken) return;
     setBusy(true);
     setError("");
     try {
       const displayName = name.trim() || "A friend";
       window.localStorage.setItem("beside.name", displayName);
+      const impressionId = impressionQuestionId || chosenImpression;
+      const questionIds = [
+        ...candidates.filter((q) => chosen.includes(q.id)).map((q) => q.id),
+        ...(impressionId ? [impressionId] : []),
+      ];
       const result = await createSession({
         data: {
           guestToken,
           displayName,
-          topicSlug,
-          questionIds: candidates.filter((q) => chosen.includes(q.id)).map((q) => q.id),
-          ...(impressionQuestionId ? { impressionQuestionId } : {}),
+          questionIds,
+          ...(impressionId ? { impressionQuestionId: impressionId } : {}),
           ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
         },
       });
@@ -190,35 +216,44 @@ function RemotePage() {
 
   return (
     <main className="paper min-h-screen bg-background">
-      {stage === "topics" && (
-        <section className="mx-auto min-h-screen max-w-2xl px-6 py-16">
-          <h1 className="text-3xl">What's on your mind?</h1>
+      {stage === "pack" && (
+        <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
+          <h1 className="text-3xl">What are you two doing this round?</h1>
           <p className="mt-2 max-w-md text-muted-foreground">
-            Answer three questions first — then send them to someone and find out how differently
-            they'd answer.
+            Answer first — then send the same questions to someone and see how they answered.
           </p>
-          <p className="mt-4 text-muted-foreground">Tap a word.</p>
 
-          <div className="mt-10">
-            <TopicCloud
-              topics={topics}
-              selectedIds={[]}
+          <div className="mt-10 flex flex-col gap-3">
+            <button
               disabled={busy}
-              onToggle={(topic: CloudTopic) =>
-                void pickTopic(topics.find((t) => t.id === topic.id)!)
-              }
-            />
+              onClick={() => void choosePack(null)}
+              className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+            >
+              <p className="text-xl">{DEFAULT_PACK_LABEL}</p>
+              <p className="mt-1 text-base text-muted-foreground">{DEFAULT_PACK_TAGLINE}</p>
+            </button>
+            {PACKS.map((pack) => (
+              <button
+                key={pack}
+                disabled={busy}
+                onClick={() => void choosePack(pack)}
+                className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+              >
+                <p className="text-xl">{PACK_LABEL[pack]}</p>
+                <p className="mt-1 text-base text-muted-foreground">{PACK_TAGLINE[pack]}</p>
+              </button>
+            ))}
           </div>
 
-          {error && <p className="text-sm text-primary">{error}</p>}
+          {error && <p className="mt-6 text-sm text-primary">{error}</p>}
         </section>
       )}
 
       {stage === "pick" && (
         <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-          <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">{topicLabel}</p>
+          <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">{packLabel}</p>
           <h1 className="mt-6 text-4xl leading-tight">Which ones do you want to ask?</h1>
-          <p className="mt-2 text-muted-foreground">Keep three. Take five if you're feeling it.</p>
+          <p className="mt-2 text-muted-foreground">Keep two. Take four if you're feeling it.</p>
 
           <div className="mt-8 flex flex-col gap-3">
             {candidates.map((q) => {
@@ -234,6 +269,30 @@ function RemotePage() {
               );
             })}
           </div>
+
+          {!impressionQuestionId && impressions.length > 1 && (
+            <div className="mt-10">
+              <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
+                And one read
+              </p>
+              <div className="mt-4 flex flex-col gap-3">
+                {impressions.map((q) => (
+                  <button
+                    key={q.id}
+                    onClick={() => setChosenImpression(q.id)}
+                    className={`card-soft px-6 py-5 text-left text-lg ${
+                      chosenImpression === q.id ? "border-primary" : "opacity-60"
+                    }`}
+                  >
+                    {impressionStem(
+                      { text: q.text, stemOther: q.stemOther ?? null, stemSelf: q.stemSelf ?? null },
+                      "other",
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <label className="mt-8 block text-sm text-muted-foreground">
             What should they see your name as?
@@ -258,7 +317,7 @@ function RemotePage() {
 
           <button
             onClick={begin}
-            disabled={busy || chosen.length < 3}
+            disabled={busy || chosen.length < 2}
             className="btn-ink mt-8 hover:opacity-90 disabled:opacity-40"
           >
             Answer them first
@@ -269,7 +328,7 @@ function RemotePage() {
 
       {stage === "play" && current && (
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
-          <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">{topicLabel}</p>
+          <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">{packLabel}</p>
           <h1 className="mt-6 text-4xl leading-tight">
             {current.kind === "impression"
               ? withName(impressionStem(current, "self"), "you")
