@@ -104,11 +104,11 @@ export const joinRoom = createServerFn({ method: "POST" })
       .single();
     if (error) throw error;
 
-    // Group rooms wait for the host to start; pair rooms jump straight to picking words.
+    // Group rooms wait for the host to start; pair rooms jump straight to picking a pack.
     if (session.status === "lobby" && session.kind !== "group") {
       await supabaseAdmin
         .from("sessions")
-        .update({ status: "topic_select" })
+        .update({ status: "pack_select" })
         .eq("id", session.id);
     }
 
