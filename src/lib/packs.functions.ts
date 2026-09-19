@@ -59,11 +59,7 @@ export const getPairPreview = createServerFn({ method: "POST" })
     const { loadDetail } = await import("@/lib/relationships.server");
     const { packPreview, nextPack } = await import("@/lib/packs.server");
 
-    const detail = await loadDetail(
-      supabaseAdmin,
-      data.guestToken,
-      ...(data.profileId ? ([data.profileId] as const) : ([] as const)),
-    );
+    const detail = await loadDetail(supabaseAdmin as never, data.guestToken, data.profileId);
     const person = detail.people.find((p) => p.personKey === data.personKey);
 
     const seen = new Set<string>();
