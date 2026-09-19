@@ -59,6 +59,9 @@ export function Room({ sessionId }: { sessionId: string }) {
   const changeSpice = useServerFn(setSpice);
   const saveEmail = useServerFn(saveSessionEmail);
   const track = useServerFn(logEvent);
+  const setPack = useServerFn(chooseRoomPack);
+  const loadCandidates = useServerFn(getRoomCandidates);
+  const pickQuestion = useServerFn(pickRoomQuestion);
 
   const [guestToken, setGuestToken] = useState("");
   const [state, setState] = useState<RoomState | null>(null);
