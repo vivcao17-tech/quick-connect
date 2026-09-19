@@ -139,7 +139,7 @@ export const createRemoteSession = createServerFn({ method: "POST" })
     // Asking more people the same wall question: they already answered it about
     // themselves, so carry that answer over instead of asking again.
     const prefilled: string[] = [];
-    if (data.impressionQuestionId && questionIds[2] === data.impressionQuestionId) {
+    if (data.impressionQuestionId && questionIds.at(-1) === data.impressionQuestionId) {
       const { myParticipants } = await import("@/lib/identity.server");
       const mine = await myParticipants(supabaseAdmin, {
         guestToken: data.guestToken,
