@@ -136,11 +136,14 @@ export const getRoomState = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Everything the screen needs in one database call.
-    const { data: raw, error } = await supabaseAdmin.rpc("room_state", {
-      _session_id: data.sessionId,
-      _guest_token: data.guestToken,
-    });
+    // Everything the screen needs in one database call, plus the room's pack.
+    const [{ data: raw, error }, { data: packRow }] = await Promise.all([
+      supabaseAdmin.rpc("room_state", {
+        _session_id: data.sessionId,
+        _guest_token: data.guestToken,
+      }),
+      supabaseAdmin.from("sessions").select("pack").eq("id", data.sessionId).maybeSingle(),
+    ]);
     if (error) throw error;
 
     const state = (raw ?? {}) as {
