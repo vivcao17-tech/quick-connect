@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { firstName } from "@/lib/packs";
+
 /**
  * Impression questions switch subject between two people, so the person being
  * asked about is named inside the stem itself — never "they".
