@@ -330,6 +330,77 @@ export function Room({ sessionId }: { sessionId: string }) {
           </div>
         )}
 
+        {state.status === "pack_select" && (
+          <div>
+            <h2 className="text-3xl">What are you two doing?</h2>
+            <p className="mt-2 text-muted-foreground">Either of you can choose.</p>
+            <div className="mt-8 flex flex-col gap-3">
+              <button
+                disabled={busy}
+                onClick={() => void run(() => setPack({ data: { guestToken, sessionId } }))}
+                className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+              >
+                <p className="text-xl">{DEFAULT_PACK_LABEL}</p>
+                <p className="mt-1 text-base text-muted-foreground">{DEFAULT_PACK_TAGLINE}</p>
+              </button>
+              {PACKS.map((pack) => (
+                <button
+                  key={pack}
+                  disabled={busy}
+                  onClick={() => void run(() => setPack({ data: { guestToken, sessionId, pack } }))}
+                  className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+                >
+                  <p className="text-xl">{PACK_LABEL[pack]}</p>
+                  <p className="mt-1 text-base text-muted-foreground">{PACK_TAGLINE[pack]}</p>
+                </button>
+              ))}
+            </div>
+            {!other && (
+              <p className="mt-6 text-sm text-muted-foreground">Waiting for someone to join…</p>
+            )}
+          </div>
+        )}
+
+        {state.status === "question_select" && (
+          <div>
+            <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
+              {packLabel}
+            </p>
+            <h2 className="mt-4 text-3xl">Pick one for {other?.name ?? "them"}.</h2>
+            <p className="mt-2 text-muted-foreground">
+              You both answer everything that gets picked.
+            </p>
+            <div className="mt-8 flex flex-col gap-3">
+              {candidates.map((q) => (
+                <button
+                  key={q.id}
+                  disabled={busy || state.myVotesDone}
+                  onClick={() =>
+                    void run(() =>
+                      pickQuestion({ data: { guestToken, sessionId, questionId: q.id } }),
+                    )
+                  }
+                  className={`card-soft px-6 py-5 text-left text-lg hover:border-primary disabled:opacity-40 ${
+                    myPick === q.id ? "border-primary" : ""
+                  }`}
+                >
+                  {q.text}
+                </button>
+              ))}
+              {candidates.length === 0 && (
+                <p className="text-muted-foreground">One moment…</p>
+              )}
+            </div>
+            {state.myVotesDone && (
+              <p className="mt-6 text-sm text-muted-foreground">
+                {other?.questionsDone
+                  ? "Both in — starting…"
+                  : `Waiting for ${other?.name ?? "them"}…`}
+              </p>
+            )}
+          </div>
+        )}
+
         {(state.status === "answering" || state.status === "revealed") && current && (
           <div>
             {(() => {
