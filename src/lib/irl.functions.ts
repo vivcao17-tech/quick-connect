@@ -24,7 +24,14 @@ export const createRoom = createServerFn({ method: "POST" })
         .from("sessions")
         .select("id")
         .eq("room_code", code)
-        .in("status", ["lobby", "topic_select", "question_select", "answering", "revealed"])
+        .in("status", [
+          "lobby",
+          "pack_select",
+          "topic_select",
+          "question_select",
+          "answering",
+          "revealed",
+        ])
         .maybeSingle();
       if (!taken) break;
       code = roomCode();
