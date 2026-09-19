@@ -51,8 +51,8 @@ export const createRemoteSession = createServerFn({ method: "POST" })
         guestToken: guest,
         profileId: z.string().uuid().optional(),
         displayName: z.string().min(1).max(40),
-        topicSlug: z.string().min(1),
-        questionIds: z.array(z.string().uuid()).min(3).max(5),
+        topicSlug: z.string().min(1).optional(),
+        questionIds: z.array(z.string().uuid()).min(2).max(6),
         /** Asking more people the same wall question overrides the impression slot. */
         impressionQuestionId: z.string().uuid().optional(),
       })
