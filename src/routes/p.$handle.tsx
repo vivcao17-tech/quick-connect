@@ -5,6 +5,7 @@ import { track } from "@/lib/track";
 
 import { getPublicProfile } from "@/lib/profile.functions";
 import {
+  byRecency,
   isMismatch,
   labelOf,
   PUBLIC_PROMPT_PREVIEW_COUNT,
