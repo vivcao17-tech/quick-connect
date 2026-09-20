@@ -77,7 +77,7 @@ export const PUBLIC_PROMPT_PREVIEW_COUNT = 3;
 
 /** The question as it should read on a wall, with the name filled in. */
 export function wallText(imp: ProfileImpression, name: string) {
-  return (imp.stemOther ?? imp.text).replace(/\{name\}/g, name);
+  return imp.text.replace(/\{name\}/g, name);
 }
 
 /** Is this read published, given whether the wall is a hand-picked selection. */
