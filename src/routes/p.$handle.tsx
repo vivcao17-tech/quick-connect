@@ -5,13 +5,13 @@ import { track } from "@/lib/track";
 
 import { getPublicProfile } from "@/lib/profile.functions";
 import {
-  byMismatch,
+  byRecency,
   isMismatch,
+  wallText,
   labelOf,
   PUBLIC_PROMPT_PREVIEW_COUNT,
   share,
   topOption,
-  WALL_PREVIEW_COUNT,
 } from "@/lib/profile-shared";
 
 export const Route = createFileRoute("/p/$handle")({
@@ -58,12 +58,11 @@ function PublicProfile() {
     track("profile_view", { handle: profile.handle });
   }, [profile.handle]);
 
-  const [showAllImpressions, setShowAllImpressions] = useState(false);
   const [showAllPrompts, setShowAllPrompts] = useState(false);
 
-  // Most surprising first; agreements stay on the wall below, never hidden.
-  const sorted = [...profile.impressions].sort(byMismatch);
-  const shown = showAllImpressions ? sorted : sorted.slice(0, WALL_PREVIEW_COUNT);
+  // The server already decided what publishes: the owner's picks, or the four
+  // most recent reads. Most recent first here too.
+  const shown = [...profile.impressions].sort(byRecency);
   const promptsShown = showAllPrompts
     ? profile.prompts
     : profile.prompts.slice(0, PUBLIC_PROMPT_PREVIEW_COUNT);
@@ -87,7 +86,7 @@ function PublicProfile() {
               key={imp.questionId}
               className={gap ? "card-soft border-primary px-6 py-6" : "card-soft px-6 py-6"}
             >
-              <p className="text-xl leading-snug">{imp.text}</p>
+              <p className="text-xl leading-snug">{wallText(imp, profile.displayName)}</p>
               <div className="mt-5 flex flex-col gap-3">
                 {imp.options.map((option) => {
                   const { percent, label } = share(imp.counts[option.key] ?? 0, imp.total);
@@ -119,25 +118,13 @@ function PublicProfile() {
                   <p className="mt-2 text-2xl leading-snug">
                     {profile.displayName} said {labelOf(imp, imp.selfKey)}.
                   </p>
-                  {!gap && (
-                    <p className="mt-3 text-sm tracking-[0.14em] text-muted-foreground uppercase">
-                      They got this one right
-                    </p>
-                  )}
                 </div>
               )}
             </div>
           );
         })}
       </div>
-      {!showAllImpressions && sorted.length > WALL_PREVIEW_COUNT && (
-        <button
-          onClick={() => setShowAllImpressions(true)}
-          className="mt-8 self-start text-sm text-muted-foreground underline underline-offset-4"
-        >
-          See all {sorted.length}
-        </button>
-      )}
+
 
       {profile.prompts.length > 0 && (
         <div className="mt-14 flex flex-col gap-5">

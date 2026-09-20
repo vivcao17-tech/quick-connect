@@ -12,12 +12,14 @@ import {
   setProfileHandle,
 } from "@/lib/profile.functions";
 import {
-  byMismatch,
+  byRecency,
   isMismatch,
   labelOf,
+  onWall,
   PROFILE_PROMPTS,
   share,
   topOption,
+  wallText,
 } from "@/lib/profile-shared";
 import type { ProfileImpression } from "@/lib/profile-shared";
 
@@ -64,7 +66,11 @@ function MyProfile() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
   const [detailsLoaded, setDetailsLoaded] = useState(false);
+  // Which reads were new when this visit started. Kept for the whole visit so
+  // the "New" marks don't vanish the moment the page marks them as seen.
+  const [newIds, setNewIds] = useState<Set<string>>(() => new Set<string>());
   const started = useRef(false);
+  const capturedNew = useRef(false);
 
   const fillDetails = useCallback(async () => {
     try {
@@ -86,6 +92,16 @@ function MyProfile() {
         return;
       }
       const result = await load();
+      if (!capturedNew.current) {
+        capturedNew.current = true;
+        setNewIds(
+          new Set(
+            result.impressions
+              .filter((imp) => (imp.newCount ?? 0) > 0)
+              .map((imp) => imp.questionId),
+          ),
+        );
+      }
       setProfile(result);
       setHandle(result.handle ?? "");
       void fillDetails();
@@ -133,9 +149,14 @@ function MyProfile() {
       ? `${window.location.origin}/p/${profile.handle}`
       : "";
 
-  // Where people read you most differently from how you read yourself, first.
-  const sorted = [...profile.impressions].sort(byMismatch);
-  const impressionsOnWall = sorted.filter((imp) => !imp.hidden).length;
+  // Anything new first, then the most recent reads. Everything stays visible
+  // to you here, whether or not it's on your public wall.
+  const sorted = [...profile.impressions].sort((a, b) => {
+    const fresh = Number(newIds.has(b.questionId)) - Number(newIds.has(a.questionId));
+    return fresh !== 0 ? fresh : byRecency(a, b);
+  });
+  const curated = Boolean(profile.curated);
+  const impressionsOnWall = sorted.filter((imp) => onWall(imp, curated)).length;
   const impressionsHidden = sorted.length - impressionsOnWall;
   const savedPrompts = profile.prompts.filter((prompt) => prompt.answer.trim().length > 0);
   const promptsOnWall = savedPrompts.filter((prompt) => prompt.visible).length;
@@ -184,11 +205,12 @@ function MyProfile() {
 
       {(profile.undisplayedNew ?? 0) > 0 && (
         <a
-          href="#wall-edit"
+          href="#new-read"
           className="mt-6 self-start text-base text-primary underline underline-offset-4"
         >
           {profile.undisplayedNew} new{" "}
-          {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"} on your wall yet
+          {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"} on your wall yet — see it
+          and choose
         </a>
       )}
 
@@ -205,16 +227,20 @@ function MyProfile() {
       ) : (
         <div id="wall-edit" className="mt-12 flex scroll-mt-10 flex-col gap-10">
           <p className="text-base text-muted-foreground">
-            {impressionsOnWall} on your wall, {impressionsHidden} hidden
+            {impressionsOnWall} on your wall, {impressionsHidden} kept private · every read stays
+            visible to you here
           </p>
-          {sorted.map((imp) => (
+          {sorted.map((imp, index) => (
             <ImpressionCard
               key={imp.questionId}
               imp={imp}
+              curated={curated}
+              isNew={newIds.has(imp.questionId)}
+              anchor={index === 0 && newIds.has(imp.questionId)}
               onToggle={() => {
-                void toggle({ data: { questionId: imp.questionId, hidden: !imp.hidden } }).then(
-                  () => void refresh(),
-                );
+                void toggle({
+                  data: { questionId: imp.questionId, hidden: onWall(imp, curated) },
+                }).then(() => void refresh());
               }}
             />
           ))}
@@ -301,12 +327,33 @@ function MyProfile() {
   );
 }
 
-function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: () => void }) {
+function ImpressionCard({
+  imp,
+  curated,
+  isNew,
+  anchor,
+  onToggle,
+}: {
+  imp: ProfileImpression;
+  curated: boolean;
+  isNew?: boolean;
+  anchor?: boolean;
+  onToggle: () => void;
+}) {
   const top = topOption(imp);
   const gap = isMismatch(imp);
+  const shown = onWall(imp, curated);
   return (
-    <div className={gap ? "card-soft border-primary px-6 py-6" : "card-soft px-6 py-6"}>
-      <p className="text-xl leading-snug">{imp.text}</p>
+    <div
+      id={anchor ? "new-read" : undefined}
+      className={`scroll-mt-10 ${gap ? "card-soft border-primary px-6 py-6" : "card-soft px-6 py-6"}`}
+    >
+      {isNew && (
+        <p className="mb-3 text-sm tracking-[0.14em] text-primary uppercase">
+          New{shown ? "" : " · not on your wall"}
+        </p>
+      )}
+      <p className="text-xl leading-snug">{wallText(imp, "you")}</p>
 
       <div className="mt-5 flex flex-col gap-3">
         {imp.options.map((option) => {
@@ -352,20 +399,20 @@ function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: (
       </Link>
 
       <div className="mt-5 flex items-center justify-between gap-4 border-t border-border pt-4">
-        <span className="text-sm font-medium">{imp.hidden ? "Hidden" : "On your wall"}</span>
+        <span className="text-sm font-medium">{shown ? "On your wall" : "Kept private"}</span>
         <button
           type="button"
           role="switch"
-          aria-checked={!imp.hidden}
-          aria-label={`${imp.hidden ? "Show" : "Hide"} this question on your wall`}
+          aria-checked={shown}
+          aria-label={`${shown ? "Hide" : "Show"} this question on your wall`}
           onClick={onToggle}
           className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors ${
-            imp.hidden ? "border-border bg-secondary" : "border-primary bg-primary"
+            shown ? "border-primary bg-primary" : "border-border bg-secondary"
           }`}
         >
           <span
             className={`absolute top-1 h-4 w-4 rounded-full bg-background transition-transform ${
-              imp.hidden ? "left-1" : "left-6"
+              shown ? "left-6" : "left-1"
             }`}
           />
         </button>
