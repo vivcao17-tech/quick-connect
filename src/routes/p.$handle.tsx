@@ -5,13 +5,11 @@ import { track } from "@/lib/track";
 
 import { getPublicProfile } from "@/lib/profile.functions";
 import {
-  byMismatch,
   isMismatch,
   labelOf,
   PUBLIC_PROMPT_PREVIEW_COUNT,
   share,
   topOption,
-  WALL_PREVIEW_COUNT,
 } from "@/lib/profile-shared";
 
 export const Route = createFileRoute("/p/$handle")({
