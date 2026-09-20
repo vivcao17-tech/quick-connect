@@ -15,9 +15,11 @@ import {
   byRecency,
   isMismatch,
   labelOf,
+  onWall,
   PROFILE_PROMPTS,
   share,
   topOption,
+  wallText,
 } from "@/lib/profile-shared";
 import type { ProfileImpression } from "@/lib/profile-shared";
 
@@ -396,20 +398,20 @@ function ImpressionCard({
       </Link>
 
       <div className="mt-5 flex items-center justify-between gap-4 border-t border-border pt-4">
-        <span className="text-sm font-medium">{imp.hidden ? "Hidden" : "On your wall"}</span>
+        <span className="text-sm font-medium">{shown ? "On your wall" : "Kept private"}</span>
         <button
           type="button"
           role="switch"
-          aria-checked={!imp.hidden}
-          aria-label={`${imp.hidden ? "Show" : "Hide"} this question on your wall`}
+          aria-checked={shown}
+          aria-label={`${shown ? "Hide" : "Show"} this question on your wall`}
           onClick={onToggle}
           className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors ${
-            imp.hidden ? "border-border bg-secondary" : "border-primary bg-primary"
+            shown ? "border-primary bg-primary" : "border-border bg-secondary"
           }`}
         >
           <span
             className={`absolute top-1 h-4 w-4 rounded-full bg-background transition-transform ${
-              imp.hidden ? "left-1" : "left-6"
+              shown ? "left-6" : "left-1"
             }`}
           />
         </button>
