@@ -48,6 +48,8 @@ export type ProfileImpression = {
   total: number;
   selfKey: string | null;
   hidden: boolean;
+  /** True once the owner has made an explicit choice about this question. */
+  hasPref?: boolean;
   /** When the most recent read on this question came in. */
   lastAt?: string | null;
   /** Owner-only: reads that arrived since they last opened their wall. */
@@ -72,6 +74,16 @@ export const WALL_PREVIEW_COUNT = 4;
 
 /** How many self-authored prompts a public wall shows before "More about me". */
 export const PUBLIC_PROMPT_PREVIEW_COUNT = 3;
+
+/** The question as it should read on a wall, with the name filled in. */
+export function wallText(imp: ProfileImpression, name: string) {
+  return (imp.stemOther ?? imp.text).replace(/\{name\}/g, name);
+}
+
+/** Is this read published, given whether the wall is a hand-picked selection. */
+export function onWall(imp: ProfileImpression, curated: boolean) {
+  return curated ? Boolean(imp.hasPref) && !imp.hidden : !imp.hidden;
+}
 
 /** Most recent read first. */
 export function byRecency(a: ProfileImpression, b: ProfileImpression) {
