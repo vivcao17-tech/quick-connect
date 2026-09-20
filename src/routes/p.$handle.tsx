@@ -56,12 +56,11 @@ function PublicProfile() {
     track("profile_view", { handle: profile.handle });
   }, [profile.handle]);
 
-  const [showAllImpressions, setShowAllImpressions] = useState(false);
   const [showAllPrompts, setShowAllPrompts] = useState(false);
 
-  // Most surprising first; agreements stay on the wall below, never hidden.
-  const sorted = [...profile.impressions].sort(byMismatch);
-  const shown = showAllImpressions ? sorted : sorted.slice(0, WALL_PREVIEW_COUNT);
+  // The server already decided what publishes: the owner's picks, or the four
+  // most recent reads. Most recent first here too.
+  const shown = [...profile.impressions].sort(byRecency);
   const promptsShown = showAllPrompts
     ? profile.prompts
     : profile.prompts.slice(0, PUBLIC_PROMPT_PREVIEW_COUNT);
@@ -117,25 +116,13 @@ function PublicProfile() {
                   <p className="mt-2 text-2xl leading-snug">
                     {profile.displayName} said {labelOf(imp, imp.selfKey)}.
                   </p>
-                  {!gap && (
-                    <p className="mt-3 text-sm tracking-[0.14em] text-muted-foreground uppercase">
-                      They got this one right
-                    </p>
-                  )}
                 </div>
               )}
             </div>
           );
         })}
       </div>
-      {!showAllImpressions && sorted.length > WALL_PREVIEW_COUNT && (
-        <button
-          onClick={() => setShowAllImpressions(true)}
-          className="mt-8 self-start text-sm text-muted-foreground underline underline-offset-4"
-        >
-          See all {sorted.length}
-        </button>
-      )}
+
 
       {profile.prompts.length > 0 && (
         <div className="mt-14 flex flex-col gap-5">
