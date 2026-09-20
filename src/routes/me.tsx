@@ -153,7 +153,8 @@ function MyProfile() {
     const fresh = Number(newIds.has(b.questionId)) - Number(newIds.has(a.questionId));
     return fresh !== 0 ? fresh : byRecency(a, b);
   });
-  const impressionsOnWall = sorted.filter((imp) => !imp.hidden).length;
+  const curated = Boolean(profile.curated);
+  const impressionsOnWall = sorted.filter((imp) => onWall(imp, curated)).length;
   const impressionsHidden = sorted.length - impressionsOnWall;
   const savedPrompts = profile.prompts.filter((prompt) => prompt.answer.trim().length > 0);
   const promptsOnWall = savedPrompts.filter((prompt) => prompt.visible).length;
@@ -230,12 +231,13 @@ function MyProfile() {
             <ImpressionCard
               key={imp.questionId}
               imp={imp}
+              curated={curated}
               isNew={newIds.has(imp.questionId)}
               anchor={index === 0 && newIds.has(imp.questionId)}
               onToggle={() => {
-                void toggle({ data: { questionId: imp.questionId, hidden: !imp.hidden } }).then(
-                  () => void refresh(),
-                );
+                void toggle({
+                  data: { questionId: imp.questionId, hidden: onWall(imp, curated) },
+                }).then(() => void refresh());
               }}
             />
           ))}
