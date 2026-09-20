@@ -12,7 +12,7 @@ import {
   setProfileHandle,
 } from "@/lib/profile.functions";
 import {
-  byMismatch,
+  byNewThenRecency,
   isMismatch,
   labelOf,
   PROFILE_PROMPTS,
@@ -133,8 +133,9 @@ function MyProfile() {
       ? `${window.location.origin}/p/${profile.handle}`
       : "";
 
-  // Where people read you most differently from how you read yourself, first.
-  const sorted = [...profile.impressions].sort(byMismatch);
+  // Anything new first, then the most recent reads. Everything stays visible
+  // to you here, whether or not it's on your public wall.
+  const sorted = [...profile.impressions].sort(byNewThenRecency);
   const impressionsOnWall = sorted.filter((imp) => !imp.hidden).length;
   const impressionsHidden = sorted.length - impressionsOnWall;
   const savedPrompts = profile.prompts.filter((prompt) => prompt.answer.trim().length > 0);
