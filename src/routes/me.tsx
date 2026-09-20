@@ -185,11 +185,12 @@ function MyProfile() {
 
       {(profile.undisplayedNew ?? 0) > 0 && (
         <a
-          href="#wall-edit"
+          href="#new-read"
           className="mt-6 self-start text-base text-primary underline underline-offset-4"
         >
           {profile.undisplayedNew} new{" "}
-          {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"} on your wall yet
+          {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"} on your wall yet — see it
+          and choose
         </a>
       )}
 
@@ -208,10 +209,12 @@ function MyProfile() {
           <p className="text-base text-muted-foreground">
             {impressionsOnWall} on your wall, {impressionsHidden} hidden
           </p>
-          {sorted.map((imp) => (
+          {sorted.map((imp, index) => (
             <ImpressionCard
               key={imp.questionId}
               imp={imp}
+              isNew={newIds.has(imp.questionId)}
+              anchor={index === 0 && newIds.has(imp.questionId)}
               onToggle={() => {
                 void toggle({ data: { questionId: imp.questionId, hidden: !imp.hidden } }).then(
                   () => void refresh(),
