@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { cleanPromptAnswer, PROFILE_PROMPTS } from "@/lib/profile-shared";
+import {
+  byRecency,
+  cleanPromptAnswer,
+  PROFILE_PROMPTS,
+  WALL_PREVIEW_COUNT,
+} from "@/lib/profile-shared";
 import type { ProfileData } from "@/lib/profile-shared";
 
 const handleShape = z
@@ -219,12 +224,15 @@ export const getPublicProfile = createServerFn({ method: "GET" })
     const curated = (prefs?.length ?? 0) > 0;
     const selected = new Set((prefs ?? []).filter((p) => !p.hidden).map((p) => p.question_id));
 
+    // Uncurated walls default to the four most recent reads.
+    const impressions = curated
+      ? result.impressions.filter((i) => selected.has(i.questionId))
+      : [...result.impressions].sort(byRecency).slice(0, WALL_PREVIEW_COUNT);
+
     return {
       handle: result.handle,
       displayName: result.displayName,
-      impressions: curated
-        ? result.impressions.filter((i) => selected.has(i.questionId))
-        : result.impressions,
+      impressions,
       prompts: result.prompts.filter((p) => p.visible),
     };
   });

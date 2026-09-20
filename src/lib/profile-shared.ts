@@ -48,6 +48,10 @@ export type ProfileImpression = {
   total: number;
   selfKey: string | null;
   hidden: boolean;
+  /** When the most recent read on this question came in. */
+  lastAt?: string | null;
+  /** Owner-only: reads that arrived since they last opened their wall. */
+  newCount?: number;
 };
 
 export type ProfileData = {
@@ -68,6 +72,18 @@ export const WALL_PREVIEW_COUNT = 4;
 
 /** How many self-authored prompts a public wall shows before "More about me". */
 export const PUBLIC_PROMPT_PREVIEW_COUNT = 3;
+
+/** Most recent read first. */
+export function byRecency(a: ProfileImpression, b: ProfileImpression) {
+  return new Date(b.lastAt ?? 0).getTime() - new Date(a.lastAt ?? 0).getTime();
+}
+
+/** Owner view: anything new first, then most recent. */
+export function byNewThenRecency(a: ProfileImpression, b: ProfileImpression) {
+  const fresh = (b.newCount ?? 0) - (a.newCount ?? 0);
+  if (fresh !== 0) return fresh;
+  return byRecency(a, b);
+}
 
 /** Mismatch first (most surprising first), ties broken by sample size. */
 export function byMismatch(a: ProfileImpression, b: ProfileImpression) {
