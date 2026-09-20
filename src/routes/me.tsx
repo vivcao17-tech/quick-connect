@@ -322,11 +322,29 @@ function MyProfile() {
   );
 }
 
-function ImpressionCard({ imp, onToggle }: { imp: ProfileImpression; onToggle: () => void }) {
+function ImpressionCard({
+  imp,
+  isNew,
+  anchor,
+  onToggle,
+}: {
+  imp: ProfileImpression;
+  isNew?: boolean;
+  anchor?: boolean;
+  onToggle: () => void;
+}) {
   const top = topOption(imp);
   const gap = isMismatch(imp);
   return (
-    <div className={gap ? "card-soft border-primary px-6 py-6" : "card-soft px-6 py-6"}>
+    <div
+      id={anchor ? "new-read" : undefined}
+      className={`scroll-mt-10 ${gap ? "card-soft border-primary px-6 py-6" : "card-soft px-6 py-6"}`}
+    >
+      {isNew && (
+        <p className="mb-3 text-sm tracking-[0.14em] text-primary uppercase">
+          New{imp.hidden ? " · not on your wall" : ""}
+        </p>
+      )}
       <p className="text-xl leading-snug">{imp.text}</p>
 
       <div className="mt-5 flex flex-col gap-3">
