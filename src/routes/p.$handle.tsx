@@ -7,6 +7,7 @@ import { getPublicProfile } from "@/lib/profile.functions";
 import {
   byRecency,
   isMismatch,
+  wallText,
   labelOf,
   PUBLIC_PROMPT_PREVIEW_COUNT,
   share,
@@ -85,7 +86,7 @@ function PublicProfile() {
               key={imp.questionId}
               className={gap ? "card-soft border-primary px-6 py-6" : "card-soft px-6 py-6"}
             >
-              <p className="text-xl leading-snug">{imp.text}</p>
+              <p className="text-xl leading-snug">{wallText(imp, profile.displayName)}</p>
               <div className="mt-5 flex flex-col gap-3">
                 {imp.options.map((option) => {
                   const { percent, label } = share(imp.counts[option.key] ?? 0, imp.total);

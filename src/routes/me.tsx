@@ -227,7 +227,8 @@ function MyProfile() {
       ) : (
         <div id="wall-edit" className="mt-12 flex scroll-mt-10 flex-col gap-10">
           <p className="text-base text-muted-foreground">
-            {impressionsOnWall} on your wall, {impressionsHidden} hidden
+            {impressionsOnWall} on your wall, {impressionsHidden} kept private · every read stays
+            visible to you here
           </p>
           {sorted.map((imp, index) => (
             <ImpressionCard
