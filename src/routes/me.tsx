@@ -12,7 +12,7 @@ import {
   setProfileHandle,
 } from "@/lib/profile.functions";
 import {
-  byNewThenRecency,
+  byRecency,
   isMismatch,
   labelOf,
   PROFILE_PROMPTS,
@@ -64,7 +64,11 @@ function MyProfile() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
   const [detailsLoaded, setDetailsLoaded] = useState(false);
+  // Which reads were new when this visit started. Kept for the whole visit so
+  // the "New" marks don't vanish the moment the page marks them as seen.
+  const [newIds, setNewIds] = useState<Set<string>>(() => new Set<string>());
   const started = useRef(false);
+  const capturedNew = useRef(false);
 
   const fillDetails = useCallback(async () => {
     try {
@@ -86,6 +90,16 @@ function MyProfile() {
         return;
       }
       const result = await load();
+      if (!capturedNew.current) {
+        capturedNew.current = true;
+        setNewIds(
+          new Set(
+            result.impressions
+              .filter((imp) => (imp.newCount ?? 0) > 0)
+              .map((imp) => imp.questionId),
+          ),
+        );
+      }
       setProfile(result);
       setHandle(result.handle ?? "");
       void fillDetails();
@@ -135,7 +149,10 @@ function MyProfile() {
 
   // Anything new first, then the most recent reads. Everything stays visible
   // to you here, whether or not it's on your public wall.
-  const sorted = [...profile.impressions].sort(byNewThenRecency);
+  const sorted = [...profile.impressions].sort((a, b) => {
+    const fresh = Number(newIds.has(b.questionId)) - Number(newIds.has(a.questionId));
+    return fresh !== 0 ? fresh : byRecency(a, b);
+  });
   const impressionsOnWall = sorted.filter((imp) => !imp.hidden).length;
   const impressionsHidden = sorted.length - impressionsOnWall;
   const savedPrompts = profile.prompts.filter((prompt) => prompt.answer.trim().length > 0);
