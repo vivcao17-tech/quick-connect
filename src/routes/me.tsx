@@ -326,17 +326,20 @@ function MyProfile() {
 
 function ImpressionCard({
   imp,
+  curated,
   isNew,
   anchor,
   onToggle,
 }: {
   imp: ProfileImpression;
+  curated: boolean;
   isNew?: boolean;
   anchor?: boolean;
   onToggle: () => void;
 }) {
   const top = topOption(imp);
   const gap = isMismatch(imp);
+  const shown = onWall(imp, curated);
   return (
     <div
       id={anchor ? "new-read" : undefined}
@@ -344,10 +347,10 @@ function ImpressionCard({
     >
       {isNew && (
         <p className="mb-3 text-sm tracking-[0.14em] text-primary uppercase">
-          New{imp.hidden ? " · not on your wall" : ""}
+          New{shown ? "" : " · not on your wall"}
         </p>
       )}
-      <p className="text-xl leading-snug">{imp.text}</p>
+      <p className="text-xl leading-snug">{wallText(imp, "you")}</p>
 
       <div className="mt-5 flex flex-col gap-3">
         {imp.options.map((option) => {
