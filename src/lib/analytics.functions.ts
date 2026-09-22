@@ -33,7 +33,9 @@ export const getOverview = createServerFn({ method: "GET" })
 export const getFunnel = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    rangeSchema.extend({ segment: z.enum(["none", "note", "mode", "week"]).default("none") }).parse(data),
+    rangeSchema
+      .extend({ segment: z.enum(["none", "note", "mode", "week"]).default("none") })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     const db = await admin(context.claims);
@@ -80,7 +82,9 @@ export const getPersonTimeline = createServerFn({ method: "GET" })
 
 export const getQuestionPerformance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ includeTest: z.boolean().default(false) }).parse(data))
+  .inputValidator((data: unknown) =>
+    z.object({ includeTest: z.boolean().default(false) }).parse(data),
+  )
   .handler(async ({ data, context }) => {
     const db = await admin(context.claims);
     const { readQuestionPerformance } = await import("@/lib/analytics.server");

@@ -46,7 +46,9 @@ const pct = (value: number | null | undefined) =>
   value === null || value === undefined ? "—" : `${Math.round(value * 1000) / 10}%`;
 
 const num = (value: number | null | undefined, digits = 2) =>
-  value === null || value === undefined ? "—" : String(Math.round(value * 10 ** digits) / 10 ** digits);
+  value === null || value === undefined
+    ? "—"
+    : String(Math.round(value * 10 ** digits) / 10 ** digits);
 
 function secs(value: number | null | undefined) {
   if (value === null || value === undefined) return "—";
@@ -57,7 +59,11 @@ function secs(value: number | null | undefined) {
   return `${Math.floor(v / 86400)}d ${Math.floor((v % 86400) / 3600)}h`;
 }
 
-function delta(current: number | null, previous: number | null, format: (v: number | null) => string) {
+function delta(
+  current: number | null,
+  previous: number | null,
+  format: (v: number | null) => string,
+) {
   if (current === null || previous === null || previous === 0) return null;
   const change = (current - previous) / Math.abs(previous);
   const sign = change >= 0 ? "+" : "";
@@ -103,7 +109,10 @@ function Pill({
 
 function ExportButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="text-sm text-muted-foreground underline hover:text-primary">
+    <button
+      onClick={onClick}
+      className="text-sm text-muted-foreground underline hover:text-primary"
+    >
       Export CSV
     </button>
   );
@@ -402,7 +411,12 @@ function FunnelTab({ range }: { range: Range }) {
                 segments.flatMap((s) =>
                   s.steps.map((step, index) => {
                     const previous = index === 0 ? step.count : s.steps[index - 1]!.count;
-                    return [s.segment, step.label, step.count, previous ? step.count / previous : ""];
+                    return [
+                      s.segment,
+                      step.label,
+                      step.count,
+                      previous ? step.count / previous : "",
+                    ];
                   }),
                 ),
               )
@@ -441,7 +455,10 @@ function FunnelTab({ range }: { range: Range }) {
                       </span>
                     </div>
                     <div className="mt-1 h-1.5 rounded-full bg-muted">
-                      <div className="h-1.5 rounded-full bg-primary" style={{ width: `${width}%` }} />
+                      <div
+                        className="h-1.5 rounded-full bg-primary"
+                        style={{ width: `${width}%` }}
+                      />
                     </div>
                   </div>
                 );
@@ -538,7 +555,9 @@ function CohortsTab({ includeTest }: { includeTest: boolean }) {
                       ) : (
                         <span
                           className="rounded px-1.5 py-0.5"
-                          style={{ backgroundColor: `color-mix(in srgb, var(--primary) ${Math.round(share * 60)}%, transparent)` }}
+                          style={{
+                            backgroundColor: `color-mix(in srgb, var(--primary) ${Math.round(share * 60)}%, transparent)`,
+                          }}
                         >
                           {Math.round(share * 100)}%
                         </span>
@@ -555,15 +574,20 @@ function CohortsTab({ includeTest }: { includeTest: boolean }) {
       <h3 className="mt-10 text-xl">Per cohort</h3>
       <div className="mt-3 flex flex-col">
         {rows.map((row) => (
-          <div key={row.cohort} className="flex justify-between border-b border-border py-2 text-sm">
+          <div
+            key={row.cohort}
+            className="flex justify-between border-b border-border py-2 text-sm"
+          >
             <span>{row.cohort}</span>
             <span className="text-muted-foreground">
-              median {num(row.medianSessions, 1)} sessions · median {num(row.medianPeople, 1)} people ·{" "}
-              {pct(row.initiatorShare)} ever started one
+              median {num(row.medianSessions, 1)} sessions · median {num(row.medianPeople, 1)}{" "}
+              people · {pct(row.initiatorShare)} ever started one
             </span>
           </div>
         ))}
-        {query.isSuccess && rows.length === 0 && <p className="text-muted-foreground">Nothing yet.</p>}
+        {query.isSuccess && rows.length === 0 && (
+          <p className="text-muted-foreground">Nothing yet.</p>
+        )}
       </div>
     </>
   );
@@ -620,7 +644,9 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
       </div>
 
       <div>
-        {!selected && <p className="text-muted-foreground">Pick a person to see their whole history.</p>}
+        {!selected && (
+          <p className="text-muted-foreground">Pick a person to see their whole history.</p>
+        )}
         {selected && timeline.isLoading && <p className="text-muted-foreground">Loading…</p>}
         {t && (
           <>
@@ -636,13 +662,15 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
                     ? "Email captured, no account"
                     : "Guest token only"}
                 {t.summary.linked && " · was linked from an earlier guest identity"}
-                {t.summary.participantRows > 1 && ` · ${t.summary.participantRows} participant rows`}
+                {t.summary.participantRows > 1 &&
+                  ` · ${t.summary.participantRows} participant rows`}
                 {t.summary.emails.length > 0 && ` · ${t.summary.emails.join(", ")}`}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                First seen {t.summary.firstSeen ? new Date(t.summary.firstSeen).toLocaleString() : "—"} ·
-                last seen {t.summary.lastSeen ? new Date(t.summary.lastSeen).toLocaleString() : "—"} · gap{" "}
-                {secs(t.summary.gapSinceLastVisitSeconds)}
+                First seen{" "}
+                {t.summary.firstSeen ? new Date(t.summary.firstSeen).toLocaleString() : "—"} · last
+                seen {t.summary.lastSeen ? new Date(t.summary.lastSeen).toLocaleString() : "—"} ·
+                gap {secs(t.summary.gapSinceLastVisitSeconds)}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 {t.summary.sessions} sessions · {t.summary.distinctPeople} people ·{" "}
@@ -654,7 +682,15 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
                   onClick={() =>
                     exportCsv(
                       `nosure-person-${t.personKey.slice(0, 8)}`,
-                      ["session_id", "kind", "started_at", "question", "choice", "reason", "answered_at"],
+                      [
+                        "session_id",
+                        "kind",
+                        "started_at",
+                        "question",
+                        "choice",
+                        "reason",
+                        "answered_at",
+                      ],
                       t.sessions.flatMap((s) =>
                         s.questions.map((q) => [
                           s.sessionId,
@@ -701,7 +737,8 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
                         {q.optionKey === "pass" && " (passed)"}
                         {q.hasReason ? ` · reason: ${q.reason}` : " · no reason"} ·{" "}
                         {new Date(q.answeredAt).toLocaleTimeString()}
-                        {q.revealedAt && ` · revealed ${new Date(q.revealedAt).toLocaleTimeString()}`}
+                        {q.revealedAt &&
+                          ` · revealed ${new Date(q.revealedAt).toLocaleTimeString()}`}
                       </span>
                     </div>
                   ))}
@@ -718,14 +755,19 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
             <h3 className="mt-8 text-lg">Raw events</h3>
             <div className="mt-2 flex flex-col text-sm">
               {t.events.map((e, index) => (
-                <div key={`${e.at}-${index}`} className="flex justify-between gap-4 border-b border-border py-1">
+                <div
+                  key={`${e.at}-${index}`}
+                  className="flex justify-between gap-4 border-b border-border py-1"
+                >
                   <span>{e.name}</span>
                   <span className="truncate text-xs text-muted-foreground">
                     {JSON.stringify(e.props)} · {new Date(e.at).toLocaleString()}
                   </span>
                 </div>
               ))}
-              {t.events.length === 0 && <p className="text-muted-foreground">No events recorded.</p>}
+              {t.events.length === 0 && (
+                <p className="text-muted-foreground">No events recorded.</p>
+              )}
             </div>
           </>
         )}
@@ -864,11 +906,12 @@ function QuestionsTab({ includeTest }: { includeTest: boolean }) {
                   .join(" · ")}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                shown {row.timesShown} · answered {row.timesAnswered} · skip {pct(row.skipRate)} · pass{" "}
-                {pct(row.passRate)} · window median {secs(row.medianAnswerWindowSeconds)} (lifetime avg{" "}
-                {secs(row.avgAnswerWindowSeconds)}) · to answer {secs(row.medianSecondsToAnswer)} ·{" "}
-                {row.threads} threads (median {num(row.medianMessagesPerThread, 1)} msgs) ·{" "}
-                {row.bridgeTaps} bridge · {row.mindChanged} changed mind
+                shown {row.timesShown} · answered {row.timesAnswered} · skip {pct(row.skipRate)} ·
+                pass {pct(row.passRate)} · window median {secs(row.medianAnswerWindowSeconds)}{" "}
+                (lifetime avg {secs(row.avgAnswerWindowSeconds)}) · to answer{" "}
+                {secs(row.medianSecondsToAnswer)} · {row.threads} threads (median{" "}
+                {num(row.medianMessagesPerThread, 1)} msgs) · {row.bridgeTaps} bridge ·{" "}
+                {row.mindChanged} changed mind
               </p>
               {row.followUp && (
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -879,7 +922,9 @@ function QuestionsTab({ includeTest }: { includeTest: boolean }) {
             </div>
           );
         })}
-        {query.isSuccess && rows.length === 0 && <p className="text-muted-foreground">Nothing yet.</p>}
+        {query.isSuccess && rows.length === 0 && (
+          <p className="text-muted-foreground">Nothing yet.</p>
+        )}
       </div>
     </>
   );
@@ -989,8 +1034,9 @@ function SessionsTab({ range }: { range: Range }) {
                   )}
                 </button>
                 <span className="text-sm text-muted-foreground">
-                  {row.people} people · {row.revealedQuestions}/{row.totalQuestions} revealed · reveal in{" "}
-                  {secs(row.secondsToFirstReveal)} · last activity {secs(row.secondsToLastActivity)}
+                  {row.people} people · {row.revealedQuestions}/{row.totalQuestions} revealed ·
+                  reveal in {secs(row.secondsToFirstReveal)} · last activity{" "}
+                  {secs(row.secondsToLastActivity)}
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -1070,7 +1116,14 @@ function InvitesTab({ range }: { range: Range }) {
           onClick={() =>
             exportCsv(
               "nosure-invites",
-              ["segment", "created", "opened", "completed", "median_to_open_s", "median_to_complete_s"],
+              [
+                "segment",
+                "created",
+                "opened",
+                "completed",
+                "median_to_open_s",
+                "median_to_complete_s",
+              ],
               (report?.segments ?? []).map((s) => [
                 s.segment,
                 s.created,
@@ -1089,11 +1142,12 @@ function InvitesTab({ range }: { range: Range }) {
           <div key={s.segment} className="card-soft px-5 py-4">
             <h3 className="text-xl">{s.segment}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              {s.created} sent · {s.opened} opened ({pct(s.created ? s.opened / s.created : null)}) ·{" "}
-              {s.completed} completed ({pct(s.opened ? s.completed / s.opened : null)})
+              {s.created} sent · {s.opened} opened ({pct(s.created ? s.opened / s.created : null)})
+              · {s.completed} completed ({pct(s.opened ? s.completed / s.opened : null)})
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              median send → open {secs(s.median_to_open)} · open → complete {secs(s.median_to_complete)}
+              median send → open {secs(s.median_to_open)} · open → complete{" "}
+              {secs(s.median_to_complete)}
             </p>
           </div>
         ))}
@@ -1105,7 +1159,10 @@ function InvitesTab({ range }: { range: Range }) {
       <h2 className="mt-10 text-2xl">Opened but abandoned</h2>
       <div className="mt-3 flex flex-col">
         {(report?.abandoned ?? []).map((invite) => (
-          <div key={invite.token} className="flex justify-between border-b border-border py-2 text-sm">
+          <div
+            key={invite.token}
+            className="flex justify-between border-b border-border py-2 text-sm"
+          >
             <span>
               {invite.label || "Someone"}{" "}
               <span className="text-muted-foreground">
@@ -1114,9 +1171,7 @@ function InvitesTab({ range }: { range: Range }) {
             </span>
             <span className="text-muted-foreground">
               opened {new Date(invite.openedAt).toLocaleString()} · stopped at{" "}
-              {invite.lastQuestionIndex === null
-                ? "before Q1"
-                : `Q${invite.lastQuestionIndex + 1}`}
+              {invite.lastQuestionIndex === null ? "before Q1" : `Q${invite.lastQuestionIndex + 1}`}
             </span>
           </div>
         ))}
@@ -1177,15 +1232,18 @@ function NotificationsTab({ range }: { range: Range }) {
       <h2 className="mt-10 text-2xl">Email delivery</h2>
       <div className="mt-3 flex flex-col">
         {(report?.delivery ?? []).map((row) => (
-          <div key={row.status} className="flex justify-between border-b border-border py-2 text-sm">
+          <div
+            key={row.status}
+            className="flex justify-between border-b border-border py-2 text-sm"
+          >
             <span>{row.status}</span>
             <span className="text-muted-foreground">{row.n}</span>
           </div>
         ))}
         {(report?.delivery ?? []).length === 0 && (
           <p className="text-sm text-muted-foreground">
-            No delivery events recorded in this range — sends, failures and bounces land here as they
-            happen.
+            No delivery events recorded in this range — sends, failures and bounces land here as
+            they happen.
           </p>
         )}
       </div>
@@ -1323,7 +1381,9 @@ function TestingTab() {
           />
           <button
             disabled={!email.trim() || addOne.isPending}
-            onClick={() => addOne.mutate({ kind: "email", value: email.trim(), note: "test account" })}
+            onClick={() =>
+              addOne.mutate({ kind: "email", value: email.trim(), note: "test account" })
+            }
             className="btn-ink px-4 py-1.5 text-sm hover:opacity-90 disabled:opacity-50"
           >
             Flag this account
@@ -1358,7 +1418,10 @@ function TestingTab() {
               </span>
               <span className="flex items-center gap-3 text-xs text-muted-foreground">
                 {row.note ?? ""}
-                <button onClick={() => dropOne.mutate(row.id)} className="underline hover:text-primary">
+                <button
+                  onClick={() => dropOne.mutate(row.id)}
+                  className="underline hover:text-primary"
+                >
                   unflag
                 </button>
               </span>

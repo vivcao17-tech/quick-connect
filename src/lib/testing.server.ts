@@ -76,7 +76,11 @@ export async function readTestIdentities(admin: Admin): Promise<TestIdentity[]> 
       .from("profiles")
       .select("id, display_name, email")
       .in("id", profileIds);
-    for (const p of (profiles ?? []) as { id: string; display_name: string | null; email: string | null }[])
+    for (const p of (profiles ?? []) as {
+      id: string;
+      display_name: string | null;
+      email: string | null;
+    }[])
       names.set(p.id, p.display_name || p.email || "");
   }
 
@@ -124,7 +128,9 @@ async function applyEmailFlagToPastRooms(admin: Admin, email: string) {
     .from("session_participants")
     .select("session_id")
     .in("profile_id", ids);
-  const sessionIds = [...new Set(((parts ?? []) as { session_id: string }[]).map((r) => r.session_id))];
+  const sessionIds = [
+    ...new Set(((parts ?? []) as { session_id: string }[]).map((r) => r.session_id)),
+  ];
   if (sessionIds.length)
     await admin.from("sessions").update({ is_test: true }).in("id", sessionIds);
 }
@@ -149,7 +155,8 @@ export async function setSessionTest(
       .eq("session_id", sessionId);
     const rows: { kind: string; value: string; note: string }[] = [];
     for (const p of (parts ?? []) as { profile_id: string | null; guest_token: string | null }[]) {
-      if (p.guest_token) rows.push({ kind: "guest_token", value: p.guest_token, note: "test room" });
+      if (p.guest_token)
+        rows.push({ kind: "guest_token", value: p.guest_token, note: "test room" });
       if (p.profile_id) rows.push({ kind: "profile", value: p.profile_id, note: "test room" });
     }
     for (const row of rows) await admin.from("excluded_identities").insert(row);
