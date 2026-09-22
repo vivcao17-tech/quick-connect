@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import fontUrl from "@/assets/nosure-card.ttf?url";
-import resvgWasmUrl from "@resvg/resvg-wasm/index_bg.wasm?url";
+
+const resvgWasmPath = "/wasm/resvg-index_bg.wasm";
 
 type Card =
   | { kind: "question"; heading: string; prompt: string; options: [string, string] }
@@ -10,7 +11,7 @@ let rendererReady: Promise<void> | null = null;
 
 async function renderer(baseUrl: string) {
   const { initWasm, Resvg } = await import("@resvg/resvg-wasm");
-  rendererReady ??= fetch(new URL(resvgWasmUrl, baseUrl))
+  rendererReady ??= fetch(new URL(resvgWasmPath, baseUrl))
     .then((response) => response.arrayBuffer())
     .then((wasm) => initWasm(wasm));
   await rendererReady;
