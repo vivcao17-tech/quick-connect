@@ -1286,7 +1286,7 @@ function TestingTab() {
     onSuccess: refresh,
   });
 
-  const rows = query.data ?? [];
+  const rows: TestIdentity[] = (query.data ?? []) as TestIdentity[];
   const deviceFlagged = rows.some((row) => row.kind === "guest_token" && row.value === thisDevice);
 
   return (
