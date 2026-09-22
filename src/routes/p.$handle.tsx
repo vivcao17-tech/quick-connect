@@ -20,13 +20,13 @@ export const Route = createFileRoute("/p/$handle")({
     if (!profile) throw notFound();
     return profile;
   },
-  head: ({ loaderData }) => {
+  head: ({ params, loaderData }) => {
     const name = loaderData?.displayName ?? "someone";
     const first = name.trim().split(/\s+/)[0] || "Their";
     const title = `${first}'s wall`;
     const description = `See how people guess ${first} — then guess them yourself.`;
-    const url = `https://nosure.app/p/${loaderData?.handle ?? ""}`;
-    const image = `https://nosure.app/api/public/og/wall/${loaderData?.handle ?? "missing"}`;
+    const url = `https://nosure.app/p/${params.handle}`;
+    const image = `https://nosure.app/api/public/og/wall/${params.handle}`;
     return {
       meta: [
         { title },

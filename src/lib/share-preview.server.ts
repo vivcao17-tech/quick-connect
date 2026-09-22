@@ -60,20 +60,16 @@ export async function invitePreview(admin: Admin, token: string): Promise<Questi
 export async function chainPreview(admin: Admin, token: string): Promise<QuestionPreview | null> {
   const { data: guess } = await admin
     .from("chain_guesses")
-    .select("guesser_name, subject_name, week_id")
+    .select("guesser_name, subject_name, question_id")
     .eq("token", token)
     .maybeSingle();
   if (!guess) return null;
 
-  const { data: week } = await admin
-    .from("chain_weeks")
-    .select("chain_questions(text, option_a, option_b)")
-    .eq("id", guess.week_id)
+  const { data: question } = await admin
+    .from("chain_questions")
+    .select("text, option_a, option_b")
+    .eq("id", guess.question_id)
     .maybeSingle();
-  const question = week?.chain_questions as
-    | { text: string; option_a: string; option_b: string }
-    | null
-    | undefined;
   if (!question) return null;
 
   const recipientName = firstName(guess.subject_name, "you");
