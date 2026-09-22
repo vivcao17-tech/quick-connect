@@ -901,17 +901,23 @@ function SessionsTab({ range }: { range: Range }) {
     retry: false,
   });
   const flag = useMutation({
-    mutationFn: (input: { sessionId: string; isTest: boolean }) => mark({ data: input }),
+    mutationFn: (input: { sessionId: string; isTest: boolean; flagPeople: boolean }) =>
+      mark({ data: input }),
     onSuccess: () => void client.invalidateQueries({ queryKey: ["admin-session-rows"] }),
   });
 
-  const rows = (query.data ?? []).filter((row) => !onlyStalled || !row.reachedReveal);
+  const rows = (query.data ?? [])
+    .filter((row) => !onlyStalled || !row.reachedReveal)
+    .filter((row) => !onlyTest || row.isTest);
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
         <Pill active={onlyStalled} onClick={() => setOnlyStalled(!onlyStalled)}>
           Never reached reveal
+        </Pill>
+        <Pill active={onlyTest} onClick={() => setOnlyTest(!onlyTest)}>
+          Test rooms only
         </Pill>
         <span className="ml-auto">
           <ExportButton
