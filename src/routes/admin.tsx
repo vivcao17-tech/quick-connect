@@ -893,6 +893,7 @@ function SessionsTab({ range }: { range: Range }) {
   const client = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [onlyStalled, setOnlyStalled] = useState(false);
+  const [onlyTest, setOnlyTest] = useState(false);
 
   const query = useQuery({
     queryKey: ["admin-session-rows", range],
