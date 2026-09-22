@@ -96,6 +96,15 @@ export const createRemoteSession = createServerFn({ method: "POST" })
     if (!questions || questions.length !== questionIds.length) {
       throw new Error("Some questions are unavailable");
     }
+    const abCount = questions.filter(
+      (question) => question.question_type === "ab" || question.question_type === "ab_reason",
+    ).length;
+    const impressionCount = questions.filter(
+      (question) => question.question_type === "impression",
+    ).length;
+    if (abCount !== 2 || impressionCount !== 1 || questions.length !== 3) {
+      throw new Error("A round needs two choices and one read");
+    }
 
     const { data: session, error: sError } = await supabaseAdmin
       .from("sessions")

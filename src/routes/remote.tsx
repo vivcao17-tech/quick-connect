@@ -10,18 +10,22 @@ import {
   PACKS,
   PACK_LABEL,
   PACK_TAGLINE,
+  roundsToUnlock,
   isPack,
 } from "@/lib/packs";
 import type { Pack } from "@/lib/packs";
-import { listPackCandidates } from "@/lib/packs.functions";
+import { getPairPackPicker, listPackCandidates } from "@/lib/packs.functions";
 import { answerAsSender, createRemoteSession } from "@/lib/remote.functions";
 import type { OptionKey, PlayQuestion } from "@/lib/remote-shared";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/remote")({
-  validateSearch: (search: Record<string, unknown>): { impression?: string; pack?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { impression?: string; pack?: string; person?: string } => ({
     ...(typeof search["impression"] === "string" ? { impression: search["impression"] } : {}),
     ...(typeof search["pack"] === "string" ? { pack: search["pack"] } : {}),
+    ...(typeof search["person"] === "string" ? { person: search["person"] } : {}),
   }),
   component: RemotePage,
   head: () => ({
@@ -58,7 +62,11 @@ type Candidate = {
 };
 
 function RemotePage() {
-  const { impression: impressionQuestionId, pack: packParam } = Route.useSearch();
+  const {
+    impression: impressionQuestionId,
+    pack: packParam,
+    person: personKey,
+  } = Route.useSearch();
   const viewer = useViewer();
   const [stage, setStage] = useState<"pack" | "pick" | "play">("pack");
   const [guestToken, setGuestToken] = useState("");
@@ -76,9 +84,11 @@ function RemotePage() {
   const [tally, setTally] = useState<{ optionKey: OptionKey; votes: number }[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [picker, setPicker] = useState<Awaited<ReturnType<typeof getPairPackPicker>> | null>(null);
 
   const navigate = useNavigate();
   const loadCandidates = useServerFn(listPackCandidates);
+  const loadPicker = useServerFn(getPairPackPicker);
   const createSession = useServerFn(createRemoteSession);
   const answer = useServerFn(answerAsSender);
 
@@ -86,6 +96,19 @@ function RemotePage() {
     setGuestToken(getGuestToken());
     setName(window.localStorage.getItem("beside.name") ?? "");
   }, []);
+
+  useEffect(() => {
+    if (!personKey || !guestToken) return;
+    void loadPicker({
+      data: {
+        guestToken,
+        personKey,
+        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+      },
+    })
+      .then(setPicker)
+      .catch(() => setPicker(null));
+  }, [guestToken, loadPicker, personKey, viewer.profileId]);
 
   const current = questions[index];
 
@@ -98,13 +121,13 @@ function RemotePage() {
           ...(pack ? { pack } : {}),
           ...(guestToken ? { guestToken } : {}),
           ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
-          count: 4,
+          count: pack ? 4 : 6,
         },
       });
       setPackLabel(pack ? PACK_LABEL[pack] : DEFAULT_PACK_LABEL);
       setCandidates(result.questions as Candidate[]);
       setImpressions(result.impressions as Candidate[]);
-      setChosen(result.questions.slice(0, 2).map((q) => q.id));
+      setChosen([]);
       setChosenImpression(result.impressions[0]?.id ?? "");
       setStage("pick");
     } catch {
@@ -125,14 +148,14 @@ function RemotePage() {
     setChosen((prev) =>
       prev.includes(id)
         ? prev.filter((item) => item !== id)
-        : prev.length >= 4
+        : prev.length >= 2
           ? prev
           : [...prev, id],
     );
   }
 
   async function begin() {
-    if (chosen.length < 2 || !guestToken) return;
+    if (chosen.length !== 2 || !guestToken) return;
     setBusy(true);
     setError("");
     try {
@@ -214,33 +237,57 @@ function RemotePage() {
     return { rows, top };
   }, [tally, current]);
 
+  const pickerPacks = useMemo(() => {
+    if (!picker?.hasPlayed) return PACKS.map((pack) => ({ pack, next: false }));
+    const next = picker.packs.find((pack) => !pack.unlocked)?.pack;
+    return PACKS.map((pack) => ({ pack, next: pack === next })).sort((a, b) => {
+      if (a.next) return -1;
+      if (b.next) return 1;
+      return PACKS.indexOf(a.pack) - PACKS.indexOf(b.pack);
+    });
+  }, [picker]);
+  const anotherUnlocked =
+    picker?.packs.some((item) => item.pack !== "clash" && item.unlocked) ?? false;
+
   return (
     <main className="paper min-h-screen bg-background">
       {stage === "pack" && (
         <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-          <h1 className="text-3xl">What are you two doing this round?</h1>
-          <p className="mt-2 max-w-md text-muted-foreground">
-            Answer first — then send the same questions to someone and see how they answered.
-          </p>
+          <h1 className="text-3xl">What do you want to find out?</h1>
+          <p className="mt-2 max-w-md text-muted-foreground">Either of you can choose.</p>
 
           <div className="mt-10 flex flex-col gap-3">
-            <button
-              disabled={busy}
-              onClick={() => void choosePack(null)}
-              className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
-            >
-              <p className="text-xl">{DEFAULT_PACK_LABEL}</p>
-              <p className="mt-1 text-base text-muted-foreground">{DEFAULT_PACK_TAGLINE}</p>
-            </button>
-            {PACKS.map((pack) => (
+            {(!personKey || picker?.hasPlayed === false) && (
+              <button
+                disabled={busy}
+                onClick={() => void choosePack(null)}
+                className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+              >
+                <p className="text-xl">{DEFAULT_PACK_LABEL}</p>
+                <p className="mt-1 text-base text-muted-foreground">{DEFAULT_PACK_TAGLINE}</p>
+              </button>
+            )}
+            {pickerPacks.map(({ pack, next }) => (
               <button
                 key={pack}
                 disabled={busy}
                 onClick={() => void choosePack(pack)}
                 className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
               >
+                {next && (
+                  <p className="mb-1 text-xs tracking-[0.18em] text-primary uppercase">Next up</p>
+                )}
                 <p className="text-xl">{PACK_LABEL[pack]}</p>
                 <p className="mt-1 text-base text-muted-foreground">{PACK_TAGLINE[pack]}</p>
+                {picker?.hasPlayed &&
+                  (() => {
+                    const state = picker.packs.find((item) => item.pack === pack);
+                    if (!state) return null;
+                    const progress = roundsToUnlock(state, anotherUnlocked);
+                    return progress ? (
+                      <p className="mt-2 text-sm text-muted-foreground">{progress}</p>
+                    ) : null;
+                  })()}
               </button>
             ))}
           </div>
@@ -253,7 +300,7 @@ function RemotePage() {
         <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
           <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">{packLabel}</p>
           <h1 className="mt-6 text-4xl leading-tight">Which ones do you want to ask?</h1>
-          <p className="mt-2 text-muted-foreground">Keep two. Take four if you're feeling it.</p>
+          <p className="mt-2 text-muted-foreground">Pick two.</p>
 
           <div className="mt-8 flex flex-col gap-3">
             {candidates.map((q) => {
@@ -285,7 +332,11 @@ function RemotePage() {
                     }`}
                   >
                     {impressionStem(
-                      { text: q.text, stemOther: q.stemOther ?? null, stemSelf: q.stemSelf ?? null },
+                      {
+                        text: q.text,
+                        stemOther: q.stemOther ?? null,
+                        stemSelf: q.stemSelf ?? null,
+                      },
                       "other",
                     )}
                   </button>
@@ -317,7 +368,7 @@ function RemotePage() {
 
           <button
             onClick={begin}
-            disabled={busy || chosen.length < 2}
+            disabled={busy || chosen.length !== 2}
             className="btn-ink mt-8 hover:opacity-90 disabled:opacity-40"
           >
             Answer them first

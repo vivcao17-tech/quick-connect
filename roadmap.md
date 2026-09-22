@@ -65,8 +65,8 @@
 - [x] Pack preview and unlock thresholds on the shared page
 - [x] Next-pack bridge from the reveal pages
 - [x] Verify the remote pack flow end to end on mobile
-- [ ] Replace pack question totals with round-to-unlock language and exclude impression reads from progress
-- [ ] Make the pair-aware picker prioritize the next locked pack and limit the starter option to new pairs
-- [ ] Randomize the six-question starter pool, enforce exactly two A/B picks, and keep one starter impression read
-- [ ] Conservatively tag clearly fitting featured questions without changing their wording, featured status, or topics
-- [ ] Verify remote and in-person pair flows without changing Chain or group modes
+- [x] Replace pack question totals with round-to-unlock language and exclude impression reads from progress
+- [x] Make the pair-aware picker prioritize the next locked pack and limit the starter option to new pairs
+- [x] Randomize the six-question starter pool, enforce exactly two A/B picks, and keep one starter impression read
+- [x] Conservatively tag clearly fitting featured questions without changing their wording, featured status, or topics
+- [x] Verify remote and in-person pair flows without changing Chain or group modes

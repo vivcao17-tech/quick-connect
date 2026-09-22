@@ -2,11 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { resolveIsTest } from "@/lib/testing.server";
 
-import {
-  memberOf,
-  roomCode,
-  seedQuestions,
-} from "@/lib/irl-helpers";
+import { memberOf, roomCode, seedQuestions } from "@/lib/irl-helpers";
 import type { OptionKey, Snapshot } from "@/lib/remote-shared";
 
 const guest = z.string().uuid();
@@ -39,7 +35,13 @@ export const createRoom = createServerFn({ method: "POST" })
 
     const { data: session, error } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "irl_pair", status: "lobby", room_code: code, current_index: 0, is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }) })
+      .insert({
+        kind: "irl_pair",
+        status: "lobby",
+        room_code: code,
+        current_index: 0,
+        is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }),
+      })
       .select("id, room_code")
       .single();
     if (error) throw error;
@@ -113,10 +115,7 @@ export const joinRoom = createServerFn({ method: "POST" })
 
     // Group rooms wait for the host to start; pair rooms jump straight to picking a pack.
     if (session.status === "lobby" && session.kind !== "group") {
-      await supabaseAdmin
-        .from("sessions")
-        .update({ status: "pack_select" })
-        .eq("id", session.id);
+      await supabaseAdmin.from("sessions").update({ status: "pack_select" }).eq("id", session.id);
     }
 
     await supabaseAdmin.from("events").insert({
@@ -232,7 +231,13 @@ export const getRoomState = createServerFn({ method: "POST" })
 
       // Impression reveal: plain sentences with real names, one per direction.
       let impression: {
-        lines: { leadIn: string; answer: string; tail: string; tailAnswer: string; match: boolean }[];
+        lines: {
+          leadIn: string;
+          answer: string;
+          tail: string;
+          tailAnswer: string;
+          match: boolean;
+        }[];
         summary: string;
       } | null = null;
 
@@ -288,8 +293,7 @@ export const getRoomState = createServerFn({ method: "POST" })
         myAnswer: mine as OptionKey | null,
         myAnswerAboutOther: myAboutOther as OptionKey | null,
         // An impression question only counts as answered once both halves are in.
-        mySubmitted:
-          questionType === "impression" ? Boolean(mine && myAboutOther) : Boolean(mine),
+        mySubmitted: questionType === "impression" ? Boolean(mine && myAboutOther) : Boolean(mine),
         otherName: otherPerson?.name ?? "them",
         answeredCount: latest.size,
         impression,
@@ -310,7 +314,6 @@ export const getRoomState = createServerFn({ method: "POST" })
       const keys = q.picks.map((p) => p.optionKey).filter(Boolean);
       return new Set(keys).size > 1;
     }).length;
-
 
     return {
       sessionId: session.id,
@@ -369,10 +372,7 @@ export const pickTopics = createServerFn({ method: "POST" })
       props: { count: data.topicIds.length },
     });
 
-    await supabaseAdmin
-      .from("session_participant_topics")
-      .delete()
-      .eq("participant_id", me.id);
+    await supabaseAdmin.from("session_participant_topics").delete().eq("participant_id", me.id);
     const { error } = await supabaseAdmin.from("session_participant_topics").insert(
       data.topicIds.map((topicId) => ({
         session_id: data.sessionId,
@@ -385,7 +385,8 @@ export const pickTopics = createServerFn({ method: "POST" })
     const [{ data: participants }, { data: picks }, { data: session }] = await reads;
 
     const done = new Map<string, number>([[me.id, data.topicIds.length]]);
-    for (const row of picks ?? []) done.set(row.participant_id, (done.get(row.participant_id) ?? 0) + 1);
+    for (const row of picks ?? [])
+      done.set(row.participant_id, (done.get(row.participant_id) ?? 0) + 1);
     const everyone =
       (participants ?? []).length >= 2 &&
       (participants ?? []).every((p) => (done.get(p.id) ?? 0) >= 2);
@@ -402,11 +403,16 @@ export const pickTopics = createServerFn({ method: "POST" })
     return { advanced: everyone };
   });
 
-
 /** Tops the room up to its full set of questions; safe to call repeatedly. */
 export const fillQuestions = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ guestToken: guest, sessionId: z.string().uuid(), want: z.number().min(1).max(8).optional() }).parse(input),
+    z
+      .object({
+        guestToken: guest,
+        sessionId: z.string().uuid(),
+        want: z.number().min(1).max(8).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -427,7 +433,12 @@ export const fillQuestions = createServerFn({ method: "POST" })
     const target = data.want ?? 3;
     if (!session || session.status === "ended" || have >= target) return { total: have };
 
-    const added = await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, target - have);
+    const added = await seedQuestions(
+      supabaseAdmin,
+      data.sessionId,
+      session.spice_max,
+      target - have,
+    );
     return { total: have + added };
   });
 
@@ -502,13 +513,9 @@ export const answerInRoom = createServerFn({ method: "POST" })
         .from("session_questions")
         .update({ revealed_at: new Date().toISOString() })
         .eq("id", sq.id);
-      await supabaseAdmin
-        .from("sessions")
-        .update({ status: "revealed" })
-        .eq("id", sq.session_id);
+      await supabaseAdmin.from("sessions").update({ status: "revealed" }).eq("id", sq.session_id);
       revealed = true;
     }
-
 
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
@@ -576,7 +583,12 @@ export const advanceRoom = createServerFn({ method: "POST" })
     // The background top-up may not have landed yet; don't end the room early.
     let available = total;
     if (nextIndex >= available && available < 3) {
-      available += await seedQuestions(supabaseAdmin, data.sessionId, session.spice_max, 3 - available);
+      available += await seedQuestions(
+        supabaseAdmin,
+        data.sessionId,
+        session.spice_max,
+        3 - available,
+      );
     }
     if (nextIndex >= available) {
       await supabaseAdmin
@@ -647,9 +659,8 @@ export const saveSessionEmail = createServerFn({ method: "POST" })
       props: { email: data.email },
     });
 
-    const { ensureSessionLink, describeSessionForParticipant } = await import(
-      "@/lib/session-link.server"
-    );
+    const { ensureSessionLink, describeSessionForParticipant } =
+      await import("@/lib/session-link.server");
     const [token, target] = await Promise.all([
       ensureSessionLink(supabaseAdmin, { sessionId: data.sessionId, participantId: me.id }),
       describeSessionForParticipant(supabaseAdmin, {
@@ -676,14 +687,11 @@ export const saveSessionEmail = createServerFn({ method: "POST" })
     });
 
     return { ok: true, sent: result.sent };
-
   });
 
 /** Opens a saved link: restores who this person was and where they left off. */
 export const openSessionLink = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({ token: z.string().min(8).max(64) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(8).max(64) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { resolveSessionLink } = await import("@/lib/session-link.server");
@@ -699,6 +707,33 @@ export type RoomState = Awaited<ReturnType<typeof getRoomState>>;
  * ------------------------------------------------------------------ */
 
 const packName = z.enum(["click", "talk", "bring_out", "clash"]);
+
+/** Pair history for ordering the in-person pack picker. */
+export const getRoomPackPicker = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ guestToken: guest, sessionId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const me = await memberOf(supabaseAdmin, data.sessionId, data.guestToken);
+    const { data: people } = await supabaseAdmin
+      .from("session_participants")
+      .select("id, guest_token, profile_id")
+      .eq("session_id", data.sessionId);
+    const other = (people ?? []).find((person) => person.id !== me.id);
+    const mine = (people ?? []).find((person) => person.id === me.id);
+    if (!other) return { hasPlayed: false, packs: [] };
+
+    const { personKeyOf } = await import("@/lib/conversations.server");
+    const { pairPackPicker } = await import("@/lib/packs.server");
+    const result = await pairPackPicker(
+      supabaseAdmin,
+      data.guestToken,
+      mine?.profile_id ?? undefined,
+      personKeyOf(other),
+    );
+    return { hasPlayed: result.hasPlayed, packs: result.packs };
+  });
 
 /** Either person sets the pack for this round; the other screen follows. */
 export const chooseRoomPack = createServerFn({ method: "POST" })
@@ -730,7 +765,7 @@ export const chooseRoomPack = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** The four questions this person chooses one of, for the other to answer too. */
+/** The questions this person chooses one of, for the other to answer too. */
 export const getRoomCandidates = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ guestToken: guest, sessionId: z.string().uuid() }).parse(input),
@@ -754,11 +789,12 @@ export const getRoomCandidates = createServerFn({ method: "POST" })
     ]);
 
     const pack = (session as { pack?: string | null } | null)?.pack;
+    const me = (people ?? []).find((person) => person.guest_token === data.guestToken);
     const result = await packCandidates(supabaseAdmin, {
       ...(isPack(pack) ? { pack } : {}),
-      guestTokens: (people ?? []).map((p) => p.guest_token),
-      profileIds: (people ?? []).map((p) => p.profile_id),
-      count: 4,
+      guestTokens: me?.guest_token ? [me.guest_token] : [],
+      profileIds: me?.profile_id ? [me.profile_id] : [],
+      count: isPack(pack) ? 4 : 6,
       exclude: (votes ?? []).map((v) => v.question_id),
     });
 
@@ -808,11 +844,7 @@ export const pickRoomQuestion = createServerFn({ method: "POST" })
         .select("participant_id, question_id, created_at")
         .eq("session_id", data.sessionId)
         .order("created_at"),
-      supabaseAdmin
-        .from("sessions")
-        .select("pack, status")
-        .eq("id", data.sessionId)
-        .maybeSingle(),
+      supabaseAdmin.from("sessions").select("pack, status").eq("id", data.sessionId).maybeSingle(),
     ]);
 
     const everyone =
@@ -832,7 +864,21 @@ export const pickRoomQuestion = createServerFn({ method: "POST" })
       exclude: chosen,
     });
     const closingId = closing.impressions[0]?.id;
-    const ids = closingId ? [...chosen, closingId] : chosen;
+    let abIds = chosen;
+    if (abIds.length < 2) {
+      const filler = await packCandidates(supabaseAdmin, {
+        ...(isPack(pack) ? { pack } : {}),
+        guestTokens: (people ?? []).map((p) => p.guest_token),
+        profileIds: (people ?? []).map((p) => p.profile_id),
+        count: 1,
+        impressionCount: 0,
+        exclude: chosen,
+      });
+      const fillerId = filler.questions[0]?.id;
+      if (fillerId) abIds = [...abIds, fillerId];
+    }
+    if (abIds.length !== 2 || !closingId) throw new Error("This round could not be filled");
+    const ids = [...abIds, closingId];
 
     const { data: rows } = await supabaseAdmin
       .from("questions")
@@ -846,17 +892,17 @@ export const pickRoomQuestion = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("session_id", data.sessionId);
     if ((already ?? 0) === 0) {
-      await supabaseAdmin.from("session_questions").insert(
-        ids.map((id, index) => {
-          const row = (rows ?? []).find((r) => r.id === id)!;
-          return {
-            session_id: data.sessionId,
-            question_id: id,
-            order_index: index,
-            snapshot: snapshotOf({ ...row, chips: row.reason_chips ?? [] }) as never,
-          };
-        }),
-      );
+      const inserts = ids.map((id, index) => {
+        const row = (rows ?? []).find((candidate) => candidate.id === id);
+        if (!row) throw new Error("This round contains an unavailable question");
+        return {
+          session_id: data.sessionId,
+          question_id: id,
+          order_index: index,
+          snapshot: snapshotOf({ ...row, chips: row.reason_chips ?? [] }) as never,
+        };
+      });
+      await supabaseAdmin.from("session_questions").insert(inserts);
     }
 
     await supabaseAdmin

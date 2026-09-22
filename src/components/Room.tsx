@@ -24,6 +24,7 @@ import {
   chooseRoomPack,
   fillQuestions,
   getRoomCandidates,
+  getRoomPackPicker,
   getRoomState,
   pickRoomQuestion,
   pickTopics,
@@ -36,6 +37,7 @@ import {
   PACKS,
   PACK_LABEL,
   PACK_TAGLINE,
+  roundsToUnlock,
   isPack,
 } from "@/lib/packs";
 import type { RoomState } from "@/lib/irl.functions";
@@ -62,6 +64,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const setPack = useServerFn(chooseRoomPack);
   const loadCandidates = useServerFn(getRoomCandidates);
   const pickQuestion = useServerFn(pickRoomQuestion);
+  const loadPackPicker = useServerFn(getRoomPackPicker);
 
   const [guestToken, setGuestToken] = useState("");
   const [state, setState] = useState<RoomState | null>(null);
@@ -77,6 +80,7 @@ export function Room({ sessionId }: { sessionId: string }) {
   const [aiPrompts, setAiPrompts] = useState<Record<string, RevealPrompts>>({});
   const [candidates, setCandidates] = useState<{ id: string; text: string }[]>([]);
   const [myPick, setMyPick] = useState("");
+  const [picker, setPicker] = useState<Awaited<ReturnType<typeof getRoomPackPicker>> | null>(null);
   const pending = useRef(false);
   const fetchPrompts = useServerFn(getRevealPrompts);
   const saveRef = useEndScreenTracking("irl_pair", state?.status === "ended", { sessionId });
@@ -150,6 +154,25 @@ export function Room({ sessionId }: { sessionId: string }) {
   const other = state?.others[0];
   const current = state?.questions[state.currentIndex];
   const packLabel = isPack(state?.pack) ? PACK_LABEL[state.pack] : DEFAULT_PACK_LABEL;
+
+  useEffect(() => {
+    if (state?.status !== "pack_select" || !guestToken || !other) return;
+    void loadPackPicker({ data: { guestToken, sessionId } })
+      .then(setPicker)
+      .catch(() => setPicker(null));
+  }, [guestToken, loadPackPicker, other, sessionId, state?.status]);
+
+  const pickerPacks = useMemo(() => {
+    if (!picker?.hasPlayed) return PACKS.map((pack) => ({ pack, next: false }));
+    const next = picker.packs.find((pack) => !pack.unlocked)?.pack;
+    return PACKS.map((pack) => ({ pack, next: pack === next })).sort((a, b) => {
+      if (a.next) return -1;
+      if (b.next) return 1;
+      return PACKS.indexOf(a.pack) - PACKS.indexOf(b.pack);
+    });
+  }, [picker]);
+  const anotherUnlocked =
+    picker?.packs.some((item) => item.pack !== "clash" && item.unlocked) ?? false;
 
   // The four questions this person chooses one of, once the pack is set.
   useEffect(() => {
@@ -357,26 +380,40 @@ export function Room({ sessionId }: { sessionId: string }) {
 
         {state.status === "pack_select" && (
           <div>
-            <h2 className="text-3xl">What are you two doing?</h2>
+            <h2 className="text-3xl">What do you want to find out?</h2>
             <p className="mt-2 text-muted-foreground">Either of you can choose.</p>
             <div className="mt-8 flex flex-col gap-3">
-              <button
-                disabled={busy}
-                onClick={() => void run(() => setPack({ data: { guestToken, sessionId } }))}
-                className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
-              >
-                <p className="text-xl">{DEFAULT_PACK_LABEL}</p>
-                <p className="mt-1 text-base text-muted-foreground">{DEFAULT_PACK_TAGLINE}</p>
-              </button>
-              {PACKS.map((pack) => (
+              {picker?.hasPlayed === false && (
+                <button
+                  disabled={busy}
+                  onClick={() => void run(() => setPack({ data: { guestToken, sessionId } }))}
+                  className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+                >
+                  <p className="text-xl">{DEFAULT_PACK_LABEL}</p>
+                  <p className="mt-1 text-base text-muted-foreground">{DEFAULT_PACK_TAGLINE}</p>
+                </button>
+              )}
+              {pickerPacks.map(({ pack, next }) => (
                 <button
                   key={pack}
                   disabled={busy}
                   onClick={() => void run(() => setPack({ data: { guestToken, sessionId, pack } }))}
                   className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
                 >
+                  {next && (
+                    <p className="mb-1 text-xs tracking-[0.18em] text-primary uppercase">Next up</p>
+                  )}
                   <p className="text-xl">{PACK_LABEL[pack]}</p>
                   <p className="mt-1 text-base text-muted-foreground">{PACK_TAGLINE[pack]}</p>
+                  {picker?.hasPlayed &&
+                    (() => {
+                      const packState = picker.packs.find((item) => item.pack === pack);
+                      if (!packState) return null;
+                      const progress = roundsToUnlock(packState, anotherUnlocked);
+                      return progress ? (
+                        <p className="mt-2 text-sm text-muted-foreground">{progress}</p>
+                      ) : null;
+                    })()}
                 </button>
               ))}
             </div>
@@ -388,9 +425,7 @@ export function Room({ sessionId }: { sessionId: string }) {
 
         {state.status === "question_select" && (
           <div>
-            <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
-              {packLabel}
-            </p>
+            <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">{packLabel}</p>
             <h2 className="mt-4 text-3xl">Pick one for {other?.name ?? "them"}.</h2>
             <p className="mt-2 text-muted-foreground">
               You both answer everything that gets picked.
@@ -413,9 +448,7 @@ export function Room({ sessionId }: { sessionId: string }) {
                   {q.text}
                 </button>
               ))}
-              {candidates.length === 0 && (
-                <p className="text-muted-foreground">One moment…</p>
-              )}
+              {candidates.length === 0 && <p className="text-muted-foreground">One moment…</p>}
             </div>
             {state.myVotesDone && (
               <p className="mt-6 text-sm text-muted-foreground">
