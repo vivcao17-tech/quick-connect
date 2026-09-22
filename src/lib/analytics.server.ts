@@ -235,8 +235,12 @@ export const readNotifications = (admin: Admin, range: Range) =>
   rpc<NotificationReport>(admin, "admin_notifications", window_(range));
 
 /** Mark a room as one of mine, so it stops polluting every number on the page. */
-export async function setSessionTest(admin: Admin, sessionId: string, isTest: boolean) {
-  const { error } = await admin.from("sessions").update({ is_test: isTest }).eq("id", sessionId);
-  if (error) throw new Error(error.message);
-  return { sessionId, isTest };
+export async function setSessionTest(
+  admin: Admin,
+  sessionId: string,
+  isTest: boolean,
+  flagPeople = false,
+) {
+  const { setSessionTest: apply } = await import("@/lib/testing.server");
+  return apply(admin as never, sessionId, isTest, flagPeople);
 }
