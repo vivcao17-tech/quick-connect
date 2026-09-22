@@ -1349,6 +1349,10 @@ export type Database = {
         }
         Returns: Json
       }
+      identity_is_test: {
+        Args: { _guest_token: string; _profile_id: string }
+        Returns: boolean
+      }
       is_my_participant: { Args: { _participant_id: string }; Returns: boolean }
       is_session_member: { Args: { _session_id: string }; Returns: boolean }
       people_overview: {
