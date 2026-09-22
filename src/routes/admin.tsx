@@ -1004,10 +1004,14 @@ function SessionsTab({ range }: { range: Range }) {
                     type="checkbox"
                     checked={row.isTest}
                     onChange={(e) =>
-                      flag.mutate({ sessionId: row.sessionId, isTest: e.target.checked })
+                      flag.mutate({
+                        sessionId: row.sessionId,
+                        isTest: e.target.checked,
+                        flagPeople: e.target.checked,
+                      })
                     }
                   />
-                  test room
+                  test room (flags everyone in it)
                 </label>
                 <Link
                   to="/admin/s/$sessionId"
