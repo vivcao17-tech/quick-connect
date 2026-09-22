@@ -66,6 +66,14 @@
 - [x] Next-pack bridge from the reveal pages
 - [x] Verify the remote pack flow end to end on mobile
 - [x] Replace pack question totals with round-to-unlock language and exclude impression reads from progress
+
+## Share cards and one-question reconnects
+
+- [ ] Add server-rendered dynamic preview metadata and 1200×630 images for private round invites and Chain links
+- [ ] Add invitation-only preview metadata and images for public wall links, without specific reads or answers
+- [ ] Show the 30-day reconnect prompt on `/people` and `/with/:person`
+- [ ] Create and share a one-question round using a question neither person has answered
+- [ ] Verify preview HTML, generated images, and the native share flow
 - [x] Make the pair-aware picker prioritize the next locked pack and limit the starter option to new pairs
 - [x] Randomize the six-question starter pool, enforce exactly two A/B picks, and keep one starter impression read
 - [x] Conservatively tag clearly fitting featured questions without changing their wording, featured status, or topics
