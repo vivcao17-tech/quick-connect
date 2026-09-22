@@ -6,7 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { exportCsv } from "@/lib/admin-csv";
 import { getAdminImpressions } from "@/lib/admin.functions";
+import { getGuestToken } from "@/lib/guest";
 import {
+  addTestIdentityFn,
   getCohorts,
   getFunnel,
   getInviteReport,
