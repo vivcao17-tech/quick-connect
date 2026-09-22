@@ -84,7 +84,13 @@ function cardElement(card: Card) {
             option(card.options[1]),
           )
         : createElement("div", {
-            style: { display: "flex", width: 92, height: 8, marginTop: 34, backgroundColor: "#49a783" },
+            style: {
+              display: "flex",
+              width: 92,
+              height: 8,
+              marginTop: 34,
+              backgroundColor: "#49a783",
+            },
           }),
     ),
   );
@@ -106,9 +112,8 @@ export const Route = createFileRoute("/api/public/og/$kind/$key")({
     handlers: {
       GET: async ({ params }) => {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { invitePreview, chainPreview, wallPreview } = await import(
-          "@/lib/share-preview.server"
-        );
+        const { invitePreview, chainPreview, wallPreview } =
+          await import("@/lib/share-preview.server");
 
         if (params.kind === "invite") {
           const preview = await invitePreview(supabaseAdmin, params.key);

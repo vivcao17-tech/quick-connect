@@ -134,7 +134,6 @@ function PublicProfile() {
         })}
       </div>
 
-
       {profile.prompts.length > 0 && (
         <div className="mt-14 flex flex-col gap-5">
           <h2 className="text-3xl">In their own words</h2>
