@@ -42,6 +42,7 @@ import { Route as ApiPublicEmailDiagnosticRouteImport } from './routes/api/publi
 import { Route as ApiPublicUnsubscribeRouteImport } from './routes/api/public/unsubscribe'
 import { Route as WithParticipantIdIndexRouteImport } from './routes/with.$participantId.index'
 import { Route as WithParticipantIdSessionIdRouteImport } from './routes/with.$participantId.$sessionId'
+import { Route as ApiPublicOgKindKeyRouteImport } from './routes/api/public/og.$kind.$key'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -210,6 +211,11 @@ const WithParticipantIdSessionIdRoute =
     path: '/with/$participantId/$sessionId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicOgKindKeyRoute = ApiPublicOgKindKeyRouteImport.update({
+  id: '/api/public/og/$kind/$key',
+  path: '/api/public/og/$kind/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -245,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
+  '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -280,6 +287,7 @@ export interface FileRoutesByTo {
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId': typeof WithParticipantIdIndexRoute
+  '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -316,6 +324,7 @@ export interface FileRoutesById {
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
+  '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -353,6 +362,7 @@ export interface FileRouteTypes {
     | '/api/public/unsubscribe'
     | '/with/$participantId/$sessionId'
     | '/with/$participantId/'
+    | '/api/public/og/$kind/$key'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -388,6 +398,7 @@ export interface FileRouteTypes {
     | '/api/public/unsubscribe'
     | '/with/$participantId/$sessionId'
     | '/with/$participantId'
+    | '/api/public/og/$kind/$key'
   id:
     | '__root__'
     | '/'
@@ -423,6 +434,7 @@ export interface FileRouteTypes {
     | '/api/public/unsubscribe'
     | '/with/$participantId/$sessionId'
     | '/with/$participantId/'
+    | '/api/public/og/$kind/$key'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -458,6 +470,7 @@ export interface RootRouteChildren {
   ApiPublicUnsubscribeRoute: typeof ApiPublicUnsubscribeRoute
   WithParticipantIdSessionIdRoute: typeof WithParticipantIdSessionIdRoute
   WithParticipantIdIndexRoute: typeof WithParticipantIdIndexRoute
+  ApiPublicOgKindKeyRoute: typeof ApiPublicOgKindKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -693,6 +706,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WithParticipantIdSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/og/$kind/$key': {
+      id: '/api/public/og/$kind/$key'
+      path: '/api/public/og/$kind/$key'
+      fullPath: '/api/public/og/$kind/$key'
+      preLoaderRoute: typeof ApiPublicOgKindKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -739,6 +759,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicUnsubscribeRoute: ApiPublicUnsubscribeRoute,
   WithParticipantIdSessionIdRoute: WithParticipantIdSessionIdRoute,
   WithParticipantIdIndexRoute: WithParticipantIdIndexRoute,
+  ApiPublicOgKindKeyRoute: ApiPublicOgKindKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

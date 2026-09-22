@@ -11,6 +11,15 @@ const because = z.string().max(160).optional();
 
 export type ChainLine = { text: string; because: string | null };
 
+/** Read-only data for chat-app previews. It never claims the recipient or exposes a guess. */
+export const getChainLinkMeta = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(8) }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { chainPreview } = await import("@/lib/share-preview.server");
+    return chainPreview(supabaseAdmin, data.token);
+  });
+
 function readLine(
   question: ChainQuestion,
   row: {
