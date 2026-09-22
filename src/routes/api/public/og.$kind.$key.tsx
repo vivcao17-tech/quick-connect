@@ -13,7 +13,10 @@ async function renderer(baseUrl: string) {
   const { initWasm, Resvg } = await import("@resvg/resvg-wasm");
   rendererReady ??= fetch(new URL(resvgWasmPath, baseUrl))
     .then((response) => response.arrayBuffer())
-    .then((wasm) => initWasm(wasm));
+    .then((wasm) => initWasm(wasm))
+    .catch((error: unknown) => {
+      if (!(error instanceof Error) || !error.message.includes("Already initialized")) throw error;
+    });
   await rendererReady;
   return Resvg;
 }
