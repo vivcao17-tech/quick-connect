@@ -18,9 +18,12 @@ import {
   getPersonTimeline,
   getQuestionPerformance,
   getSessionRows,
+  getTestIdentities,
   markSessionTest,
+  removeTestIdentityFn,
 } from "@/lib/analytics.functions";
 import type { OverviewNumbers, QuestionRow } from "@/lib/analytics.server";
+import type { TestIdentity } from "@/lib/testing.server";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
