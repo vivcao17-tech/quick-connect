@@ -17,10 +17,10 @@ export const PACK_LABEL: Record<Pack, string> = {
 };
 
 export const PACK_TAGLINE: Record<Pack, string> = {
-  click: "How you two land together",
-  talk: "What you'd actually talk about",
-  bring_out: "What each of you brings",
-  clash: "Where you'd go different ways",
+  click: "Plans, pace, and energy",
+  talk: "What you're both curious about",
+  bring_out: "Your roles with each other",
+  clash: "How you handle the hard stuff",
 };
 
 /** The title of the read a pair unlocks once a pack has enough answers. */
@@ -31,8 +31,17 @@ export const PACK_READ_TITLE: Record<Pack, string> = {
   clash: "Where you clash",
 };
 
-export const DEFAULT_PACK_LABEL = "First round";
-export const DEFAULT_PACK_TAGLINE = "Two easy ones and one read";
+export const DEFAULT_PACK_LABEL = "A bit of everything";
+export const DEFAULT_PACK_TAGLINE = "Two easy ones and one guess about each other";
+
+export function roundsToUnlock(pack: PackState, anotherUnlocked: boolean) {
+  if (pack.unlocked) return "";
+  if (pack.pack === "clash" && !anotherUnlocked) return "Opens after you unlock another one";
+  const rounds = Math.ceil(Math.max(0, pack.threshold - pack.answered) / 2);
+  if (rounds === 1) return "One more round to unlock";
+  if (rounds === 2) return "Two more rounds to unlock";
+  return "A few more rounds to unlock";
+}
 
 /** Impression stems name the person, and a full name reads wrong mid-sentence. */
 export function firstName(name?: string | null) {

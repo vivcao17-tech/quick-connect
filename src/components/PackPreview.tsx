@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getPairPreview } from "@/lib/packs.functions";
 import type { Pack } from "@/lib/packs";
+import { roundsToUnlock } from "@/lib/packs";
 
 type Preview = Awaited<ReturnType<typeof getPairPreview>>;
 
@@ -36,6 +37,7 @@ export function PackPreview({
   }, [load, guestToken, profileId, personKey]);
 
   if (!data) return null;
+  const anotherUnlocked = data.packs.some((pack) => pack.pack !== "clash" && pack.unlocked);
 
   return (
     <div className="mt-12">
@@ -52,11 +54,11 @@ export function PackPreview({
                   <p className="text-xl leading-tight">
                     {pack.unlocked ? pack.readTitle : pack.label}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {pack.unlocked
-                      ? `${pack.answered} answered · same on ${pack.same}, different on ${pack.different}`
-                      : `${pack.answered} of ${pack.threshold} questions`}
-                  </p>
+                  {!pack.unlocked && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {roundsToUnlock(pack, anotherUnlocked)}
+                    </p>
+                  )}
                 </div>
                 {pack.unlocked ? (
                   <button
@@ -68,10 +70,10 @@ export function PackPreview({
                 ) : (
                   <Link
                     to="/remote"
-                    search={{ pack: pack.pack }}
+                    search={{ pack: pack.pack, person: personKey }}
                     className="shrink-0 text-sm text-primary underline underline-offset-4"
                   >
-                    {pack.remaining === 1 ? "1 more" : `${pack.remaining} more`}
+                    Play
                   </Link>
                 )}
               </div>
@@ -85,7 +87,9 @@ export function PackPreview({
                         You: {item.myLabel}
                         {item.myReason ? ` — "${item.myReason}"` : ""}
                       </p>
-                      <p className={`text-sm ${item.matched ? "text-muted-foreground" : "text-primary"}`}>
+                      <p
+                        className={`text-sm ${item.matched ? "text-muted-foreground" : "text-primary"}`}
+                      >
                         {name}: {item.theirLabel}
                         {item.theirReason ? ` — "${item.theirReason}"` : ""}
                       </p>
@@ -145,5 +149,19 @@ export function NextPackBridge({
   }, [load, guestToken, profileId, personKey]);
 
   if (!next) return null;
-  return <PackBridge pack={next} name={name} />;
+  const label: Record<Pack, string> = {
+    click: `Ask ${name} two more from Click`,
+    talk: `Ask ${name} two more from Talk`,
+    bring_out: `Ask ${name} two more from Bring out`,
+    clash: `Ask ${name} two more from Clash`,
+  };
+  return (
+    <Link
+      to="/remote"
+      search={{ pack: next, person: personKey }}
+      className="mt-6 block rounded-2xl border-2 border-primary px-6 py-5 text-center text-xl text-primary"
+    >
+      {label[next]}
+    </Link>
+  );
 }

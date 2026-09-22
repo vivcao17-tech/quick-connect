@@ -97,6 +97,39 @@ async function fetchPackRows(
   return (data ?? []) as unknown as Row[];
 }
 
+async function fetchFirstRoundRows(admin: Admin, types: string[]) {
+  const { data } = await admin
+    .from("questions")
+    .select(QUESTION_SELECT)
+    .eq("active", true)
+    .in("mode", ["pair", "both"])
+    .in("question_type", types)
+    .or("is_featured.eq.true,first_round_role.in.(icebreaker,divider)");
+  return (data ?? []) as unknown as Row[];
+}
+
+async function fetchFirstRoundImpressions(admin: Admin) {
+  const { data } = await admin
+    .from("questions")
+    .select(QUESTION_SELECT)
+    .eq("active", true)
+    .in("mode", ["pair", "both"])
+    .eq("question_type", "impression")
+    .eq("first_round_role", "impression");
+  return (data ?? []) as unknown as Row[];
+}
+
+function shuffled<T>(rows: T[]) {
+  const result = [...rows];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const bytes = crypto.getRandomValues(new Uint32Array(1));
+    const value = bytes[0] ?? 0;
+    const j = value % (i + 1);
+    [result[i], result[j]] = [result[j] as T, result[i] as T];
+  }
+  return result;
+}
+
 /** Legacy fallback so a drained pack never blocks a round. */
 async function legacyRows(admin: Admin, types: string[]) {
   const { data } = await admin
@@ -142,13 +175,33 @@ export async function packCandidates(
 
   const abRows = opts.pack
     ? await fetchPackRows(admin, { pack: opts.pack, types: ["ab", "ab_reason"] })
-    : await fetchPackRows(admin, {
-        types: ["ab", "ab_reason"],
-        roles: ["icebreaker", "divider"],
-      });
+    : await fetchFirstRoundRows(admin, ["ab", "ab_reason"]);
   const impressionRows = opts.pack
     ? await fetchPackRows(admin, { pack: opts.pack, types: ["impression"] })
-    : await fetchPackRows(admin, { types: ["impression"], roles: ["impression"] });
+    : await fetchFirstRoundImpressions(admin);
+
+  if (!opts.pack) {
+    const ab = shuffled(abRows.filter((row) => !exclude.has(row.id) && !seen.has(row.id)));
+    let impressions = shuffled(
+      impressionRows.filter((row) => !exclude.has(row.id) && !seen.has(row.id)),
+    );
+    if (impressions.length < impressionCount) {
+      impressions = [
+        ...impressions,
+        ...shuffled(
+          impressionRows.filter(
+            (row) => !exclude.has(row.id) && !impressions.some((item) => item.id === row.id),
+          ),
+        ),
+      ];
+    }
+    return {
+      pack: null,
+      label: "A bit of everything",
+      questions: ab.slice(0, count).map(toPick),
+      impressions: impressions.slice(0, impressionCount).map(toPick),
+    };
+  }
 
   let ab = rank(
     abRows.filter((r) => !exclude.has(r.id)),
@@ -180,7 +233,7 @@ export async function packCandidates(
 
   return {
     pack: opts.pack ?? null,
-    label: opts.pack ? PACK_LABEL[opts.pack] : "First round",
+    label: PACK_LABEL[opts.pack],
     questions: ab.slice(0, count).map(toPick),
     impressions: impressions.slice(0, impressionCount).map(toPick),
   };
@@ -234,6 +287,46 @@ export function nextPack(previews: PackPreview[]): Pack {
   return (first?.pack ?? PACKS[0]) as Pack;
 }
 
+export async function pairPackPicker(
+  admin: Admin,
+  guestToken: string,
+  profileId: string | undefined,
+  personKey: string,
+) {
+  const { loadDetail } = await import("@/lib/relationships.server");
+  const detail = await loadDetail(admin as never, guestToken, profileId);
+  const person = detail.people.find((candidate) => candidate.personKey === personKey);
+  const seen = new Set<string>();
+  const pairSessions = (person?.sessions ?? []).filter(
+    (session) => session.kind === "remote" || session.kind === "irl_pair",
+  );
+  const questions = pairSessions.flatMap((session) =>
+    session.questions
+      .filter((question) =>
+        seen.has(question.sessionQuestionId) ? false : seen.add(question.sessionQuestionId),
+      )
+      .map((question) => ({
+        sessionId: question.sessionId,
+        sessionQuestionId: question.sessionQuestionId,
+        questionId: question.questionId,
+        text: question.text,
+        revealed: question.revealed,
+        myLabel: question.myLabel,
+        theirLabel: question.theirLabel,
+        myReason: question.myReason,
+        theirReason: question.theirReason,
+        matched: question.matched,
+      })),
+  );
+  const packs = await packPreview(admin, questions);
+  return {
+    name: person?.nickname || person?.name || "",
+    hasPlayed: pairSessions.length > 0,
+    packs,
+    next: nextPack(packs),
+  };
+}
+
 /** Groups a pair's shared, revealed questions into the four packs. */
 export async function packPreview(
   admin: Admin,
@@ -254,9 +347,15 @@ export async function packPreview(
   const ids = [...new Set(usable.map((q) => q.questionId))];
   const packOf = new Map<string, Pack>();
   if (ids.length > 0) {
-    const { data } = await admin.from("questions").select("id, pack").in("id", ids);
-    for (const row of (data ?? []) as { id: string; pack: string | null }[]) {
-      if (isPack(row.pack)) packOf.set(row.id, row.pack);
+    const { data } = await admin.from("questions").select("id, pack, question_type").in("id", ids);
+    for (const row of (data ?? []) as {
+      id: string;
+      pack: string | null;
+      question_type: string | null;
+    }[]) {
+      if (isPack(row.pack) && (row.question_type === "ab" || row.question_type === "ab_reason")) {
+        packOf.set(row.id, row.pack);
+      }
     }
   }
 
