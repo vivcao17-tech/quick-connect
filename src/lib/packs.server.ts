@@ -67,18 +67,15 @@ export async function seenQuestionIds(
 }
 
 /**
- * Tiered pick: featured and unseen first, then unseen (gentlest first), then
- * anything. Never blocks — a drained pack falls through to the legacy bank.
+ * Tiered pick: featured and unseen first, then unseen, then anything, with a
+ * random rotation inside each tier so candidates vary round to round. Never
+ * blocks — a drained pack falls through to the legacy bank.
  */
 function rank(rows: Row[], seen: Set<string>) {
-  return [...rows].sort((a, b) => {
-    const tier = (r: Row) => (seen.has(r.id) ? 2 : r.is_featured ? 0 : 1);
-    if (tier(a) !== tier(b)) return tier(a) - tier(b);
-    if ((a.spice_level ?? 1) !== (b.spice_level ?? 1)) {
-      return (a.spice_level ?? 1) - (b.spice_level ?? 1);
-    }
-    return a.id.localeCompare(b.id);
-  });
+  const tier = (r: Row) => (seen.has(r.id) ? 2 : r.is_featured ? 0 : 1);
+  const tiers: Row[][] = [[], [], []];
+  for (const row of rows) tiers[tier(row)]?.push(row);
+  return tiers.flatMap((group) => shuffled(group));
 }
 
 async function fetchPackRows(
