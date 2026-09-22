@@ -12,9 +12,14 @@ type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseA
 export type Range = { from: string; to: string; includeTest: boolean };
 
 async function rpc<T>(admin: Admin, fn: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await (admin as never as {
-    rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-  }).rpc(fn, args);
+  const { data, error } = await (
+    admin as never as {
+      rpc: (
+        name: string,
+        params: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>;
+    }
+  ).rpc(fn, args);
   if (error) throw new Error((error as { message?: string }).message ?? "Report failed");
   return data as T;
 }
@@ -127,7 +132,12 @@ export type PersonTimeline = {
     }[];
     messages: { at: string; mine: boolean; chars: number; kind: string; body: string | null }[];
   }[];
-  events: { name: string; at: string; sessionId: string | null; props: Record<string, string | number | boolean | null> }[];
+  events: {
+    name: string;
+    at: string;
+    sessionId: string | null;
+    props: Record<string, string | number | boolean | null>;
+  }[];
 };
 
 export const readPersonTimeline = (admin: Admin, personKey: string) =>
@@ -235,8 +245,12 @@ export const readNotifications = (admin: Admin, range: Range) =>
   rpc<NotificationReport>(admin, "admin_notifications", window_(range));
 
 /** Mark a room as one of mine, so it stops polluting every number on the page. */
-export async function setSessionTest(admin: Admin, sessionId: string, isTest: boolean) {
-  const { error } = await admin.from("sessions").update({ is_test: isTest }).eq("id", sessionId);
-  if (error) throw new Error(error.message);
-  return { sessionId, isTest };
+export async function setSessionTest(
+  admin: Admin,
+  sessionId: string,
+  isTest: boolean,
+  flagPeople = false,
+) {
+  const { setSessionTest: apply } = await import("@/lib/testing.server");
+  return apply(admin as never, sessionId, isTest, flagPeople);
 }
