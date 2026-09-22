@@ -86,7 +86,8 @@ async function image(card: Card, status = 200) {
   })
     .render()
     .asPng();
-  return new Response(png, {
+  const body = png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength) as ArrayBuffer;
+  return new Response(body, {
     status,
     headers: {
       "Content-Type": "image/png",
