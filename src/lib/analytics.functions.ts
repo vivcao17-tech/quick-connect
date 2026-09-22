@@ -117,10 +117,51 @@ export const getNotificationReport = createServerFn({ method: "GET" })
 export const markSessionTest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({ sessionId: z.string().uuid(), isTest: z.boolean() }).parse(data),
+    z
+      .object({
+        sessionId: z.string().uuid(),
+        isTest: z.boolean(),
+        flagPeople: z.boolean().default(false),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     const db = await admin(context.claims);
     const { setSessionTest } = await import("@/lib/analytics.server");
-    return setSessionTest(db, data.sessionId, data.isTest);
+    return setSessionTest(db, data.sessionId, data.isTest, data.flagPeople);
+  });
+
+/** Everyone permanently flagged as test. */
+export const getTestIdentities = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const db = await admin(context.claims);
+    const { readTestIdentities } = await import("@/lib/testing.server");
+    return readTestIdentities(db as never);
+  });
+
+export const addTestIdentityFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        kind: z.enum(["email", "profile", "guest_token"]),
+        value: z.string().min(1),
+        note: z.string().optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const db = await admin(context.claims);
+    const { addTestIdentity } = await import("@/lib/testing.server");
+    return addTestIdentity(db as never, data.kind, data.value, data.note ?? null);
+  });
+
+export const removeTestIdentityFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const db = await admin(context.claims);
+    const { removeTestIdentity } = await import("@/lib/testing.server");
+    return removeTestIdentity(db as never, data.id);
   });
