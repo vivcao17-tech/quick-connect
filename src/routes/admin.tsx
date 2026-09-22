@@ -231,6 +231,7 @@ function AdminPage() {
               {tab === "sessions" && <SessionsTab range={range} />}
               {tab === "invites" && <InvitesTab range={range} />}
               {tab === "notifications" && <NotificationsTab range={range} />}
+              {tab === "testing" && <TestingTab />}
             </div>
           </>
         )}
