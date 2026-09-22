@@ -8,9 +8,9 @@ type Card =
 
 let rendererReady: Promise<void> | null = null;
 
-async function renderer() {
+async function renderer(baseUrl: string) {
   const { initWasm, Resvg } = await import("@resvg/resvg-wasm");
-  rendererReady ??= fetch(resvgWasmUrl)
+  rendererReady ??= fetch(new URL(resvgWasmUrl, baseUrl))
     .then((response) => response.arrayBuffer())
     .then((wasm) => initWasm(wasm));
   await rendererReady;
@@ -82,10 +82,10 @@ function svg(card: Card) {
   </svg>`;
 }
 
-async function image(card: Card, status = 200) {
+async function image(card: Card, baseUrl: string, status = 200) {
   const [Resvg, font] = await Promise.all([
-    renderer(),
-    fetch(fontUrl).then((response) => response.arrayBuffer()),
+    renderer(baseUrl),
+    fetch(new URL(fontUrl, baseUrl)).then((response) => response.arrayBuffer()),
   ]);
   const png = new Resvg(svg(card), {
     fitTo: { mode: "width", value: 1200 },
@@ -107,7 +107,7 @@ async function image(card: Card, status = 200) {
 export const Route = createFileRoute("/api/public/og/$kind/$key")({
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async ({ params, request }) => {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { invitePreview, chainPreview, wallPreview } =
           await import("@/lib/share-preview.server");
@@ -115,34 +115,44 @@ export const Route = createFileRoute("/api/public/og/$kind/$key")({
         if (params.kind === "invite") {
           const preview = await invitePreview(supabaseAdmin, params.key);
           if (preview)
-            return image({
-              kind: "question",
-              heading: `${preview.senderName} has one question for you`,
-              prompt: preview.prompt,
-              options: preview.options,
-            });
+            return image(
+              {
+                kind: "question",
+                heading: `${preview.senderName} has one question for you`,
+                prompt: preview.prompt,
+                options: preview.options,
+              },
+              request.url,
+            );
         }
         if (params.kind === "chain") {
           const preview = await chainPreview(supabaseAdmin, params.key);
           if (preview)
-            return image({
-              kind: "question",
-              heading: `${preview.senderName} has one question for you`,
-              prompt: preview.prompt,
-              options: preview.options,
-            });
+            return image(
+              {
+                kind: "question",
+                heading: `${preview.senderName} has one question for you`,
+                prompt: preview.prompt,
+                options: preview.options,
+              },
+              request.url,
+            );
         }
         if (params.kind === "wall") {
           const preview = await wallPreview(supabaseAdmin, params.key);
           if (preview)
-            return image({
-              kind: "wall",
-              heading: `${preview.name}'s wall`,
-              prompt: `See how people guess ${preview.name} — then guess them yourself.`,
-            });
+            return image(
+              {
+                kind: "wall",
+                heading: `${preview.name}'s wall`,
+                prompt: `See how people guess ${preview.name} — then guess them yourself.`,
+              },
+              request.url,
+            );
         }
         return image(
           { kind: "wall", heading: "NoSure", prompt: "One question can change the conversation." },
+          request.url,
           404,
         );
       },
