@@ -41,7 +41,14 @@ function lines(value: string, max: number) {
   return result.slice(0, 4);
 }
 
-function textBlock(value: string, x: number, y: number, fontSize: number, max: number, color: string) {
+function textBlock(
+  value: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  max: number,
+  color: string,
+) {
   return lines(value, max)
     .map(
       (line, index) =>
