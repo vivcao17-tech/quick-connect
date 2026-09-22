@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ImageResponse } from "@vercel/og";
 import { createElement } from "react";
 
 const size = { width: 1200, height: 630 };
@@ -96,7 +95,8 @@ function cardElement(card: Card) {
   );
 }
 
-function image(card: Card, status = 200) {
+async function image(card: Card, status = 200) {
+  const { ImageResponse } = await import("@vercel/og");
   return new ImageResponse(cardElement(card), {
     ...size,
     status,
