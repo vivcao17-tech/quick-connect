@@ -24,10 +24,10 @@ export const Route = createFileRoute("/i/$token")({
   // another, not as a product blurb.
   loader: ({ params }) => getInviteMeta({ data: { token: params.token } }),
   head: ({ loaderData }) => {
-    const sender = loaderData?.senderName?.trim() || "A friend";
-    const to = loaderData?.recipientLabel?.trim() ?? "";
-    const title = `${to ? `${to} — ` : ""}${sender} sent you three questions`;
-    const description = `One of them is ${sender}'s read on you. 30 seconds, no signup.`;
+    const sender = loaderData?.senderName || "A friend";
+    const title = `${sender} has one question for you`;
+    const description = loaderData?.prompt || "One question. Two ways to answer.";
+    const image = `https://nosure.app/api/public/og/invite/${loaderData ? "" : "missing"}`;
     return {
       meta: [
         { title: `${title} — NoSure` },
@@ -35,9 +35,15 @@ export const Route = createFileRoute("/i/$token")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:type", content: "website" },
+        { property: "og:url", content: "https://nosure.app" },
+        { property: "og:image", content: image },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:type", content: "image/png" },
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
+        { name: "twitter:image", content: image },
         { name: "robots", content: "noindex" },
       ],
     };

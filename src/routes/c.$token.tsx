@@ -5,29 +5,45 @@ import { useCallback, useEffect, useState } from "react";
 import { ChainGuess } from "@/components/ChainGuess";
 import { selfStem } from "@/lib/chain-shared";
 import type { ChainOption } from "@/lib/chain-shared";
-import { addChainGuess, answerChainSelf, openChainLink } from "@/lib/chain.functions";
+import {
+  addChainGuess,
+  answerChainSelf,
+  getChainLinkMeta,
+  openChainLink,
+} from "@/lib/chain.functions";
 import { track } from "@/lib/track";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/c/$token")({
   component: ChainLinkPage,
-  head: () => ({
-    meta: [
-      { title: "Someone guessed you — NoSure" },
-      {
-        name: "description",
-        content:
-          "One question. Someone made a guess about you. Guess them back and you both find out at once.",
-      },
-      { property: "og:title", content: "Someone guessed you" },
-      { property: "og:description", content: "One question. 30 seconds. No signup." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Someone guessed you" },
-      { name: "twitter:description", content: "One question. 30 seconds. No signup." },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
+  loader: ({ params }) => getChainLinkMeta({ data: { token: params.token } }),
+  head: ({ params, loaderData }) => {
+    const sender = loaderData?.senderName || "A friend";
+    const title = `${sender} has one question for you`;
+    const description = loaderData?.prompt || "One question. Two ways to answer.";
+    const url = `https://nosure.app/c/${params.token}`;
+    const image = `https://nosure.app/api/public/og/chain/${params.token}`;
+    return {
+      meta: [
+        { title: `${title} — NoSure` },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: url },
+        { property: "og:image", content: image },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:type", content: "image/png" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "twitter:image", content: image },
+        { name: "robots", content: "noindex" },
+      ],
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
 });
 
 type LinkState = Awaited<ReturnType<typeof openChainLink>>;

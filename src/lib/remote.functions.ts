@@ -375,21 +375,8 @@ export const getInviteMeta = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ token: z.string().min(4).max(40) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: invite } = await supabaseAdmin
-      .from("invites")
-      .select("recipient_label, inviter_participant_id")
-      .eq("token", data.token)
-      .maybeSingle();
-    if (!invite) return { senderName: "", recipientLabel: "" };
-    const { data: inviter } = await supabaseAdmin
-      .from("session_participants")
-      .select("display_name")
-      .eq("id", invite.inviter_participant_id ?? "")
-      .maybeSingle();
-    return {
-      senderName: inviter?.display_name ?? "",
-      recipientLabel: invite.recipient_label ?? "",
-    };
+    const { invitePreview } = await import("@/lib/share-preview.server");
+    return invitePreview(supabaseAdmin, data.token);
   });
 
 export const getInvite = createServerFn({ method: "POST" })

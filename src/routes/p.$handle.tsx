@@ -22,9 +22,11 @@ export const Route = createFileRoute("/p/$handle")({
   },
   head: ({ loaderData }) => {
     const name = loaderData?.displayName ?? "someone";
-    const title = `how ${name}'s friends read them`;
-    const description =
-      "they guessed. see if they got it right — then find out how people read you";
+    const first = name.trim().split(/\s+/)[0] || "Their";
+    const title = `${first}'s wall`;
+    const description = `See how people guess ${first} — then guess them yourself.`;
+    const url = `https://nosure.app/p/${loaderData?.handle ?? ""}`;
+    const image = `https://nosure.app/api/public/og/wall/${loaderData?.handle ?? "missing"}`;
     return {
       meta: [
         { title },
@@ -32,10 +34,17 @@ export const Route = createFileRoute("/p/$handle")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:type", content: "profile" },
+        { property: "og:url", content: url },
+        { property: "og:image", content: image },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:type", content: "image/png" },
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
+        { name: "twitter:image", content: image },
       ],
+      links: [{ rel: "canonical", href: url }],
     };
   },
   errorComponent: () => (
