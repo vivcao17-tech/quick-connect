@@ -1246,3 +1246,108 @@ function ImpressionsTab({ includeTest }: { includeTest: boolean }) {
     </div>
   );
 }
+
+/* ---------- 10. testing ---------- */
+
+function TestingTab() {
+  const load = useServerFn(getTestIdentities);
+  const add = useServerFn(addTestIdentityFn);
+  const remove = useServerFn(removeTestIdentityFn);
+  const client = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [thisDevice, setThisDevice] = useState("");
+
+  useEffect(() => {
+    setThisDevice(getGuestToken());
+  }, []);
+
+  const query = useQuery({
+    queryKey: ["admin-test-identities"],
+    queryFn: () => load({}),
+    retry: false,
+  });
+  const refresh = () => void client.invalidateQueries({ queryKey: ["admin-test-identities"] });
+
+  const addOne = useMutation({
+    mutationFn: (input: { kind: "email" | "guest_token"; value: string; note?: string }) =>
+      add({ data: input }),
+    onSuccess: () => {
+      setEmail("");
+      refresh();
+    },
+  });
+  const dropOne = useMutation({
+    mutationFn: (id: string) => remove({ data: { id } }),
+    onSuccess: refresh,
+  });
+
+  const rows = query.data ?? [];
+  const deviceFlagged = rows.some((row) => row.kind === "guest_token" && row.value === thisDevice);
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="card-soft px-6 py-5">
+        <h2 className="text-xl">Test accounts</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Any room with one of these people in it is marked as a test room automatically, and anyone
+          who joins a test room afterwards gets flagged too — guests included.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <input
+            type="email"
+            value={email}
+            placeholder="name@example.com"
+            onChange={(e) => setEmail(e.target.value)}
+            className="min-w-64 rounded-md border border-border bg-transparent px-3 py-1.5 text-sm"
+          />
+          <button
+            disabled={!email.trim() || addOne.isPending}
+            onClick={() => addOne.mutate({ kind: "email", value: email.trim(), note: "test account" })}
+            className="btn-ink px-4 py-1.5 text-sm hover:opacity-90 disabled:opacity-50"
+          >
+            Flag this account
+          </button>
+          <button
+            disabled={!thisDevice || deviceFlagged || addOne.isPending}
+            onClick={() =>
+              addOne.mutate({ kind: "guest_token", value: thisDevice, note: "dashboard device" })
+            }
+            className="text-sm text-muted-foreground underline hover:text-primary disabled:opacity-50"
+          >
+            {deviceFlagged ? "This browser is flagged" : "Flag this browser"}
+          </button>
+          <Link to="/start" className="ml-auto text-sm underline">
+            Start a test room
+          </Link>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm text-muted-foreground">Flagged ({rows.length})</h3>
+        <div className="mt-3 flex flex-col">
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border py-2 text-sm"
+            >
+              <span>
+                <span className="text-muted-foreground">{row.kind.replace("_", " ")} · </span>
+                {row.label ? `${row.label} · ` : ""}
+                {row.value}
+              </span>
+              <span className="flex items-center gap-3 text-xs text-muted-foreground">
+                {row.note ?? ""}
+                <button onClick={() => dropOne.mutate(row.id)} className="underline hover:text-primary">
+                  unflag
+                </button>
+              </span>
+            </div>
+          ))}
+          {query.isSuccess && rows.length === 0 && (
+            <p className="text-muted-foreground">Nobody is flagged yet.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
