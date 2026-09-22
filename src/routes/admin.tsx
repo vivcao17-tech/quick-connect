@@ -114,6 +114,7 @@ const TABS = [
   ["sessions", "Sessions"],
   ["invites", "Invites"],
   ["notifications", "Notifications"],
+  ["testing", "Testing"],
 ] as const;
 
 type Tab = (typeof TABS)[number][0];
