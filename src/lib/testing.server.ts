@@ -11,7 +11,7 @@
 
 import { getRequestHeader } from "@tanstack/react-start/server";
 
-type Admin = { from: (table: string) => any; rpc: (fn: string, args: any) => any };
+type Admin = { from: (table: string) => any; rpc: (...args: any[]) => any };
 
 export type CreatorIdentity = { guestToken?: string | null; profileId?: string | null };
 
