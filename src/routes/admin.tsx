@@ -982,6 +982,11 @@ function SessionsTab({ range }: { range: Range }) {
                       never revealed
                     </span>
                   )}
+                  {row.isTest && (
+                    <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                      test
+                    </span>
+                  )}
                 </button>
                 <span className="text-sm text-muted-foreground">
                   {row.people} people · {row.revealedQuestions}/{row.totalQuestions} revealed · reveal in{" "}
