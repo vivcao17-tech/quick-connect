@@ -72,11 +72,13 @@ function PeoplePage() {
             </p>
             <h1 className="mt-3 text-5xl leading-none">People</h1>
           </div>
-          <Button asChild variant="ghost" size="icon" aria-label="Invite someone new">
-            <Link to="/remote">
-              <UserPlus aria-hidden="true" className="h-5 w-5" />
-            </Link>
-          </Button>
+          <Link
+            to="/remote"
+            aria-label="Invite someone new"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent"
+          >
+            <UserPlus aria-hidden="true" className="h-5 w-5" />
+          </Link>
         </header>
 
         {people === null && <p className="mt-10 text-base text-muted-foreground">One second…</p>}

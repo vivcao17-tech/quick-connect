@@ -73,7 +73,7 @@ function ChainPage() {
 
   if (!week || !week.open) {
     return (
-      <main className="paper min-h-screen bg-background">
+      <main className="paper min-h-screen bg-background pb-28">
         <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 px-6 py-20">
           <h1 className="text-4xl leading-tight">This week's read opens Thursday.</h1>
           {week && (
