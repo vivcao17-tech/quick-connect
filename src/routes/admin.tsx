@@ -233,6 +233,7 @@ function AdminPage() {
                   {label}
                 </Pill>
               ))}
+              <Link to="/admin/meet" className="rounded-full border border-border px-3 py-1 text-sm text-muted-foreground hover:text-primary">Meet</Link>
             </div>
 
             <div className="mt-8">
