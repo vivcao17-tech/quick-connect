@@ -82,9 +82,9 @@
 
 ## Signed-in app shell and People inbox
 
-- [ ] Signed-in root opens People; signed-out root keeps the landing page
-- [ ] Bottom tabs in order: People / This week / You / Meet
-- [ ] This week dot shows only while the open question is unanswered
-- [ ] People rows, statuses, invite action, floating person picker, and empty state
-- [ ] Mark all existing sessions and participant identities as test
-- [ ] Verify tab exclusions, navigation, privacy, mobile and desktop
+- [x] Signed-in root opens People; signed-out root keeps the landing page
+- [x] Bottom tabs in order: People / This week / You / Meet
+- [x] This week dot shows only while the open question is unanswered
+- [x] People rows, statuses, invite action, floating person picker, and empty state
+- [x] Mark all existing sessions and participant identities as test
+- [x] Verify tab exclusions, navigation, privacy, mobile and desktop
