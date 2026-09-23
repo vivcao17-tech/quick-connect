@@ -330,6 +330,30 @@ export type Database = {
           },
         ]
       }
+      conversation_prompts: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          pack: string | null
+          text: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          pack?: string | null
+          text: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          pack?: string | null
+          text?: string
+        }
+        Relationships: []
+      }
       email_optouts: {
         Row: {
           created_at: string
