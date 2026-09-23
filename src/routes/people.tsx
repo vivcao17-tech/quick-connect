@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AppTabs } from "@/components/AppTabs";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { Button } from "@/components/ui/button";
-import { listPeople } from "@/lib/conversations.functions";
-import { useViewer } from "@/lib/viewer";
+import { listPeople, listPeopleBasic } from "@/lib/conversations.functions";
+import { readLocalViewer, useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/people")({
   component: PeoplePage,
@@ -30,7 +30,8 @@ export const Route = createFileRoute("/people")({
   }),
 });
 
-type People = Awaited<ReturnType<typeof listPeople>>["people"];
+type Row = Awaited<ReturnType<typeof listPeopleBasic>>["people"][number] & { status?: string };
+type People = Row[];
 
 function colorFor(name: string) {
   let total = 0;
@@ -40,21 +41,33 @@ function colorFor(name: string) {
 
 function PeoplePage() {
   const [people, setPeople] = useState<People | null>(null);
+  const [statuses, setStatuses] = useState<Map<string, string> | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const load = useServerFn(listPeople);
+  const loadBasic = useServerFn(listPeopleBasic);
+  const loadFull = useServerFn(listPeople);
   const viewer = useViewer();
 
+  // Starts on mount from the locally stored session — no auth round trip first.
+  // Names arrive from the light query; status lines fill in from the full one.
   useEffect(() => {
-    if (!viewer.ready || !viewer.guestToken) return;
-    void load({
-      data: {
-        guestToken: viewer.guestToken,
-        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
-      },
-    })
-      .then((result) => setPeople(result.people))
-      .catch(() => setPeople([]));
-  }, [viewer.ready, viewer.guestToken, viewer.profileId, load]);
+    let alive = true;
+    void readLocalViewer().then((who) => {
+      if (!alive) return;
+      void loadBasic({ data: who })
+        .then((result) => alive && setPeople((prev) => prev ?? result.people))
+        .catch(() => alive && setPeople((prev) => prev ?? []));
+      void loadFull({ data: who })
+        .then((result) => {
+          if (!alive) return;
+          setPeople(result.people);
+          setStatuses(new Map(result.people.map((row) => [row.personKey, row.status])));
+        })
+        .catch(() => alive && setStatuses(new Map()));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [loadBasic, loadFull]);
 
   const sorted = useMemo(
     () => [...(people ?? [])].sort((a, b) => (a.lastActivity < b.lastActivity ? 1 : -1)),
@@ -81,7 +94,19 @@ function PeoplePage() {
           </Link>
         </header>
 
-        {people === null && <p className="mt-10 text-base text-muted-foreground">One second…</p>}
+        {people === null && (
+          <div aria-busy="true" aria-label="Loading people" className="mt-10 flex flex-col">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-4 border-b border-border py-5">
+                <span className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-muted" />
+                <span className="flex-1">
+                  <span className="block h-6 w-32 animate-pulse rounded bg-muted" />
+                  <span className="mt-2 block h-4 w-48 animate-pulse rounded bg-muted" />
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {people?.length === 0 && (
           <div className="mt-24 text-center">
@@ -119,9 +144,13 @@ function PeoplePage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-2xl leading-tight">{displayName}</span>
-                  <span className="mt-1 block truncate text-sm text-muted-foreground">
-                    {person.status}
-                  </span>
+                  {(statuses?.get(person.personKey) ?? person.status) ? (
+                    <span className="mt-1 block truncate text-sm text-muted-foreground">
+                      {statuses?.get(person.personKey) ?? person.status}
+                    </span>
+                  ) : (
+                    <span className="mt-2 block h-4 w-40 animate-pulse rounded bg-muted" />
+                  )}
                 </span>
                 {person.unread > 0 && (
                   <span
@@ -217,7 +246,7 @@ function PeoplePage() {
         </div>
       )}
 
-      <AppTabs />
+      <AppTabs deferChecks={people === null} />
     </main>
   );
 }

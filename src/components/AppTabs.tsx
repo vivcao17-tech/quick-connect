@@ -13,17 +13,18 @@ const tabs = [
   { label: "Meet", to: "/meet" as const, icon: MapPin },
 ];
 
-export function AppTabs() {
+/** deferChecks: hold the weekly-dot lookup until the page's own data has drawn. */
+export function AppTabs({ deferChecks = false }: { deferChecks?: boolean } = {}) {
   const viewer = useViewer();
   const loadWeek = useServerFn(getChainWeek);
   const [weekNeedsAnswer, setWeekNeedsAnswer] = useState(false);
 
   const refreshWeek = useCallback(() => {
-    if (!viewer.ready || !viewer.profileId || !viewer.guestToken) return;
+    if (deferChecks || !viewer.ready || !viewer.profileId || !viewer.guestToken) return;
     void loadWeek({ data: { guestToken: viewer.guestToken, profileId: viewer.profileId } })
       .then((result) => setWeekNeedsAnswer(Boolean(result.week?.open && !result.mine)))
       .catch(() => setWeekNeedsAnswer(false));
-  }, [loadWeek, viewer.guestToken, viewer.profileId, viewer.ready]);
+  }, [deferChecks, loadWeek, viewer.guestToken, viewer.profileId, viewer.ready]);
 
   useEffect(refreshWeek, [refreshWeek]);
 
