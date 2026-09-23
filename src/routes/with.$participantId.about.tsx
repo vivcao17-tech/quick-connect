@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { PackPreview } from "@/components/PackPreview";
 import { getPersonSessions } from "@/lib/conversations.functions";
@@ -9,6 +9,7 @@ import { listMyAnswerSets } from "@/lib/remote.functions";
 import { contactLink } from "@/lib/contact-link";
 import { getWallLinks } from "@/lib/profile.functions";
 import { useViewer } from "@/lib/viewer";
+import { getPairImpressions } from "@/lib/conversation.functions";
 
 export const Route = createFileRoute("/with/$participantId/about")({
   component: WithPersonPage,
@@ -246,6 +247,18 @@ function WithPersonPage() {
           </Fold>
         )}
 
+        {wallHandle && (
+          <Fold title="Their wall">
+            <Link
+              to="/p/$handle"
+              params={{ handle: wallHandle }}
+              className="block rounded-2xl border-2 border-primary px-6 py-5 text-center text-xl text-primary"
+            >
+              How people read {name}
+            </Link>
+          </Fold>
+        )}
+
         {data && sessions.length === 0 && (
           <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
         )}
@@ -310,84 +323,84 @@ function WithPersonPage() {
 
         {/* Private annotations — only ever shown to whoever wrote them. */}
         <Fold title="Just for you">
-        <div className="card-soft px-6 py-5">
-          <div className="flex items-baseline justify-between gap-4">
-            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-              Just for you
-            </p>
-            <button
-              onClick={() => setEditing((open) => !open)}
-              className="text-sm text-muted-foreground underline underline-offset-4"
-            >
-              {editing
-                ? "Cancel"
-                : data?.note.nickname || data?.note.contact || data?.note.note
-                  ? "Edit"
-                  : "Add"}
-            </button>
-          </div>
-
-          {!editing && (
-            <div className="mt-4 flex flex-col gap-2 text-base">
-              {data?.note.contact ? (
-                link ? (
-                  <a
-                    href={link.href}
-                    target={link.href.startsWith("http") ? "_blank" : undefined}
-                    rel="noreferrer"
-                    className="text-primary underline underline-offset-4"
-                  >
-                    {link.label}
-                  </a>
-                ) : (
-                  <p>{data.note.contact}</p>
-                )
-              ) : null}
-              {data?.note.note && <p className="text-muted-foreground">{data.note.note}</p>}
-              {!data?.note.contact && !data?.note.note && !data?.note.nickname && (
-                <p className="text-muted-foreground">
-                  Nickname, where you talk, and one line to remember them by.
-                </p>
-              )}
-            </div>
-          )}
-
-          {editing && (
-            <form
-              className="mt-4 flex flex-col gap-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void submit();
-              }}
-            >
-              <input
-                value={nickname}
-                onChange={(event) => setNickname(event.target.value)}
-                placeholder="Nickname (only you see it)"
-                className={field}
-              />
-              <input
-                value={contact}
-                onChange={(event) => setContact(event.target.value)}
-                placeholder="@instagram, phone, or a link"
-                className={field}
-              />
-              <input
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Note — e.g. orientation group, sat next to me"
-                className={field}
-              />
+          <div className="card-soft px-6 py-5">
+            <div className="flex items-baseline justify-between gap-4">
+              <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+                Just for you
+              </p>
               <button
-                type="submit"
-                disabled={saving}
-                className="btn-quiet self-start hover:bg-secondary disabled:opacity-40"
+                onClick={() => setEditing((open) => !open)}
+                className="text-sm text-muted-foreground underline underline-offset-4"
               >
-                {saving ? "Saving…" : "Save"}
+                {editing
+                  ? "Cancel"
+                  : data?.note.nickname || data?.note.contact || data?.note.note
+                    ? "Edit"
+                    : "Add"}
               </button>
-            </form>
-          )}
-        </div>
+            </div>
+
+            {!editing && (
+              <div className="mt-4 flex flex-col gap-2 text-base">
+                {data?.note.contact ? (
+                  link ? (
+                    <a
+                      href={link.href}
+                      target={link.href.startsWith("http") ? "_blank" : undefined}
+                      rel="noreferrer"
+                      className="text-primary underline underline-offset-4"
+                    >
+                      {link.label}
+                    </a>
+                  ) : (
+                    <p>{data.note.contact}</p>
+                  )
+                ) : null}
+                {data?.note.note && <p className="text-muted-foreground">{data.note.note}</p>}
+                {!data?.note.contact && !data?.note.note && !data?.note.nickname && (
+                  <p className="text-muted-foreground">
+                    Nickname, where you talk, and one line to remember them by.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {editing && (
+              <form
+                className="mt-4 flex flex-col gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void submit();
+                }}
+              >
+                <input
+                  value={nickname}
+                  onChange={(event) => setNickname(event.target.value)}
+                  placeholder="Nickname (only you see it)"
+                  className={field}
+                />
+                <input
+                  value={contact}
+                  onChange={(event) => setContact(event.target.value)}
+                  placeholder="@instagram, phone, or a link"
+                  className={field}
+                />
+                <input
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  placeholder="Note — e.g. orientation group, sat next to me"
+                  className={field}
+                />
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-quiet self-start hover:bg-secondary disabled:opacity-40"
+                >
+                  {saving ? "Saving…" : "Save"}
+                </button>
+              </form>
+            )}
+          </div>
         </Fold>
 
         {sets.length > 0 && (
@@ -415,5 +428,71 @@ function WithPersonPage() {
         )}
       </section>
     </main>
+  );
+}
+
+/** Collapsed sections mount nothing until opened, so the page stays light. */
+function Fold({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mt-8 border-t border-border pt-5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <span className="text-xs tracking-[0.18em] text-muted-foreground uppercase">{title}</span>
+        <span className="text-muted-foreground">{open ? "−" : "+"}</span>
+      </button>
+      {open && <div className="mt-4 [&>div:first-child]:mt-0">{children}</div>}
+    </div>
+  );
+}
+
+function PairImpressions({
+  guestToken,
+  profileId,
+  personKey,
+  name,
+}: {
+  guestToken: string;
+  profileId?: string | undefined;
+  personKey: string;
+  name: string;
+}) {
+  const load = useServerFn(getPairImpressions);
+  const [items, setItems] = useState<
+    Awaited<ReturnType<typeof getPairImpressions>>["items"] | null
+  >(null);
+  useEffect(() => {
+    void load({ data: { guestToken, personKey, ...(profileId ? { profileId } : {}) } })
+      .then((r) => setItems(r.items))
+      .catch(() => setItems([]));
+  }, [load, guestToken, profileId, personKey]);
+  if (!items) return <p className="text-muted-foreground">One second…</p>;
+  if (items.length === 0)
+    return <p className="text-muted-foreground">No guesses between you two yet.</p>;
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item) => (
+        <div key={item.sessionQuestionId} className="card-soft px-5 py-4">
+          <p className="text-base leading-snug">{item.text}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            You guessed {name}: {item.myGuess || "—"} · {name} said: {item.theirLabel || "—"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {name} guessed you: {item.theirGuess || "—"} · You said: {item.myLabel || "—"}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
