@@ -422,18 +422,17 @@ export const getConversationPrompt = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let query = (supabaseAdmin as unknown as { from: (t: string) => any })
+    const { data: rows } = await (supabaseAdmin as unknown as { from: (t: string) => any })
       .from("conversation_prompts")
-      .select("text")
+      .select("id, pack, subtopic, question")
       .eq("active", true);
-    if (data.pack) query = query.eq("pack", data.pack);
-    const { data: rows } = await query;
-    const pool = ((rows ?? []) as { text: string }[])
-      .map((r) => r.text)
-      .filter((t) => t !== data.skip);
-    return {
-      text: pool[Math.floor(Math.random() * pool.length)] ?? "What's the story behind that?",
-    };
+    type P = { id: string; pack: string | null; subtopic: string; question: string };
+    const all = ((rows ?? []) as P[]).filter((r) => r.question !== data.skip);
+    const inPack = data.pack ? all.filter((r) => r.pack === data.pack) : [];
+    const pool = inPack.length ? inPack : all;
+    const hit = pool[Math.floor(Math.random() * pool.length)];
+    if (!hit) throw new Error("No prompts available");
+    return { id: hit.id, pack: hit.pack, subtopic: hit.subtopic, text: hit.question };
   });
 
 /** A message to one person. No question needed; a reference only when sent from Talk. */

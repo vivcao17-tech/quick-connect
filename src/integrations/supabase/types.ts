@@ -336,21 +336,27 @@ export type Database = {
           created_at: string
           id: string
           pack: string | null
-          text: string
+          question: string
+          sort: number
+          subtopic: string
         }
         Insert: {
           active?: boolean
           created_at?: string
           id?: string
           pack?: string | null
-          text: string
+          question: string
+          sort?: number
+          subtopic?: string
         }
         Update: {
           active?: boolean
           created_at?: string
           id?: string
           pack?: string | null
-          text?: string
+          question?: string
+          sort?: number
+          subtopic?: string
         }
         Relationships: []
       }

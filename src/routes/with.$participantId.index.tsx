@@ -181,8 +181,10 @@ function ConversationPage() {
   // Only a Talk tap attaches a question; otherwise the message stands alone.
   const targetQ = questions.find((i) => i.data.sessionQuestionId === target)?.data;
   const display = name || "them";
+  const promptRef = useRef<{ id: string; text: string; source: string } | null>(null);
 
   function fill(text: string, sessionQuestionId?: string) {
+    promptRef.current = null;
     setTarget(sessionQuestionId ?? "");
     setDraft(text);
     window.setTimeout(() => {
@@ -190,6 +192,22 @@ function ConversationPage() {
       const end = inputRef.current?.value.length ?? 0;
       inputRef.current?.setSelectionRange(end, end);
     }, 0);
+  }
+
+  function fillPrompt(
+    p: { id: string; pack: string | null; subtopic: string; text: string },
+    source: "something_to_talk_about" | "similar_questions",
+    sessionQuestionId?: string,
+  ) {
+    fill(p.text, sessionQuestionId);
+    promptRef.current = { id: p.id, text: p.text, source };
+    track("conversation_prompt_filled", {
+      prompt_id: p.id,
+      pack: p.pack,
+      subtopic: p.subtopic,
+      source,
+      surface: "conversation",
+    });
   }
 
   async function send(kind: "text" | "reaction", body: string) {
@@ -210,6 +228,16 @@ function ConversationPage() {
         session_question_id: targetQ?.sessionQuestionId ?? null,
         surface: "conversation",
       });
+      const used = promptRef.current;
+      if (kind === "text" && used) {
+        track("conversation_prompt_sent", {
+          prompt_id: used.id,
+          source: used.source,
+          edited: clean !== used.text.trim(),
+          surface: "conversation",
+        });
+        promptRef.current = null;
+      }
       if (kind === "text") {
         setDraft("");
         setTarget("");
@@ -247,7 +275,7 @@ function ConversationPage() {
   async function somethingToTalkAbout() {
     setMenuOpen(false);
     const result = await loadPrompt({ data: { pack: null } });
-    fill(result.text);
+    fillPrompt(result, "something_to_talk_about");
   }
 
   return (
