@@ -6,25 +6,22 @@ function newToken(): string {
     .slice(0, 24);
 }
 
-/** One durable, secret way back into this session for this one participant. */
+/**
+ * A fresh, single-use way back into this session for this one participant.
+ * Every email gets its own link; each expires after 24 hours or its first use.
+ */
 export async function ensureSessionLink(
   admin: Admin,
   opts: { sessionId: string; participantId: string },
 ): Promise<string> {
-  const { data: existing } = await admin
-    .from("session_links")
-    .select("token")
-    .eq("participant_id", opts.participantId)
-    .maybeSingle();
-  if (existing?.token) return existing.token;
-
   const token = newToken();
-  const { data: inserted } = await admin
-    .from("session_links")
-    .insert({ token, session_id: opts.sessionId, participant_id: opts.participantId })
-    .select("token")
-    .maybeSingle();
-  return inserted?.token ?? token;
+  await admin.from("session_links").insert({
+    token,
+    session_id: opts.sessionId,
+    participant_id: opts.participantId,
+    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  });
+  return token;
 }
 
 export type SessionLinkTarget = {
@@ -80,7 +77,8 @@ export async function describeSessionForParticipant(
   }
 
   const other = others[0];
-  const key = other ? (other.profile_id ?? other.guest_token ?? other.id) : "";
+  const { personKeyOf } = await import("@/lib/conversations.server");
+  const key = other ? personKeyOf(other) : "";
   return {
     path: key ? `/with/${key}/${opts.sessionId}` : `/room/${opts.sessionId}`,
     withName: other?.display_name ?? "them",
@@ -89,25 +87,98 @@ export async function describeSessionForParticipant(
   };
 }
 
-/** Resolve a saved link back to the identity and screen it belongs to. */
-export async function resolveSessionLink(admin: Admin, token: string) {
-  const { data: link } = await admin
+type LinkRow = {
+  session_id: string;
+  participant_id: string;
+  expires_at: string;
+  used_at: string | null;
+};
+
+async function findLink(admin: Admin, token: string): Promise<LinkRow | null> {
+  const { data } = await admin
     .from("session_links")
-    .select("session_id, participant_id")
+    .select("session_id, participant_id, expires_at, used_at")
     .eq("token", token)
     .maybeSingle();
-  if (!link) return null;
+  return (data as LinkRow | null) ?? null;
+}
 
-  const { data: participant } = await admin
-    .from("session_participants")
-    .select("guest_token")
-    .eq("id", link.participant_id)
-    .maybeSingle();
+function isLive(link: LinkRow) {
+  return !link.used_at && new Date(link.expires_at).getTime() > Date.now();
+}
 
+/** Look without using it up — safe for mail scanners that pre-open links. */
+export async function previewSessionLink(admin: Admin, token: string) {
+  const link = await findLink(admin, token);
+  if (!link) return { status: "missing" as const };
+  if (!isLive(link)) return { status: "expired" as const };
   const target = await describeSessionForParticipant(admin, {
     sessionId: link.session_id,
     participantId: link.participant_id,
   });
+  return { status: "ready" as const, withName: target.withName, isGroup: target.isGroup };
+}
 
-  return { guestToken: participant?.guest_token ?? "", path: target.path };
+/** Use the link up (atomically) and hand back the identity and screen. */
+export async function claimSessionLink(admin: Admin, token: string) {
+  const { data: claimed } = await admin
+    .from("session_links")
+    .update({ used_at: new Date().toISOString() })
+    .eq("token", token)
+    .is("used_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .select("session_id, participant_id")
+    .maybeSingle();
+  if (!claimed) return null;
+
+  const { data: participant } = await admin
+    .from("session_participants")
+    .select("guest_token")
+    .eq("id", claimed.participant_id)
+    .maybeSingle();
+
+  const target = await describeSessionForParticipant(admin, {
+    sessionId: claimed.session_id,
+    participantId: claimed.participant_id,
+  });
+  return { guestToken: (participant?.guest_token as string | null) ?? "", path: target.path };
+}
+
+/**
+ * Expired or used link: mail a fresh one to the address already on file for
+ * that participant. Forwarding the old email therefore gets the forwarder
+ * nothing — the new link only ever goes to the original inbox.
+ */
+export async function resendSessionLink(admin: Admin, token: string) {
+  const link = await findLink(admin, token);
+  if (!link) return;
+  const { data: recent } = await admin
+    .from("session_links")
+    .select("token")
+    .eq("participant_id", link.participant_id)
+    .gt("created_at", new Date(Date.now() - 2 * 60 * 1000).toISOString())
+    .limit(1);
+  if ((recent ?? []).length > 0) return; // one resend per two minutes
+  const { data: row } = await admin
+    .from("participant_emails")
+    .select("email")
+    .eq("participant_id", link.participant_id)
+    .maybeSingle();
+  if (!row?.email) return;
+  const fresh = await ensureSessionLink(admin, {
+    sessionId: link.session_id,
+    participantId: link.participant_id,
+  });
+  const target = await describeSessionForParticipant(admin, {
+    sessionId: link.session_id,
+    participantId: link.participant_id,
+  });
+  const { sendSessionSavedEmail } = await import("@/lib/email.server");
+  await sendSessionSavedEmail(admin as never, {
+    to: row.email as string,
+    withName: target.withName,
+    isGroup: target.isGroup,
+    questionCount: target.questionCount,
+    path: `/s/${fresh}`,
+  });
 }

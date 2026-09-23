@@ -38,6 +38,8 @@ export async function loadNotes(
     .in("owner_key", keys)
     .order("updated_at");
 
+  const { contactsLocked } = await import("@/lib/identity.server");
+  const locked = await contactsLocked(admin as never, identity);
   for (const row of (data ?? []) as {
     target_key: string;
     nickname: string | null;
@@ -46,7 +48,7 @@ export async function loadNotes(
   }[]) {
     out.set(row.target_key, {
       nickname: row.nickname ?? "",
-      contact: row.contact ?? "",
+      contact: locked ? "" : (row.contact ?? ""),
       note: row.note ?? "",
     });
   }
@@ -71,10 +73,13 @@ export async function saveNote(
   const owner = writeKey(identity);
   if (!owner) return EMPTY_NOTE;
 
+  const { contactsLocked } = await import("@/lib/identity.server");
+  const locked = await contactsLocked(admin as never, identity);
   const value = {
     nickname: patch.nickname.trim() || null,
-    contact: patch.contact.trim() || null,
     note: patch.note.trim() || null,
+    // Without a sign-in the contact wasn't shown, so never overwrite it.
+    ...(locked ? {} : { contact: patch.contact.trim() || null }),
   };
 
   // Notes written before sign-in live under the guest token; move them across
@@ -93,7 +98,7 @@ export async function saveNote(
 
   return {
     nickname: value.nickname ?? "",
-    contact: value.contact ?? "",
+    contact: "contact" in value ? (value.contact ?? "") : "",
     note: value.note ?? "",
   };
 }

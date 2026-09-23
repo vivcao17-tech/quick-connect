@@ -71,11 +71,7 @@ export function snapshotOf(row: {
   };
 }
 
-export function toPlay(sq: {
-  id: string;
-  question_id: string;
-  snapshot: unknown;
-}): PlayQuestion {
+export function toPlay(sq: { id: string; question_id: string; snapshot: unknown }): PlayQuestion {
   const snap = sq.snapshot as Snapshot;
   return {
     sessionQuestionId: sq.id,

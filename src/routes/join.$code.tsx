@@ -88,7 +88,11 @@ function JoinPage() {
           </Link>
           .
         </p>
-        <button onClick={go} disabled={!name.trim() || busy} className="btn-ink mt-6 self-start disabled:opacity-30">
+        <button
+          onClick={go}
+          disabled={!name.trim() || busy}
+          className="btn-ink mt-6 self-start disabled:opacity-30"
+        >
           I'm in
         </button>
         {error && <p className="mt-6 text-sm text-primary">{error}</p>}

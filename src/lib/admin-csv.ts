@@ -12,5 +12,9 @@ export function toCsv(headers: string[], rows: unknown[][]) {
 }
 
 export function exportCsv(name: string, headers: string[], rows: unknown[][]) {
-  downloadFile(`${name}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(headers, rows), "text/csv");
+  downloadFile(
+    `${name}-${new Date().toISOString().slice(0, 10)}.csv`,
+    toCsv(headers, rows),
+    "text/csv",
+  );
 }

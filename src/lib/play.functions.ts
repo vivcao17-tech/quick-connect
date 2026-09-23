@@ -40,7 +40,12 @@ export const startSession = createServerFn({ method: "POST" })
 
     const { data: session, error: sessionError } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "irl_pair", status: "active", spice_max: data.spiceMax ?? 2, is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }) })
+      .insert({
+        kind: "irl_pair",
+        status: "active",
+        spice_max: data.spiceMax ?? 2,
+        is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }),
+      })
       .select("id")
       .single();
     if (sessionError) throw sessionError;

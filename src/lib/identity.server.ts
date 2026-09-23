@@ -67,3 +67,21 @@ export async function linkProfileToGuestRows(admin: Admin, identity: Identity): 
     .eq("guest_token", identity.guestToken)
     .is("profile_id", null);
 }
+
+/**
+ * Contact details (phone numbers, emails saved in private notes) need a real
+ * sign-in once the guest token belongs to a claimed account. A guest token
+ * alone still reads and replies; it just can't see those. People who never
+ * signed up keep full access — they have no account to sign in to.
+ * `profileId` here is already verified by the verifyProfileId middleware.
+ */
+export async function contactsLocked(admin: Admin, identity: Identity): Promise<boolean> {
+  if (identity.profileId || !identity.guestToken) return false;
+  const { data } = await admin
+    .from("session_participants")
+    .select("id")
+    .eq("guest_token", identity.guestToken)
+    .not("profile_id", "is", null)
+    .limit(1);
+  return (data ?? []).length > 0;
+}

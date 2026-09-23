@@ -11,7 +11,7 @@ import { getInbox } from "@/lib/remote.functions";
 export const Route = createFileRoute("/inbox")({
   component: InboxPage,
   validateSearch: (search: Record<string, unknown>): { q?: string } => {
-    const q = search['q'];
+    const q = search["q"];
     return typeof q === "string" && q ? { q } : {};
   },
   head: () => ({

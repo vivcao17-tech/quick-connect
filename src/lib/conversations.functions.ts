@@ -57,7 +57,13 @@ export const getPersonSessions = createServerFn({ method: "POST" })
     const { loadDetail, metLabel } = await import("@/lib/relationships.server");
 
     const detail = await loadDetail(supabaseAdmin as never, data.guestToken, data.profileId);
-    const person = detail.people.find((p) => p.personKey === data.personKey);
+    const { guestPersonKey } = await import("@/lib/conversations.server");
+    // Old links carried a raw guest token; accept it once so the page can swap
+    // the address for the hashed key.
+    const legacy = guestPersonKey(data.personKey);
+    const person = detail.people.find(
+      (p) => p.personKey === data.personKey || p.personKey === legacy,
+    );
     if (!person) {
       return {
         name: "",
@@ -69,6 +75,7 @@ export const getPersonSessions = createServerFn({ method: "POST" })
     }
     const oldest = person.sessions[person.sessions.length - 1];
     return {
+      personKey: person.personKey,
       name: person.nickname || person.name,
       realName: person.name,
       note: { nickname: person.nickname, contact: person.contact, note: person.note },
@@ -98,10 +105,17 @@ export const getSessionBlock = createServerFn({ method: "POST" })
     const { loadDetail } = await import("@/lib/relationships.server");
 
     const detail = await loadDetail(supabaseAdmin as never, data.guestToken, data.profileId);
-    const person = detail.people.find((p) => p.personKey === data.personKey);
+    const { guestPersonKey } = await import("@/lib/conversations.server");
+    // Old links carried a raw guest token; accept it once so the page can swap
+    // the address for the hashed key.
+    const legacy = guestPersonKey(data.personKey);
+    const person = detail.people.find(
+      (p) => p.personKey === data.personKey || p.personKey === legacy,
+    );
     const session = person?.sessions.find((s) => s.sessionId === data.sessionId);
     if (!person || !session) return { name: "", topic: "", questions: [] };
     return {
+      personKey: person.personKey,
       name: person.nickname || person.name,
       topic: session.topic,
       questions: session.questions,
@@ -300,12 +314,18 @@ export const listPeople = createServerFn({ method: "POST" })
       return "Start another round";
     }
 
+    const { contactsLocked } = await import("@/lib/identity.server");
+    const locked = await contactsLocked(supabaseAdmin as never, {
+      guestToken: data.guestToken,
+      profileId: data.profileId,
+    });
+
     return {
       people: (overview?.people ?? []).map((row) => ({
         personKey: row.personKey,
         name: row.name,
         nickname: row.nickname,
-        contact: row.contact,
+        contact: locked ? "" : row.contact,
         note: row.note,
         sessionCount: row.sessionCount,
         unread: row.unread,

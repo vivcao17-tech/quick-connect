@@ -86,7 +86,12 @@ export async function loadDetail(
     _profile_id: profileId ?? null,
   });
   if (error) throw new Error(error.message);
-  return { people: data?.people ?? [], waiting: data?.waiting ?? [] };
+  const people: RelationshipsDetail["people"] = data?.people ?? [];
+  const { contactsLocked } = await import("@/lib/identity.server");
+  if (await contactsLocked(admin as never, { guestToken, profileId })) {
+    for (const person of people) person.contact = "";
+  }
+  return { people, waiting: data?.waiting ?? [] };
 }
 
 /** Plain words for where the two of you first ended up together. */

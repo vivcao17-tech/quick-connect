@@ -78,7 +78,9 @@ function RemoteGroupSetup() {
   return (
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-        <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Group · not here</p>
+        <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
+          Group · not here
+        </p>
         <h1 className="mt-6 text-4xl leading-tight">You answer first, then they get a link.</h1>
         <p className="mt-3 text-muted-foreground">
           Five questions. Nobody sees anything until it opens.

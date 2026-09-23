@@ -51,7 +51,10 @@ export async function pickAsyncGroupQuestions(
   const { data: history } = await admin
     .from("answers")
     .select("question_id, option_key")
-    .in("question_id", pool.map((q) => q.id))
+    .in(
+      "question_id",
+      pool.map((q) => q.id),
+    )
     .limit(8000);
 
   const tallies = new Map<string, Map<string, number>>();
@@ -75,9 +78,11 @@ export async function pickAsyncGroupQuestions(
   });
   scored.sort((a, b) => b.score - a.score);
 
-  return spreadAcrossTopics(scored.map((s) => s.q), count) as QuestionRow[];
+  return spreadAcrossTopics(
+    scored.map((s) => s.q),
+    count,
+  ) as QuestionRow[];
 }
-
 
 export function asyncSnapshot(q: QuestionRow) {
   return snapshotRow(q);
@@ -100,7 +105,9 @@ export function promptsFor(
   groups: { optionKey: OptionKey; label: string; people: { id: string; name: string }[] }[],
 ): string[] {
   const mine = groups.find((g) => g.people.some((p) => p.id === meId));
-  const sole = groups.find((g) => g.people.length === 1 && groups.some((other) => other !== g && other.people.length > 1));
+  const sole = groups.find(
+    (g) => g.people.length === 1 && groups.some((other) => other !== g && other.people.length > 1),
+  );
   const prompts: string[] = [];
 
   if (sole && mine === sole) {
@@ -113,7 +120,8 @@ export function promptsFor(
   if (mine && mine.people.length > 1) {
     const others = mine.people.filter((p) => p.id !== meId).map((p) => p.name);
     if (others.length === 1) prompts.push(`Same answer as ${others[0]} — same reason?`);
-    else if (others.length > 1) prompts.push(`Same answer as ${others[0]} and ${others[1]} — same reason?`);
+    else if (others.length > 1)
+      prompts.push(`Same answer as ${others[0]} and ${others[1]} — same reason?`);
   }
 
   return prompts;

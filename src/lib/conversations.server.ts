@@ -1,17 +1,31 @@
+import { createHash } from "node:crypto";
+
 import type { Snapshot } from "@/lib/remote-shared";
 
 /**
  * Person identity across sessions.
  *
- * A registered person is keyed by profile_id, a guest by guest_token. Both are
- * uuids, so one column of route param covers both. A signed-in viewer is matched
+ * A registered person is keyed by profile_id. A guest is keyed by a one-way hash
+ * of their guest token ("g" + 32 hex) — never the token itself, because this key
+ * ends up in /with/ URLs and responses the other person can see. Must match
+ * public.public_person_key() in the database. A signed-in viewer is matched
  * by profile_id as well as by the guest token of the browser they are on, so
  * their history follows them across devices. If a guest loses their token
  * (cleared storage, new device, private window) they become a new person until
  * they sign in.
  */
-export function personKeyOf(row: { profile_id: string | null; guest_token: string | null; id: string }) {
-  return row.profile_id ?? row.guest_token ?? row.id;
+export function personKeyOf(row: {
+  profile_id: string | null;
+  guest_token: string | null;
+  id: string;
+}) {
+  if (row.profile_id) return row.profile_id;
+  if (row.guest_token) return guestPersonKey(row.guest_token);
+  return row.id;
+}
+
+export function guestPersonKey(guestToken: string) {
+  return "g" + createHash("sha256").update(guestToken, "utf8").digest("hex").slice(0, 32);
 }
 
 type Admin = {
@@ -49,7 +63,6 @@ export type SessionBlock = {
   questions: QuestionBlock[];
 };
 
-
 export type Person = {
   personKey: string;
   name: string;
@@ -79,9 +92,7 @@ export async function loadPendingInvites(
 ): Promise<PendingInvite[]> {
   const { myParticipants } = await import("@/lib/identity.server");
   const mine = await myParticipants(admin, { guestToken, profileId });
-  const parentIds = [
-    ...new Set(mine.filter((p) => p.role === "sender").map((p) => p.session_id)),
-  ];
+  const parentIds = [...new Set(mine.filter((p) => p.role === "sender").map((p) => p.session_id))];
   if (parentIds.length === 0) return [];
 
   const { data } = await admin
@@ -91,14 +102,16 @@ export async function loadPendingInvites(
     .is("completed_at", null)
     .order("created_at", { ascending: false });
 
-  return ((data ?? []) as {
-    token: string;
-    recipient_label: string | null;
-    personal_note: string | null;
-    opened_at: string | null;
-    created_at: string;
-    session_id: string;
-  }[]).map((row) => ({
+  return (
+    (data ?? []) as {
+      token: string;
+      recipient_label: string | null;
+      personal_note: string | null;
+      opened_at: string | null;
+      created_at: string;
+      session_id: string;
+    }[]
+  ).map((row) => ({
     token: row.token,
     label: row.recipient_label ?? "Someone",
     note: row.personal_note ?? "",
@@ -107,7 +120,6 @@ export async function loadPendingInvites(
     sessionId: row.session_id,
   }));
 }
-
 
 /** All blocks I share with anyone, grouped by person rather than by session. */
 export async function loadRelationships(
@@ -157,7 +169,6 @@ export async function loadRelationships(
   const kindOf = new Map<string, string>(
     ((sessionRows ?? []) as { id: string; kind: string }[]).map((row) => [row.id, row.kind]),
   );
-
 
   const { data: sqRows } = await admin
     .from("session_questions")
@@ -240,8 +251,7 @@ export async function loadRelationships(
       ? [...selfAnswers].reverse().find((a) => a.participant_id === partner.id)
       : undefined;
 
-    const label = (key: string | undefined) =>
-      snap.options.find((o) => o.key === key)?.label ?? "";
+    const label = (key: string | undefined) => snap.options.find((o) => o.key === key)?.label ?? "";
 
     const mine = messages.filter((m) => m.session_question_id === sq.id);
     const readAt = reads.find(

@@ -47,7 +47,13 @@ export const createGroupRoom = createServerFn({ method: "POST" })
 
     const { data: session, error } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: "group", status: "lobby", room_code: code, current_index: 0, is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }) })
+      .insert({
+        kind: "group",
+        status: "lobby",
+        room_code: code,
+        current_index: 0,
+        is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }),
+      })
       .select("id, room_code")
       .single();
     if (error) throw error;
@@ -76,7 +82,6 @@ export const createGroupRoom = createServerFn({ method: "POST" })
       const spare = extra.find((q) => !questions.some((row) => row.id === q.id));
       if (spare) questions.push(spare);
     }
-
 
     const { error: sqError } = await supabaseAdmin.from("session_questions").insert(
       questions.map((q, index) => ({
@@ -139,7 +144,9 @@ export const getGroupState = createServerFn({ method: "POST" })
 
     const { data: answerRows } = await supabaseAdmin
       .from("answers")
-      .select("session_question_id, participant_id, option_key, created_at, answer_role, about_participant_id")
+      .select(
+        "session_question_id, participant_id, option_key, created_at, answer_role, about_participant_id",
+      )
       .in("session_question_id", sqs.map((sq) => sq.id).length ? sqs.map((sq) => sq.id) : [""])
       .order("created_at");
 
@@ -200,7 +207,12 @@ export const getGroupState = createServerFn({ method: "POST" })
         .map((p) => {
           const key = latest.get(`${currentSq.id}:${p.participantId}`);
           return key
-            ? { participantId: p.participantId, name: p.name, isMe: p.isMe, optionKey: key as OptionKey }
+            ? {
+                participantId: p.participantId,
+                name: p.name,
+                isMe: p.isMe,
+                optionKey: key as OptionKey,
+              }
             : null;
         })
         .filter((row): row is NonNullable<typeof row> => row !== null);
@@ -213,7 +225,11 @@ export const getGroupState = createServerFn({ method: "POST" })
       const groups = [...byOption.values()].sort((a, b) => b.length - a.length);
       const small = groups.length > 1 ? groups[groups.length - 1]! : [];
       const isMinority =
-        !isImpression && revealed && small.length > 0 && small.length <= 2 && small.length < groups[0]!.length;
+        !isImpression &&
+        revealed &&
+        small.length > 0 &&
+        small.length <= 2 &&
+        small.length < groups[0]!.length;
       const minorityNames = isMinority ? small.map((p) => p.name) : [];
       const iAmMinority = isMinority && small.some((p) => p.isMe);
 
@@ -227,7 +243,8 @@ export const getGroupState = createServerFn({ method: "POST" })
             name: p.name,
             stem: stemForTarget(snap, p.name),
             guessed:
-              (guesses.get(`${currentSq.id}:${me.id}:${p.participantId}`) as OptionKey | undefined) ?? null,
+              (guesses.get(`${currentSq.id}:${me.id}:${p.participantId}`) as
+                OptionKey | undefined) ?? null,
           })),
           selfStem: selfStem(snap),
           selfAnswer: (latest.get(`${currentSq.id}:${me.id}`) as OptionKey | undefined) ?? null,
@@ -236,8 +253,7 @@ export const getGroupState = createServerFn({ method: "POST" })
             ? others
                 .map((p) => {
                   const key = guesses.get(`${currentSq.id}:${p.participantId}:${me.id}`) as
-                    | OptionKey
-                    | undefined;
+                    OptionKey | undefined;
                   if (!key) return null;
                   return {
                     name: p.name,
@@ -258,7 +274,9 @@ export const getGroupState = createServerFn({ method: "POST" })
         if (!latest.get(`${currentSq.id}:${p.participantId}`)) return false;
         return players
           .filter((other) => other.participantId !== p.participantId)
-          .every((other) => guesses.get(`${currentSq.id}:${p.participantId}:${other.participantId}`));
+          .every((other) =>
+            guesses.get(`${currentSq.id}:${p.participantId}:${other.participantId}`),
+          );
       }).length;
 
       current = {
@@ -280,7 +298,6 @@ export const getGroupState = createServerFn({ method: "POST" })
         impression,
       };
     }
-
 
     // End screen: plain counts of where each person landed differently from me.
     const differences = players
@@ -348,8 +365,8 @@ export const getGroupState = createServerFn({ method: "POST" })
             id: pendingRequest.id,
             secondsLeft: pendingRequest.secondsLeft,
             name:
-              everyone.find((p) => p.participantId === pendingRequest.requesterParticipantId)?.name ??
-              "Someone",
+              everyone.find((p) => p.participantId === pendingRequest.requesterParticipantId)
+                ?.name ?? "Someone",
             isMine: pendingRequest.requesterParticipantId === me.id,
           }
         : null,
@@ -407,9 +424,8 @@ export const answerInGroup = createServerFn({ method: "POST" })
       .eq("session_question_id", sq.id)
       .eq("participant_id", me.id)
       .eq("answer_role", role);
-    const { data: already } = await (aboutOther
-      ? existing.eq("about_participant_id", data.aboutParticipantId!)
-      : existing
+    const { data: already } = await (
+      aboutOther ? existing.eq("about_participant_id", data.aboutParticipantId!) : existing
     ).maybeSingle();
     if (already) return { ok: true };
 
@@ -433,7 +449,6 @@ export const answerInGroup = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
-
 
 /** Host-only, always allowed: a missing or departed person never blocks the room. */
 export const revealGroupQuestion = createServerFn({ method: "POST" })
@@ -547,7 +562,9 @@ export const requestHost = createServerFn({ method: "POST" })
 
 export const declineHostRequest = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ guestToken: guest, sessionId: z.string().uuid(), requestId: z.string().uuid() }).parse(input),
+    z
+      .object({ guestToken: guest, sessionId: z.string().uuid(), requestId: z.string().uuid() })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

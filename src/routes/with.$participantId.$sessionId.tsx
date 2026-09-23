@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
@@ -48,6 +48,7 @@ function SessionBlockPage() {
   const [openId, setOpenId] = useState(q ?? "");
 
   const load = useServerFn(getSessionBlock);
+  const navigate = useNavigate();
 
   const refresh = useCallback(() => {
     if (!viewer.guestToken) return;
@@ -59,9 +60,20 @@ function SessionBlockPage() {
         sessionId,
       },
     })
-      .then(setData)
+      .then((result) => {
+        setData(result);
+        // Old addresses carried a guest token; swap to the hashed key.
+        if ("personKey" in result && result.personKey && result.personKey !== participantId) {
+          void navigate({
+            to: "/with/$participantId/$sessionId",
+            params: { participantId: result.personKey, sessionId },
+            search: q ? { q } : {},
+            replace: true,
+          });
+        }
+      })
       .catch(() => setData({ name: "", topic: "", questions: [] }));
-  }, [load, participantId, sessionId, viewer.guestToken, viewer.profileId]);
+  }, [load, navigate, participantId, q, sessionId, viewer.guestToken, viewer.profileId]);
 
   useEffect(() => {
     if (viewer.ready) refresh();

@@ -12,7 +12,6 @@ import {
   type ExportableSession,
 } from "@/lib/admin-export";
 
-
 export const Route = createFileRoute("/admin_/s/$sessionId")({
   component: SessionDetailPage,
   head: () => ({
@@ -50,10 +49,7 @@ function Bar({ options }: { options: { key: string; label: string; votes: number
           <div key={option.key} className="flex items-center gap-3">
             <span className="w-44 shrink-0 text-sm">{option.label}</span>
             <div className="h-2 flex-1 rounded-full bg-muted">
-              <div
-                className="h-2 rounded-full bg-primary"
-                style={{ width: `${width}%` }}
-              />
+              <div className="h-2 rounded-full bg-primary" style={{ width: `${width}%` }} />
             </div>
             <span className="w-20 shrink-0 text-right text-sm text-muted-foreground">
               {option.votes} · {total ? `${width}%` : "—"}
@@ -88,7 +84,6 @@ function SessionDetailPage() {
         return a.orderIndex - b.orderIndex;
       })
     : [];
-
 
   return (
     <main className="paper min-h-screen bg-background">
@@ -167,7 +162,6 @@ function SessionDetailPage() {
               </button>
             </div>
 
-
             <div className="mt-10 flex flex-col gap-4">
               {questions.map((question) => (
                 <div key={question.sessionQuestionId} className="card-soft px-6 py-5">
@@ -181,7 +175,6 @@ function SessionDetailPage() {
                       <br />
                       {secs(question.answerWindowSeconds)} window
                     </span>
-
                   </div>
 
                   {question.skipped ? (
@@ -189,7 +182,9 @@ function SessionDetailPage() {
                   ) : (
                     <>
                       {question.selfOptions && (
-                        <p className="mt-3 text-sm text-muted-foreground">Guesses about the other</p>
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          Guesses about the other
+                        </p>
                       )}
                       <Bar options={question.options} />
                       {question.selfOptions && (
@@ -200,7 +195,8 @@ function SessionDetailPage() {
                       )}
                       <p className="mt-4 text-sm text-muted-foreground">
                         {question.totalVotes} answers · {secs(question.secondsOnQuestion)} on this
-                        question · {secs(question.answerWindowSeconds)} between first and last answer
+                        question · {secs(question.answerWindowSeconds)} between first and last
+                        answer
                       </p>
                     </>
                   )}

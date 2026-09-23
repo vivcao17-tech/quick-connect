@@ -5,7 +5,8 @@ type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseA
 
 export type DrawnQuestion = { questionId: string; snapshot: Snapshot };
 
-const QUESTION_SELECT = "id, topic_id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, follow_up, reason_chips(id, option_key, text)";
+const QUESTION_SELECT =
+  "id, topic_id, text, option_a, option_b, option_c, question_type, stem_other, stem_self, follow_up, reason_chips(id, option_key, text)";
 
 type QuestionRow = {
   id: string;
@@ -92,4 +93,3 @@ export async function drawQuestions(
     snapshot: snapshotOf({ ...row, chips: row.reason_chips ?? [] }),
   }));
 }
-
