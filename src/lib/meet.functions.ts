@@ -29,6 +29,15 @@ const fields = z.object({
 });
 
 type AdminClient = { from: (table: string) => any };
+type MeetQuestion = {
+  position: number;
+  id: string;
+  questionKey: string;
+  text: string;
+  optionA: string;
+  optionB: string;
+  pack: string;
+};
 
 async function activeMeet(admin: AdminClient) {
   const { data: event, error } = await admin
@@ -46,7 +55,7 @@ async function activeMeet(admin: AdminClient) {
     .eq("event_id", event.id)
     .order("position");
   if (questionsError) throw questionsError;
-  const questions = (rows ?? []).flatMap((row: any) =>
+  const questions: MeetQuestion[] = (rows ?? []).flatMap((row: any) =>
     row.question
       ? [{
           position: row.position as number,
@@ -180,7 +189,9 @@ export const getAdminMeet = createServerFn({ method: "GET" })
       .eq("event_id", form.event.id)
       .order("signup_number");
     if (error) throw error;
-    const sessionIds = (signups ?? []).map((row) => row.answer_session_id).filter(Boolean);
+  const sessionIds = (signups ?? [])
+    .map((row) => row.answer_session_id as string | null)
+    .filter((id): id is string => Boolean(id));
     const { data: answerRows } = sessionIds.length
       ? await supabaseAdmin
           .from("answers")
