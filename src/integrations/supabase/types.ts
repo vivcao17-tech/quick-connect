@@ -573,6 +573,160 @@ export type Database = {
           },
         ]
       }
+      meet_event_questions: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          position: number
+          question_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          position: number
+          question_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          position?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meet_event_questions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "meet_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meet_event_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meet_events: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          slot_label: string
+          starts_at: string
+          time_zone: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          slot_label: string
+          starts_at: string
+          time_zone?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          slot_label?: string
+          starts_at?: string
+          time_zone?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meet_signups: {
+        Row: {
+          answer_session_id: string | null
+          availability: string
+          berkeley_email: string
+          confirmed_18: boolean
+          consented: boolean
+          contact: string
+          created_at: string
+          event_id: string
+          first_name: string
+          id: string
+          open_answers: Json
+          participant_id: string | null
+          profile_id: string | null
+          signup_answers: Json
+          signup_number: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          answer_session_id?: string | null
+          availability: string
+          berkeley_email: string
+          confirmed_18: boolean
+          consented: boolean
+          contact: string
+          created_at?: string
+          event_id: string
+          first_name: string
+          id?: string
+          open_answers: Json
+          participant_id?: string | null
+          profile_id?: string | null
+          signup_answers: Json
+          signup_number?: never
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          answer_session_id?: string | null
+          availability?: string
+          berkeley_email?: string
+          confirmed_18?: boolean
+          consented?: boolean
+          contact?: string
+          created_at?: string
+          event_id?: string
+          first_name?: string
+          id?: string
+          open_answers?: Json
+          participant_id?: string | null
+          profile_id?: string | null
+          signup_answers?: Json
+          signup_number?: never
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meet_signups_answer_session_id_fkey"
+            columns: ["answer_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meet_signups_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "meet_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meet_signups_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           actor_name: string
