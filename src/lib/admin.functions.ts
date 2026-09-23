@@ -123,3 +123,80 @@ export const getAdminImpressions = createServerFn({ method: "GET" })
       impressionFallbacks: rows.filter((r) => r.name === "impression_fallback").length,
     };
   });
+
+/**
+ * A link leaked: give this person a brand-new guest token. Every row keyed by
+ * the old token moves to the new one (chain rows included, so nothing about the
+ * game changes), outstanding resume links die, and the old token stops working
+ * everywhere. Returns a fresh single-use resume link to send the person so their
+ * own device picks up the new token (not needed if they can sign in).
+ */
+export const rotateGuestToken = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ personKey: z.string().min(8).max(64) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertAdmin } = await import("@/lib/admin.server");
+    assertAdmin(context.claims);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { guestPersonKey } = await import("@/lib/conversations.server");
+    const { ensureSessionLink } = await import("@/lib/session-link.server");
+    const isUuid = /^[0-9a-f-]{36}$/i;
+
+    // Person key is a profile id (rotate every token that account used) or a raw guest token.
+    const { data: byProfile } = await supabaseAdmin
+      .from("session_participants")
+      .select("guest_token")
+      .eq("profile_id", isUuid.test(data.personKey) ? data.personKey : "00000000-0000-0000-0000-000000000000")
+      .not("guest_token", "is", null);
+    const oldTokens = [
+      ...new Set(
+        (byProfile ?? []).length > 0
+          ? (byProfile ?? []).map((row) => row.guest_token as string)
+          : [data.personKey],
+      ),
+    ];
+
+    let rotated = 0;
+    let resumePath: string | null = null;
+    for (const oldToken of oldTokens) {
+      const { data: rows } = await supabaseAdmin
+        .from("session_participants")
+        .select("id, session_id, joined_at")
+        .eq("guest_token", oldToken)
+        .order("joined_at", { ascending: false });
+      if (!rows || rows.length === 0) continue;
+      const fresh = crypto.randomUUID();
+      const ids = rows.map((row) => row.id);
+
+      await supabaseAdmin.from("session_participants").update({ guest_token: fresh }).eq("guest_token", oldToken);
+      await supabaseAdmin.from("events").update({ guest_token: fresh }).eq("guest_token", oldToken);
+      await supabaseAdmin.from("person_notes").update({ owner_key: fresh }).eq("owner_key", oldToken);
+      await supabaseAdmin
+        .from("person_notes")
+        .update({ target_key: guestPersonKey(fresh) })
+        .eq("target_key", guestPersonKey(oldToken));
+      await supabaseAdmin.from("chain_answers").update({ person_key: fresh }).eq("person_key", oldToken);
+      await supabaseAdmin.from("chain_guesses").update({ guesser_key: fresh }).eq("guesser_key", oldToken);
+      await supabaseAdmin.from("chain_guesses").update({ subject_key: fresh }).eq("subject_key", oldToken);
+      await supabaseAdmin
+        .from("excluded_identities")
+        .update({ value: fresh })
+        .eq("kind", "guest_token")
+        .eq("value", oldToken);
+      await supabaseAdmin
+        .from("session_links")
+        .update({ used_at: new Date().toISOString() })
+        .in("participant_id", ids)
+        .is("used_at", null);
+
+      rotated += 1;
+      if (!resumePath && rows[0]) {
+        const token = await ensureSessionLink(supabaseAdmin, {
+          sessionId: rows[0].session_id,
+          participantId: rows[0].id,
+        });
+        resumePath = `/s/${token}`;
+      }
+    }
+    return { rotated, resumePath };
+  });
