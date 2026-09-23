@@ -1,414 +1,559 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { PackPreview } from "@/components/PackPreview";
-import { getPersonSessions } from "@/lib/conversations.functions";
-import { savePersonNote } from "@/lib/notes.functions";
-import { listMyAnswerSets } from "@/lib/remote.functions";
-import { contactLink } from "@/lib/contact-link";
-import { getWallLinks } from "@/lib/profile.functions";
+import {
+  answerInConversation,
+  getConversation,
+  getConversationPrompt,
+  type TimelineItem,
+  type TimelineQuestion,
+} from "@/lib/conversation.functions";
+import { postThreadMessage } from "@/lib/remote.functions";
+import { track } from "@/lib/track";
 import { useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/with/$participantId/")({
-  component: WithPersonPage,
+  validateSearch: (search: Record<string, unknown>): { q?: string } =>
+    typeof search["q"] === "string" ? { q: search["q"] as string } : {},
+  component: ConversationPage,
   head: () => ({
     meta: [
-      { title: "Everything you two answered — NoSure" },
+      { title: "Your conversation — NoSure" },
       {
         name: "description",
-        content: "Every set of questions you and this person have both answered, newest first.",
+        content: "Every question you two have answered and everything you said after, in order.",
       },
-      { property: "og:title", content: "Everything you two answered — NoSure" },
+      { property: "og:title", content: "Your conversation — NoSure" },
       {
         property: "og:description",
-        content: "Every set of questions you two have both answered, newest first.",
+        content: "Every question you two have answered and everything you said after.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Everything you two answered — NoSure" },
-      {
-        name: "twitter:description",
-        content: "Every set of questions you two have both answered, newest first.",
-      },
       { name: "robots", content: "noindex" },
     ],
   }),
 });
 
-type Data = {
-  name: string;
-  realName: string;
-  note: { nickname: string; contact: string; note: string };
-  met: string;
-  sessions: Awaited<ReturnType<typeof getPersonSessions>>["sessions"];
-};
+type Q = TimelineQuestion["data"];
 
-type Session = Data["sessions"][number];
-type HistoryQuestion = Session["questions"][number];
-type TopicGroup = {
-  id: string;
-  name: string;
-  lastActivity: string;
-  questions: HistoryQuestion[];
-};
-
-function groupQuestionsByTopic(sessions: Session[]): TopicGroup[] {
-  const topics = new Map<string, TopicGroup>();
-  const seen = new Set<string>();
-
-  for (const session of sessions) {
-    for (const question of session.questions) {
-      if (seen.has(question.sessionQuestionId)) continue;
-      seen.add(question.sessionQuestionId);
-
-      const topicKey = question.topicId ?? "uncategorized";
-      const current = topics.get(topicKey) ?? {
-        id: topicKey,
-        name: question.topic || "Other",
-        lastActivity: question.lastActivity,
-        questions: [],
-      };
-      current.questions.push(question);
-      if (current.lastActivity < question.lastActivity) {
-        current.lastActivity = question.lastActivity;
-      }
-      topics.set(topicKey, current);
-    }
-  }
-
-  for (const topic of topics.values()) {
-    topic.questions.sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
-  }
-
-  return [...topics.values()].sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
+function colorFor(name: string) {
+  let total = 0;
+  for (const letter of name) total = (total * 31 + (letter.codePointAt(0) ?? 0)) % 6;
+  return `var(--code-ink-${total + 1})`;
 }
 
-export function ago(iso: string) {
-  if (!iso) return "";
-  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return `${Math.round(days / 7)}w ago`;
+function merge(current: TimelineItem[], incoming: TimelineItem[]) {
+  const byId = new Map(current.map((item) => [item.id, item]));
+  for (const item of incoming) byId.set(item.id, item);
+  return [...byId.values()].sort((a, b) =>
+    a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0,
+  );
 }
 
-const field =
-  "w-full rounded-xl border border-border bg-card px-4 py-3 text-base outline-none focus:border-primary";
-
-function WithPersonPage() {
+function ConversationPage() {
   const { participantId } = Route.useParams();
+  const { q } = Route.useSearch();
   const viewer = useViewer();
   const navigate = useNavigate();
-  const [data, setData] = useState<Data | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [nickname, setNickname] = useState("");
-  const [contact, setContact] = useState("");
-  const [note, setNote] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const [sets, setSets] = useState<Awaited<ReturnType<typeof listMyAnswerSets>>["sets"]>([]);
-  const [wallHandle, setWallHandle] = useState("");
+  const load = useServerFn(getConversation);
+  const post = useServerFn(postThreadMessage);
+  const answer = useServerFn(answerInConversation);
+  const loadPrompt = useServerFn(getConversationPrompt);
 
-  const loadWalls = useServerFn(getWallLinks);
-  useEffect(() => {
-    void loadWalls({ data: { personKeys: [participantId] } })
-      .then((result) => setWallHandle(result.walls[participantId] ?? ""))
-      .catch(() => setWallHandle(""));
-  }, [loadWalls, participantId]);
+  const [items, setItems] = useState<TimelineItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [name, setName] = useState("");
+  const [header, setHeader] = useState({ line: "", next: "click" });
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [target, setTarget] = useState("");
+  const [talkOpen, setTalkOpen] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [highlight, setHighlight] = useState("");
 
-  const load = useServerFn(getPersonSessions);
-  const loadSets = useServerFn(listMyAnswerSets);
-  const save = useServerFn(savePersonNote);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const settled = useRef(false);
+  const keepOffset = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (!viewer.ready || !viewer.guestToken) return;
-    void load({
-      data: {
-        guestToken: viewer.guestToken,
-        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
-        personKey: participantId,
-      },
-    })
-      .then((result) => {
-        setData(result);
-        if ("personKey" in result && result.personKey && result.personKey !== participantId) {
-          void navigate({
-            to: "/with/$participantId",
-            params: { participantId: result.personKey },
-            replace: true,
-          });
-        }
-        setNickname(result.note.nickname);
-        setContact(result.note.contact);
-        setNote(result.note.note);
-      })
-      .catch(() =>
-        setData({
-          name: "",
-          realName: "",
-          note: { nickname: "", contact: "", note: "" },
-          met: "",
-          sessions: [],
-        }),
-      );
-  }, [load, navigate, participantId, viewer.ready, viewer.guestToken, viewer.profileId]);
+  const identity = useCallback(
+    () => ({
+      guestToken: viewer.guestToken,
+      ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
+    }),
+    [viewer.guestToken, viewer.profileId],
+  );
 
-  // Meeting someone new is the usual trigger for reusing a set, so the sets are
-  // ready before the page even knows there is nothing between you two yet.
-  useEffect(() => {
-    if (!viewer.ready || !viewer.guestToken) return;
-    void loadSets({
-      data: {
-        guestToken: viewer.guestToken,
-        ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
-      },
-    })
-      .then((result) => setSets(result.sets))
-      .catch(() => setSets([]));
-  }, [loadSets, viewer.ready, viewer.guestToken, viewer.profileId]);
-
-  async function submit() {
-    if (!viewer.guestToken || saving) return;
-    setSaving(true);
-    try {
-      const saved = await save({
-        data: {
-          guestToken: viewer.guestToken,
-          ...(viewer.profileId ? { profileId: viewer.profileId } : {}),
-          personKey: participantId,
-          nickname,
-          contact,
-          note,
-        },
+  const refresh = useCallback(async () => {
+    if (!viewer.guestToken) return;
+    const result = await load({
+      data: { ...identity(), personKey: participantId, ...(q ? { focus: q } : {}) },
+    });
+    setName(result.name);
+    setHeader(result.header);
+    setItems((current) => merge(current, result.items));
+    if (!settled.current) setHasMore(result.hasMore);
+    setLoaded(true);
+    if (result.personKey && result.personKey !== participantId) {
+      void navigate({
+        to: "/with/$participantId",
+        params: { participantId: result.personKey },
+        search: q ? { q } : {},
+        replace: true,
       });
-      setData((current) =>
-        current ? { ...current, note: saved, name: saved.nickname || current.realName } : current,
-      );
-      setEditing(false);
+    }
+  }, [identity, load, navigate, participantId, q, viewer.guestToken]);
+
+  useEffect(() => {
+    if (!viewer.ready) return;
+    void refresh().catch(() => setLoaded(true));
+    const timer = window.setInterval(() => void refresh().catch(() => undefined), 5000);
+    return () => window.clearInterval(timer);
+  }, [viewer.ready, refresh]);
+
+  // First paint: land on ?q= (briefly highlighted), otherwise the bottom.
+  useEffect(() => {
+    if (!loaded || settled.current) return;
+    settled.current = true;
+    window.setTimeout(() => {
+      if (q) {
+        const node = document.getElementById(`q-${q}`);
+        if (node) {
+          node.scrollIntoView({ block: "center" });
+          setHighlight(q);
+          window.setTimeout(() => setHighlight(""), 2200);
+          return;
+        }
+      }
+      window.scrollTo({ top: document.body.scrollHeight });
+    }, 0);
+  }, [loaded, q]);
+
+  // New arrivals at the bottom pull the view down only if you're already near it.
+  const lastId = items[items.length - 1]?.id;
+  useEffect(() => {
+    if (!settled.current || !lastId) return;
+    const nearBottom = window.innerHeight + window.scrollY > document.body.scrollHeight - 240;
+    if (nearBottom) window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }, [lastId]);
+
+  // Older items: keep the reader's place when they're prepended.
+  useLayoutEffect(() => {
+    if (keepOffset.current === null) return;
+    window.scrollTo({ top: document.body.scrollHeight - keepOffset.current });
+    keepOffset.current = null;
+  }, [items]);
+
+  const loadOlder = useCallback(async () => {
+    if (!hasMore || loadingOlder || !items[0]) return;
+    setLoadingOlder(true);
+    try {
+      const result = await load({
+        data: { ...identity(), personKey: participantId, before: items[0].timestamp },
+      });
+      keepOffset.current = document.body.scrollHeight - window.scrollY;
+      setItems((current) => merge(current, result.items));
+      setHasMore(result.hasMore);
     } finally {
-      setSaving(false);
+      setLoadingOlder(false);
+    }
+  }, [hasMore, identity, items, load, loadingOlder, participantId]);
+
+  useEffect(() => {
+    const node = topRef.current;
+    if (!node || !hasMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && settled.current) void loadOlder();
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loadOlder]);
+
+  const questions = items.filter((i): i is TimelineQuestion => i.type === "question");
+  const lastRevealed = [...questions].reverse().find((i) => i.data.state === "revealed");
+  const targetId = target || lastRevealed?.data.sessionQuestionId || "";
+  const targetQ = questions.find((i) => i.data.sessionQuestionId === targetId)?.data;
+  const display = name || "them";
+
+  function fill(text: string, sessionQuestionId?: string) {
+    if (sessionQuestionId) setTarget(sessionQuestionId);
+    setDraft(text);
+    window.setTimeout(() => {
+      inputRef.current?.focus();
+      const end = inputRef.current?.value.length ?? 0;
+      inputRef.current?.setSelectionRange(end, end);
+    }, 0);
+  }
+
+  async function send(kind: "text" | "reaction", body: string) {
+    const clean = body.trim();
+    if (!clean || busy || !targetId) return;
+    setBusy(true);
+    try {
+      await post({ data: { ...identity(), sessionQuestionId: targetId, kind, body: clean } });
+      track(kind === "reaction" ? "reaction_sent" : "thread_message_sent", {
+        kind,
+        chars: clean.length,
+        session_question_id: targetId,
+        surface: "conversation",
+      });
+      if (kind === "text") setDraft("");
+      await refresh();
+      window.setTimeout(
+        () => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }),
+        50,
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
-  const sessions = data?.sessions ?? [];
-  const name = data?.name || "them";
-  const topicGroups = useMemo(() => groupQuestionsByTopic(sessions), [sessions]);
-  const link = contactLink(data?.note.contact ?? "");
-  const lastTalked = sessions[0]?.lastActivity ?? "";
+  async function pick(question: Q, optionKey: string) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await answer({
+        data: {
+          ...identity(),
+          sessionQuestionId: question.sessionQuestionId,
+          optionKey: optionKey as "a" | "b" | "c",
+          ...(question.kind === "impression" && question.needs
+            ? { answerRole: question.needs }
+            : {}),
+        },
+      });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function somethingToTalkAbout() {
+    setMenuOpen(false);
+    const result = await loadPrompt({ data: { pack: null } });
+    fill(result.text);
+  }
 
   return (
     <main className="paper min-h-screen bg-background">
-      <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-        <Link to="/people" className="text-sm text-muted-foreground underline underline-offset-4">
-          People
-        </Link>
-        <h1 className="mt-6 text-4xl leading-tight">You and {name}</h1>
-        {data?.note.nickname && data.realName && (
-          <p className="mt-2 text-sm text-muted-foreground">Their name: {data.realName}</p>
-        )}
-        <p className="mt-3 text-sm text-muted-foreground">
-          {[
-            data?.met,
-            sessions.length === 1 ? "1 session together" : `${sessions.length} sessions together`,
-            lastTalked ? `Last talked ${ago(lastTalked)}` : "",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-
-        {/* Their wall comes first — seeing how others read someone is the pull. */}
-        {wallHandle && (
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-3">
           <Link
-            to="/p/$handle"
-            params={{ handle: wallHandle }}
-            className="mt-8 block rounded-2xl border-2 border-primary px-6 py-5 text-center text-xl text-primary"
+            to="/people"
+            aria-label="Back to People"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xl text-muted-foreground hover:bg-secondary"
           >
-            How people read {name}
+            ←
           </Link>
+          <Link
+            to="/with/$participantId/about"
+            params={{ participantId }}
+            className="flex min-w-0 flex-1 items-center gap-3"
+          >
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg text-background"
+              style={{ backgroundColor: name ? colorFor(name) : "var(--muted)" }}
+            >
+              {(name.trim()[0] ?? "").toUpperCase()}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-lg leading-tight">{name || " "}</span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {header.line ? `${header.line} ›` : " "}
+              </span>
+            </span>
+          </Link>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-xl px-4 pt-4 pb-40">
+        <div ref={topRef} className="h-px" />
+        {hasMore && (
+          <button
+            onClick={() => void loadOlder()}
+            className="mx-auto mb-4 block text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {loadingOlder ? "Loading…" : "Earlier"}
+          </button>
         )}
 
-        {viewer.guestToken && (
-          <PackPreview
-            guestToken={viewer.guestToken}
-            {...(viewer.profileId ? { profileId: viewer.profileId } : {})}
-            personKey={participantId}
-            name={name}
-          />
-        )}
-
-        {data && sessions.length === 0 && (
-          <p className="mt-8 text-lg text-muted-foreground">Nothing between you yet.</p>
-        )}
-
-        {topicGroups.length > 0 && (
-          <div className="mt-10">
-            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-              Topics you've discussed
-            </p>
-            <div className="mt-4 flex flex-col gap-4">
-              {topicGroups.map((topic) => (
-                <section key={topic.id} className="card-soft overflow-hidden px-5 sm:px-6">
-                  <header className="flex items-end justify-between gap-4 py-5">
-                    <h2 className="text-xl leading-tight">{topic.name}</h2>
-                    <p className="shrink-0 text-xs text-muted-foreground">
-                      {topic.questions.length}{" "}
-                      {topic.questions.length === 1 ? "question" : "questions"}
-                      {topic.lastActivity ? ` · ${ago(topic.lastActivity)}` : ""}
-                    </p>
-                  </header>
-                  <div className="border-t border-border">
-                    {topic.questions.map((question) => (
-                      <Link
-                        key={question.sessionQuestionId}
-                        to="/with/$participantId/$sessionId"
-                        params={{ participantId, sessionId: question.sessionId }}
-                        search={{ q: question.sessionQuestionId }}
-                        className="group flex min-w-0 items-start gap-3 border-b border-border py-5 last:border-b-0"
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-lg leading-snug transition-colors group-hover:text-primary">
-                            {question.text}
-                          </span>
-                          <span className="mt-3 block text-sm leading-relaxed text-muted-foreground">
-                            <span className="block">You: {question.myLabel || "—"}</span>
-                            <span className="block">
-                              {name}:{" "}
-                              {question.revealed
-                                ? question.theirLabel || "—"
-                                : `Waiting for ${name}`}
-                            </span>
-                          </span>
-                          {(question.messageCount > 0 || question.unread > 0) && (
-                            <span className="mt-2 block text-xs text-muted-foreground">
-                              {question.messageCount}{" "}
-                              {question.messageCount === 1 ? "line" : "lines"}
-                              {question.unread > 0 && <span className="text-primary"> · new</span>}
-                            </span>
-                          )}
-                        </span>
-                        <span
-                          aria-hidden="true"
-                          className="mt-1 shrink-0 text-lg text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-                        >
-                          →
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
+        {!loaded && (
+          <div className="flex flex-col gap-3" aria-hidden>
+            {[0, 1, 2].map((n) => (
+              <div key={n} className="h-24 animate-pulse rounded-2xl bg-secondary/60" />
+            ))}
           </div>
         )}
 
-        {/* Private annotations — only ever shown to whoever wrote them. */}
-        <div className="card-soft mt-12 px-6 py-5">
-          <div className="flex items-baseline justify-between gap-4">
-            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-              Just for you
-            </p>
-            <button
-              onClick={() => setEditing((open) => !open)}
-              className="text-sm text-muted-foreground underline underline-offset-4"
-            >
-              {editing
-                ? "Cancel"
-                : data?.note.nickname || data?.note.contact || data?.note.note
-                  ? "Edit"
-                  : "Add"}
-            </button>
-          </div>
+        {loaded && items.length === 0 && (
+          <p className="mt-10 text-center text-muted-foreground">
+            Nothing between you yet. Tap + to send {display} three questions.
+          </p>
+        )}
 
-          {!editing && (
-            <div className="mt-4 flex flex-col gap-2 text-base">
-              {data?.note.contact ? (
-                link ? (
-                  <a
-                    href={link.href}
-                    target={link.href.startsWith("http") ? "_blank" : undefined}
-                    rel="noreferrer"
-                    className="text-primary underline underline-offset-4"
-                  >
-                    {link.label}
-                  </a>
-                ) : (
-                  <p>{data.note.contact}</p>
-                )
-              ) : null}
-              {data?.note.note && <p className="text-muted-foreground">{data.note.note}</p>}
-              {!data?.note.contact && !data?.note.note && !data?.note.nickname && (
-                <p className="text-muted-foreground">
-                  Nickname, where you talk, and one line to remember them by.
-                </p>
-              )}
-            </div>
-          )}
-
-          {editing && (
-            <form
-              className="mt-4 flex flex-col gap-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void submit();
-              }}
-            >
-              <input
-                value={nickname}
-                onChange={(event) => setNickname(event.target.value)}
-                placeholder="Nickname (only you see it)"
-                className={field}
+        <div className="flex flex-col gap-3">
+          {items.map((item) =>
+            item.type === "question" ? (
+              <QuestionCard
+                key={item.id}
+                q={item.data}
+                name={display}
+                highlighted={highlight === item.data.sessionQuestionId}
+                talkOpen={talkOpen === item.data.sessionQuestionId}
+                busy={busy}
+                onToggleTalk={() =>
+                  setTalkOpen((open) =>
+                    open === item.data.sessionQuestionId ? "" : item.data.sessionQuestionId,
+                  )
+                }
+                onFill={(text) => fill(text, item.data.sessionQuestionId)}
+                onSimilar={async () => {
+                  const result = await loadPrompt({ data: { pack: item.data.pack } });
+                  fill(result.text, item.data.sessionQuestionId);
+                }}
+                onPick={(key) => void pick(item.data, key)}
               />
-              <input
-                value={contact}
-                onChange={(event) => setContact(event.target.value)}
-                placeholder="@instagram, phone, or a link"
-                className={field}
-              />
-              <input
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Note — e.g. orientation group, sat next to me"
-                className={field}
-              />
-              <button
-                type="submit"
-                disabled={saving}
-                className="btn-quiet self-start hover:bg-secondary disabled:opacity-40"
-              >
-                {saving ? "Saving…" : "Save"}
-              </button>
-            </form>
+            ) : item.type === "message" ? (
+              <Bubble key={item.id} body={item.data.body} mine={item.data.mine} kind={item.data.kind} />
+            ) : (
+              <p key={item.id} className="py-2 text-center text-xs text-muted-foreground">
+                {item.data.text}
+              </p>
+            ),
           )}
         </div>
+      </section>
 
-        {sets.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-2xl leading-tight">Send {name} a set you've already answered</h2>
-            <p className="mt-2 text-muted-foreground">
-              You won't answer anything again — they just get their own link.
-            </p>
-            <div className="mt-5 flex flex-col gap-3">
-              {sets.map((set) => (
-                <Link
-                  key={set.sessionId}
-                  to="/send/$sessionId"
-                  params={{ sessionId: set.sessionId }}
-                  className="card-soft block px-6 py-5"
-                >
-                  <p className="text-lg">{set.topic || "Three questions"}</p>
-                  {set.firstQuestion && (
-                    <p className="mt-2 text-base text-muted-foreground">{set.firstQuestion}</p>
-                  )}
-                </Link>
-              ))}
-            </div>
+      {/* Rendered before anything loads: the bar is the page's first job. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background pb-[env(safe-area-inset-bottom)]">
+        {menuOpen && (
+          <div className="mx-auto flex max-w-xl flex-col gap-1 px-4 pt-3">
+            <Link
+              to="/remote"
+              search={{ person: participantId }}
+              className="rounded-xl px-4 py-3 text-left hover:bg-secondary"
+            >
+              <span className="block text-base">Ask three</span>
+              <span className="block text-sm text-muted-foreground">
+                Pick a pack and send {display} three questions
+              </span>
+            </Link>
+            <Link
+              to="/remote"
+              search={{ person: participantId, pack: header.next }}
+              className="rounded-xl px-4 py-3 text-left hover:bg-secondary"
+            >
+              <span className="block text-base">One question</span>
+              <span className="block text-sm text-muted-foreground">
+                From the next pack you haven't unlocked
+              </span>
+            </Link>
+            <button
+              onClick={() => void somethingToTalkAbout()}
+              disabled={!targetId}
+              className="rounded-xl px-4 py-3 text-left hover:bg-secondary disabled:opacity-40"
+            >
+              <span className="block text-base">Something to talk about</span>
+              <span className="block text-sm text-muted-foreground">
+                Puts a prompt in the box — nothing is sent
+              </span>
+            </button>
           </div>
         )}
-      </section>
+        <form
+          className="mx-auto flex max-w-xl items-center gap-2 px-4 py-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void send("text", draft);
+          }}
+        >
+          <button
+            type="button"
+            aria-label="More"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-2xl hover:border-primary"
+          >
+            {menuOpen ? "×" : "+"}
+          </button>
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            disabled={loaded && !targetId}
+            placeholder={
+              loaded && !targetId
+                ? "Talk opens once you've both answered"
+                : targetQ
+                  ? `About: ${targetQ.text}`
+                  : "Say one thing"
+            }
+            className="min-w-0 flex-1 rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary disabled:opacity-60"
+          />
+          {draft.trim() ? (
+            <button
+              type="submit"
+              disabled={busy || !targetId}
+              aria-label="Send"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-xl text-primary-foreground disabled:opacity-40"
+            >
+              →
+            </button>
+          ) : (
+            <button
+              type="button"
+              title="No reply needed"
+              aria-label="No reply needed"
+              disabled={busy || !targetId}
+              onClick={() => void send("reaction", "👀")}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-xl disabled:opacity-40"
+            >
+              👀
+            </button>
+          )}
+        </form>
+      </div>
     </main>
+  );
+}
+
+function Bubble({ body, mine, kind }: { body: string; mine: boolean; kind: string }) {
+  if (kind === "reaction") {
+    return <p className={`text-2xl ${mine ? "text-right" : "text-left"}`}>{body}</p>;
+  }
+  return (
+    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+      <p
+        className={`max-w-[80%] rounded-2xl px-4 py-2 text-base ${
+          mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-secondary"
+        }`}
+      >
+        {body}
+      </p>
+    </div>
+  );
+}
+
+function QuestionCard({
+  q,
+  name,
+  highlighted,
+  talkOpen,
+  busy,
+  onToggleTalk,
+  onFill,
+  onSimilar,
+  onPick,
+}: {
+  q: Q;
+  name: string;
+  highlighted: boolean;
+  talkOpen: boolean;
+  busy: boolean;
+  onToggleTalk: () => void;
+  onFill: (text: string) => void;
+  onSimilar: () => void;
+  onPick: (key: string) => void;
+}) {
+  const withName = (text: string) => text.replaceAll("{name}", name);
+  const prompt =
+    q.state === "waiting_me" && q.kind === "impression"
+      ? withName((q.needs === "about_other" ? q.stemOther : q.stemSelf) || q.text)
+      : withName(q.text);
+  const chip =
+    "rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-foreground";
+
+  return (
+    <article
+      id={`q-${q.sessionQuestionId}`}
+      className={`card-soft scroll-mt-24 px-5 py-4 transition-shadow duration-700 ${
+        highlighted ? "ring-2 ring-primary" : ""
+      }`}
+    >
+      <p className="text-lg leading-snug">{prompt}</p>
+
+      {q.state === "waiting_them" && (
+        <p className="mt-3 text-sm text-muted-foreground italic">Waiting for {name}</p>
+      )}
+
+      {q.state === "waiting_me" && (
+        <div className="mt-4 flex flex-col gap-2">
+          {q.options.map((option) => (
+            <button
+              key={option.key}
+              disabled={busy}
+              onClick={() => onPick(option.key)}
+              className="rounded-xl border border-border px-4 py-3 text-left text-base hover:border-primary disabled:opacity-40"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {q.state === "revealed" && (
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">You</p>
+              <p className="text-base">{q.myLabel || "—"}</p>
+              {q.myReason && (
+                <p className="mt-1 text-sm text-muted-foreground italic">"{q.myReason}"</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">{name}</p>
+              <p className={`text-base ${q.matched === false ? "text-primary" : ""}`}>
+                {q.theirLabel || "—"}
+              </p>
+              {q.theirReason && (
+                <p className="mt-1 text-sm text-muted-foreground italic">"{q.theirReason}"</p>
+              )}
+            </div>
+          </div>
+          {(q.myGuess || q.theirGuess) && (
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+              <p>You guessed {name}: {q.myGuess || "—"}</p>
+              <p>{name} guessed you: {q.theirGuess || "—"}</p>
+            </div>
+          )}
+          <button
+            onClick={onToggleTalk}
+            aria-expanded={talkOpen}
+            className="mt-4 text-sm text-primary underline underline-offset-4"
+          >
+            Talk
+          </button>
+          {talkOpen && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {q.matched === false && (
+                <button className={chip} onClick={() => onFill(`Wait, why "${q.theirLabel}"?`)}>
+                  Ask why
+                </button>
+              )}
+              {q.matched === true && (
+                <button className={chip} onClick={() => onFill("Same. For me it's because…")}>
+                  Tell them yours
+                </button>
+              )}
+              <button
+                className={chip}
+                onClick={() => onFill(q.followUp || "What's the story behind that?")}
+              >
+                Spill the tea
+              </button>
+              <button className={chip} onClick={onSimilar}>
+                Similar questions
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </article>
   );
 }
