@@ -86,10 +86,15 @@ async function buildTimeline(data: {
     .select("id, session_id, role, display_name, profile_id, guest_token")
     .in("session_id", sessionIds);
   const myIds = new Set(mine.map((p) => p.id));
+  // Old links carry a participant id; resolve it to that person's key.
+  const byId = ((everyone ?? []) as Row[]).find(
+    (p) => p.id === data.personKey && !myIds.has(p.id),
+  );
+  const wanted = byId ? personKeyOf(byId as never) : data.personKey;
   const partners = ((everyone ?? []) as Row[]).filter((p) => {
     if (myIds.has(p.id)) return false;
     const key = personKeyOf(p as never);
-    return key === data.personKey || key === legacy;
+    return key === wanted || key === legacy;
   });
   if (partners.length === 0) return empty;
   const personKey = personKeyOf(partners[0] as never);
