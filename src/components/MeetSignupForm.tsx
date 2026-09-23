@@ -56,7 +56,7 @@ function ChoiceSet({
   onChange,
 }: {
   name: string;
-  value?: string;
+  value: string | undefined;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
 }) {
