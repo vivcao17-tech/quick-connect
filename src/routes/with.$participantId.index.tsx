@@ -181,6 +181,7 @@ function ConversationPage() {
   // Only a Talk tap attaches a question; otherwise the message stands alone.
   const targetQ = questions.find((i) => i.data.sessionQuestionId === target)?.data;
   const display = name || "them";
+  const promptRef = useRef<{ id: string; text: string; source: string } | null>(null);
 
   function fill(text: string, sessionQuestionId?: string) {
     promptRef.current = null;
