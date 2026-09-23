@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { PackPreview } from "@/components/PackPreview";
+import { fillName } from "@/components/QuestionText";
 import { getPersonSessions } from "@/lib/conversations.functions";
 import { savePersonNote } from "@/lib/notes.functions";
 import { listMyAnswerSets } from "@/lib/remote.functions";
@@ -287,7 +288,7 @@ function WithPersonPage() {
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block text-lg leading-snug transition-colors group-hover:text-primary">
-                            {question.text}
+                            {fillName(question.text, name)}
                           </span>
                           <span className="mt-3 block text-sm leading-relaxed text-muted-foreground">
                             <span className="block">You: {question.myLabel || "—"}</span>
@@ -484,7 +485,7 @@ function PairImpressions({
     <div className="flex flex-col gap-3">
       {items.map((item) => (
         <div key={item.sessionQuestionId} className="card-soft px-5 py-4">
-          <p className="text-base leading-snug">{item.text}</p>
+          <p className="text-base leading-snug">{fillName(item.text, name)}</p>
           <p className="mt-2 text-sm text-muted-foreground">
             You guessed {name}: {item.myGuess || "—"} · {name} said: {item.theirLabel || "—"}
           </p>

@@ -6,9 +6,11 @@ import {
   answerInConversation,
   getConversation,
   getConversationPrompt,
+  postConversationMessage,
   type TimelineItem,
   type TimelineQuestion,
 } from "@/lib/conversation.functions";
+import { fillName } from "@/components/QuestionText";
 import { postThreadMessage } from "@/lib/remote.functions";
 import { track } from "@/lib/track";
 import { useViewer } from "@/lib/viewer";
@@ -60,6 +62,7 @@ function ConversationPage() {
 
   const load = useServerFn(getConversation);
   const post = useServerFn(postThreadMessage);
+  const postLoose = useServerFn(postConversationMessage);
   const answer = useServerFn(answerInConversation);
   const loadPrompt = useServerFn(getConversationPrompt);
 
@@ -175,13 +178,12 @@ function ConversationPage() {
   }, [hasMore, loadOlder]);
 
   const questions = items.filter((i): i is TimelineQuestion => i.type === "question");
-  const lastRevealed = [...questions].reverse().find((i) => i.data.state === "revealed");
-  const targetId = target || lastRevealed?.data.sessionQuestionId || "";
-  const targetQ = questions.find((i) => i.data.sessionQuestionId === targetId)?.data;
+  // Only a Talk tap attaches a question; otherwise the message stands alone.
+  const targetQ = questions.find((i) => i.data.sessionQuestionId === target)?.data;
   const display = name || "them";
 
   function fill(text: string, sessionQuestionId?: string) {
-    if (sessionQuestionId) setTarget(sessionQuestionId);
+    setTarget(sessionQuestionId ?? "");
     setDraft(text);
     window.setTimeout(() => {
       inputRef.current?.focus();
@@ -192,17 +194,26 @@ function ConversationPage() {
 
   async function send(kind: "text" | "reaction", body: string) {
     const clean = body.trim();
-    if (!clean || busy || !targetId) return;
+    if (!clean || busy || !viewer.guestToken) return;
     setBusy(true);
     try {
-      await post({ data: { ...identity(), sessionQuestionId: targetId, kind, body: clean } });
+      if (targetQ) {
+        await post({
+          data: { ...identity(), sessionQuestionId: targetQ.sessionQuestionId, kind, body: clean },
+        });
+      } else {
+        await postLoose({ data: { ...identity(), personKey: participantId, kind, body: clean } });
+      }
       track(kind === "reaction" ? "reaction_sent" : "thread_message_sent", {
         kind,
         chars: clean.length,
-        session_question_id: targetId,
+        session_question_id: targetQ?.sessionQuestionId ?? null,
         surface: "conversation",
       });
-      if (kind === "text") setDraft("");
+      if (kind === "text") {
+        setDraft("");
+        setTarget("");
+      }
       await refresh();
       window.setTimeout(
         () => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }),
@@ -324,6 +335,7 @@ function ConversationPage() {
                 body={item.data.body}
                 mine={item.data.mine}
                 kind={item.data.kind}
+                quote={fillName(item.data.quote, display)}
               />
             ) : (
               <p key={item.id} className="py-2 text-center text-xs text-muted-foreground">
@@ -348,25 +360,29 @@ function ConversationPage() {
                 Pick a pack and send {display} three questions
               </span>
             </Link>
-            <Link
-              to="/remote"
-              search={{ person: participantId, pack: header.next }}
-              className="rounded-xl px-4 py-3 text-left hover:bg-secondary"
-            >
-              <span className="block text-base">One question</span>
-              <span className="block text-sm text-muted-foreground">
-                From the next pack you haven't unlocked
-              </span>
-            </Link>
             <button
               onClick={() => void somethingToTalkAbout()}
-              disabled={!targetId}
-              className="rounded-xl px-4 py-3 text-left hover:bg-secondary disabled:opacity-40"
+              className="rounded-xl px-4 py-3 text-left hover:bg-secondary"
             >
               <span className="block text-base">Something to talk about</span>
               <span className="block text-sm text-muted-foreground">
                 Puts a prompt in the box — nothing is sent
               </span>
+            </button>
+          </div>
+        )}
+        {targetQ && (
+          <div className="mx-auto flex max-w-xl items-center gap-2 px-4 pt-2 text-xs text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate border-l-2 border-border pl-2">
+              {fillName(targetQ.text, display)}
+            </span>
+            <button
+              type="button"
+              aria-label="Don't attach this question"
+              onClick={() => setTarget("")}
+              className="px-2 text-base"
+            >
+              ×
             </button>
           </div>
         )}
@@ -390,20 +406,13 @@ function ConversationPage() {
             ref={inputRef}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            disabled={loaded && !targetId}
-            placeholder={
-              loaded && !targetId
-                ? "Talk opens once you've both answered"
-                : targetQ
-                  ? `About: ${targetQ.text}`
-                  : "Say one thing"
-            }
-            className="min-w-0 flex-1 rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary disabled:opacity-60"
+            placeholder={`Message ${display}`}
+            className="min-w-0 flex-1 rounded-full border border-border bg-card px-5 py-3 text-base outline-none focus:border-primary"
           />
           {draft.trim() ? (
             <button
               type="submit"
-              disabled={busy || !targetId}
+              disabled={busy}
               aria-label="Send"
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-xl text-primary-foreground disabled:opacity-40"
             >
@@ -414,7 +423,7 @@ function ConversationPage() {
               type="button"
               title="No reply needed"
               aria-label="No reply needed"
-              disabled={busy || !targetId}
+              disabled={busy}
               onClick={() => void send("reaction", "👀")}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-xl disabled:opacity-40"
             >
@@ -427,12 +436,37 @@ function ConversationPage() {
   );
 }
 
-function Bubble({ body, mine, kind }: { body: string; mine: boolean; kind: string }) {
+function Bubble({
+  body,
+  mine,
+  kind,
+  quote,
+}: {
+  body: string;
+  mine: boolean;
+  kind: string;
+  quote: string;
+}) {
+  const quoted = quote ? (
+    <span
+      className={`mb-1 block max-w-[80%] truncate border-l-2 border-border pl-2 text-xs text-muted-foreground ${
+        mine ? "ml-auto" : ""
+      }`}
+    >
+      {quote}
+    </span>
+  ) : null;
   if (kind === "reaction") {
-    return <p className={`text-2xl ${mine ? "text-right" : "text-left"}`}>{body}</p>;
+    return (
+      <div className={mine ? "text-right" : "text-left"}>
+        {quoted}
+        <p className="text-2xl">{body}</p>
+      </div>
+    );
   }
   return (
-    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+    <div className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+      {quoted}
       <p
         className={`max-w-[80%] rounded-2xl px-4 py-2 text-base ${
           mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-secondary"
@@ -465,7 +499,7 @@ function QuestionCard({
   onSimilar: () => void;
   onPick: (key: string) => void;
 }) {
-  const withName = (text: string) => text.replaceAll("{name}", name);
+  const withName = (text: string) => fillName(text, name);
   const prompt =
     q.state === "waiting_me" && q.kind === "impression"
       ? withName((q.needs === "about_other" ? q.stemOther : q.stemSelf) || q.text)

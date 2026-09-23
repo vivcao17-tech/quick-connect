@@ -45,3 +45,8 @@ export function subjectName(step: "other" | "self", otherName?: string | null) {
   if (step === "self") return "";
   return firstName(otherName) || UNKNOWN_SUBJECT;
 }
+
+/** Plain-text fill of a stored {name} slot with the person's first name. */
+export function fillName(text: string, name?: string | null) {
+  return text.replace(/\{name\}/g, firstName(name) || "them");
+}

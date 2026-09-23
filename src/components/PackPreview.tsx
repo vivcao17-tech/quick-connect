@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
+import { fillName } from "@/components/QuestionText";
 import { getPairPreview } from "@/lib/packs.functions";
 import type { Pack } from "@/lib/packs";
 import { roundsToUnlock } from "@/lib/packs";
@@ -82,7 +83,7 @@ export function PackPreview({
                 <div className="mt-5 flex flex-col gap-4 border-t border-border pt-5">
                   {pack.items.map((item) => (
                     <div key={item.sessionQuestionId}>
-                      <p className="text-base leading-snug">{item.text}</p>
+                      <p className="text-base leading-snug">{fillName(item.text, name)}</p>
                       <p className="mt-1 text-sm text-muted-foreground">
                         You: {item.myLabel}
                         {item.myReason ? ` — "${item.myReason}"` : ""}
