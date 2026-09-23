@@ -30,3 +30,18 @@ export function useViewer(): Viewer {
 
   return viewer;
 }
+
+/**
+ * Same identity as useViewer, but read from the locally stored session instead
+ * of asking the auth server. Lets pages start their data fetch immediately.
+ */
+export async function readLocalViewer(): Promise<{ guestToken: string; profileId?: string }> {
+  const guestToken = getGuestToken();
+  try {
+    const { data } = await supabase.auth.getSession();
+    const profileId = data.session?.user.id;
+    return profileId ? { guestToken, profileId } : { guestToken };
+  } catch {
+    return { guestToken };
+  }
+}
