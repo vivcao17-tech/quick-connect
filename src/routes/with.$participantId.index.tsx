@@ -114,7 +114,7 @@ function ConversationPage() {
 
   useEffect(() => {
     if (!viewer.ready) return;
-    void refresh().catch(() => setLoaded(true));
+    void refresh().catch((e) => { console.error("DBGC", e); setLoaded(true); });
     const timer = window.setInterval(() => void refresh().catch(() => undefined), 5000);
     return () => window.clearInterval(timer);
   }, [viewer.ready, refresh]);
