@@ -12,5 +12,7 @@ export const Route = createFileRoute("/with/$participantId/$sessionId")({
       replace: true,
     });
   },
-  head: () => ({ meta: [{ title: "Conversation — NoSure" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [{ title: "Conversation — NoSure" }, { name: "robots", content: "noindex" }],
+  }),
 });

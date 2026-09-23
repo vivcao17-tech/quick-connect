@@ -319,7 +319,12 @@ function ConversationPage() {
                 onPick={(key) => void pick(item.data, key)}
               />
             ) : item.type === "message" ? (
-              <Bubble key={item.id} body={item.data.body} mine={item.data.mine} kind={item.data.kind} />
+              <Bubble
+                key={item.id}
+                body={item.data.body}
+                mine={item.data.mine}
+                kind={item.data.kind}
+              />
             ) : (
               <p key={item.id} className="py-2 text-center text-xs text-muted-foreground">
                 {item.data.text}
@@ -518,8 +523,12 @@ function QuestionCard({
           </div>
           {(q.myGuess || q.theirGuess) && (
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-muted-foreground">
-              <p>You guessed {name}: {q.myGuess || "—"}</p>
-              <p>{name} guessed you: {q.theirGuess || "—"}</p>
+              <p>
+                You guessed {name}: {q.myGuess || "—"}
+              </p>
+              <p>
+                {name} guessed you: {q.theirGuess || "—"}
+              </p>
             </div>
           )}
           <button
