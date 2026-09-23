@@ -5,7 +5,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /** Only the addresses listed in ADMIN_EMAILS can read the dashboard. */
 
-
 export const getAdminMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
@@ -16,9 +15,7 @@ export const getAdminMetrics = createServerFn({ method: "GET" })
       .split(",")
       .map((entry) => entry.trim().toLowerCase())
       .filter(Boolean);
-    const email = String(
-      (context.claims as { email?: string } | null)?.email ?? "",
-    ).toLowerCase();
+    const email = String((context.claims as { email?: string } | null)?.email ?? "").toLowerCase();
     if (!email || !allowed.includes(email)) throw new Error("Not allowed");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -146,7 +143,10 @@ export const rotateGuestToken = createServerFn({ method: "POST" })
     const { data: byProfile } = await supabaseAdmin
       .from("session_participants")
       .select("guest_token")
-      .eq("profile_id", isUuid.test(data.personKey) ? data.personKey : "00000000-0000-0000-0000-000000000000")
+      .eq(
+        "profile_id",
+        isUuid.test(data.personKey) ? data.personKey : "00000000-0000-0000-0000-000000000000",
+      )
       .not("guest_token", "is", null);
     const oldTokens = [
       ...new Set(
@@ -168,16 +168,31 @@ export const rotateGuestToken = createServerFn({ method: "POST" })
       const fresh = crypto.randomUUID();
       const ids = rows.map((row) => row.id);
 
-      await supabaseAdmin.from("session_participants").update({ guest_token: fresh }).eq("guest_token", oldToken);
+      await supabaseAdmin
+        .from("session_participants")
+        .update({ guest_token: fresh })
+        .eq("guest_token", oldToken);
       await supabaseAdmin.from("events").update({ guest_token: fresh }).eq("guest_token", oldToken);
-      await supabaseAdmin.from("person_notes").update({ owner_key: fresh }).eq("owner_key", oldToken);
+      await supabaseAdmin
+        .from("person_notes")
+        .update({ owner_key: fresh })
+        .eq("owner_key", oldToken);
       await supabaseAdmin
         .from("person_notes")
         .update({ target_key: guestPersonKey(fresh) })
         .eq("target_key", guestPersonKey(oldToken));
-      await supabaseAdmin.from("chain_answers").update({ person_key: fresh }).eq("person_key", oldToken);
-      await supabaseAdmin.from("chain_guesses").update({ guesser_key: fresh }).eq("guesser_key", oldToken);
-      await supabaseAdmin.from("chain_guesses").update({ subject_key: fresh }).eq("subject_key", oldToken);
+      await supabaseAdmin
+        .from("chain_answers")
+        .update({ person_key: fresh })
+        .eq("person_key", oldToken);
+      await supabaseAdmin
+        .from("chain_guesses")
+        .update({ guesser_key: fresh })
+        .eq("guesser_key", oldToken);
+      await supabaseAdmin
+        .from("chain_guesses")
+        .update({ subject_key: fresh })
+        .eq("subject_key", oldToken);
       await supabaseAdmin
         .from("excluded_identities")
         .update({ value: fresh })

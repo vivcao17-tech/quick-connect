@@ -111,7 +111,9 @@ function GroupSendPage() {
                 value={recipient.label}
                 onChange={(event) =>
                   setRecipients((prev) =>
-                    prev.map((item, j) => (j === i ? { ...item, label: event.target.value } : item)),
+                    prev.map((item, j) =>
+                      j === i ? { ...item, label: event.target.value } : item,
+                    ),
                   )
                 }
                 placeholder="Their name"

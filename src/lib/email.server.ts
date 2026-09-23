@@ -48,7 +48,11 @@ async function logDelivery(
   try {
     await admin.from("events").insert({
       name: outcome.sent ? "email_sent" : "email_failed",
-      props: { kind, status: outcome.sent ? "sent" : (outcome.reason ?? "unknown"), id: outcome.id ?? null },
+      props: {
+        kind,
+        status: outcome.sent ? "sent" : (outcome.reason ?? "unknown"),
+        id: outcome.id ?? null,
+      },
     } as never);
   } catch {
     // never let analytics break a send
@@ -69,7 +73,8 @@ export async function sendReplyEmail(
   if (!apiKey) return logDelivery(admin, KIND, { sent: false, reason: "no_api_key" });
 
   const to = opts.to.trim().toLowerCase();
-  if (await isOptedOut(admin, to)) return logDelivery(admin, KIND, { sent: false, reason: "opted_out" });
+  if (await isOptedOut(admin, to))
+    return logDelivery(admin, KIND, { sent: false, reason: "opted_out" });
 
   const deepLink = `${SITE_URL}${opts.link}`;
   const optOut = unsubscribeUrl(to);
@@ -132,7 +137,8 @@ export async function sendSessionSavedEmail(
   if (!apiKey) return logDelivery(admin, KIND, { sent: false, reason: "no_api_key" });
 
   const to = opts.to.trim().toLowerCase();
-  if (await isOptedOut(admin, to)) return logDelivery(admin, KIND, { sent: false, reason: "opted_out" });
+  if (await isOptedOut(admin, to))
+    return logDelivery(admin, KIND, { sent: false, reason: "opted_out" });
 
   const deepLink = `${SITE_URL}${opts.path}`;
   const optOut = unsubscribeUrl(to);
@@ -170,7 +176,10 @@ export async function sendSessionSavedEmail(
   const body = await response.text();
   if (!response.ok) {
     console.error(`[email] session-saved resend failed [${response.status}]: ${body}`);
-    return logDelivery(admin, "session_saved", { sent: false, reason: `resend_${response.status}` });
+    return logDelivery(admin, "session_saved", {
+      sent: false,
+      reason: `resend_${response.status}`,
+    });
   }
   let id: string | undefined;
   try {

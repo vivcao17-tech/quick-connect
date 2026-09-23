@@ -53,9 +53,7 @@ function SendPage() {
   const { sessionId } = Route.useParams();
   const viewer = useViewer();
   const guestToken = viewer.guestToken;
-  const [recipients, setRecipients] = useState<Recipient[]>([
-    { label: "", note: "", read: null },
-  ]);
+  const [recipients, setRecipients] = useState<Recipient[]>([{ label: "", note: "", read: null }]);
   const [links, setLinks] = useState<Invite[]>([]);
   const [answers, setAnswers] = useState<Answers>([]);
   const [impression, setImpression] = useState<Impression>(null);
@@ -94,8 +92,7 @@ function SendPage() {
   }
 
   const named = recipients.filter((r) => r.label.trim());
-  const ready =
-    named.length > 0 && (!impression || named.every((r) => r.read !== null));
+  const ready = named.length > 0 && (!impression || named.every((r) => r.read !== null));
 
   async function makeLinks() {
     if (!ready || !guestToken) return;
@@ -136,9 +133,7 @@ function SendPage() {
     const lines = [
       invite.note ? `${invite.note}\n` : "",
       `${to ? `${to} — ` : ""}${from} sent you three questions.`,
-      impression
-        ? `One of them is ${from}'s read on you.`
-        : "One of them is about you.",
+      impression ? `One of them is ${from}'s read on you.` : "One of them is about you.",
       "30 seconds, no signup.",
       `${origin}/i/${invite.token}`,
     ].filter(Boolean);
@@ -267,9 +262,7 @@ function SendPage() {
         )}
 
         <button
-          onClick={() =>
-            setRecipients((prev) => [...prev, { label: "", note: "", read: null }])
-          }
+          onClick={() => setRecipients((prev) => [...prev, { label: "", note: "", read: null }])}
           className="mt-4 text-sm text-muted-foreground underline underline-offset-4"
         >
           + Add someone
@@ -310,7 +303,10 @@ function SendPage() {
                   {invite.note && (
                     <p className="mt-2 text-base italic text-muted-foreground">"{invite.note}"</p>
                   )}
-                  <button onClick={() => copy(invite)} className="btn-quiet mt-4 hover:bg-secondary">
+                  <button
+                    onClick={() => copy(invite)}
+                    className="btn-quiet mt-4 hover:bg-secondary"
+                  >
                     {copied === invite.token ? "Copied" : `Copy ${invite.label}'s link`}
                   </button>
                 </div>

@@ -14,7 +14,11 @@ import type { Snapshot } from "@/lib/remote-shared";
  * (cleared storage, new device, private window) they become a new person until
  * they sign in.
  */
-export function personKeyOf(row: { profile_id: string | null; guest_token: string | null; id: string }) {
+export function personKeyOf(row: {
+  profile_id: string | null;
+  guest_token: string | null;
+  id: string;
+}) {
   if (row.profile_id) return row.profile_id;
   if (row.guest_token) return guestPersonKey(row.guest_token);
   return row.id;
@@ -59,7 +63,6 @@ export type SessionBlock = {
   questions: QuestionBlock[];
 };
 
-
 export type Person = {
   personKey: string;
   name: string;
@@ -89,9 +92,7 @@ export async function loadPendingInvites(
 ): Promise<PendingInvite[]> {
   const { myParticipants } = await import("@/lib/identity.server");
   const mine = await myParticipants(admin, { guestToken, profileId });
-  const parentIds = [
-    ...new Set(mine.filter((p) => p.role === "sender").map((p) => p.session_id)),
-  ];
+  const parentIds = [...new Set(mine.filter((p) => p.role === "sender").map((p) => p.session_id))];
   if (parentIds.length === 0) return [];
 
   const { data } = await admin
@@ -101,14 +102,16 @@ export async function loadPendingInvites(
     .is("completed_at", null)
     .order("created_at", { ascending: false });
 
-  return ((data ?? []) as {
-    token: string;
-    recipient_label: string | null;
-    personal_note: string | null;
-    opened_at: string | null;
-    created_at: string;
-    session_id: string;
-  }[]).map((row) => ({
+  return (
+    (data ?? []) as {
+      token: string;
+      recipient_label: string | null;
+      personal_note: string | null;
+      opened_at: string | null;
+      created_at: string;
+      session_id: string;
+    }[]
+  ).map((row) => ({
     token: row.token,
     label: row.recipient_label ?? "Someone",
     note: row.personal_note ?? "",
@@ -117,7 +120,6 @@ export async function loadPendingInvites(
     sessionId: row.session_id,
   }));
 }
-
 
 /** All blocks I share with anyone, grouped by person rather than by session. */
 export async function loadRelationships(
@@ -167,7 +169,6 @@ export async function loadRelationships(
   const kindOf = new Map<string, string>(
     ((sessionRows ?? []) as { id: string; kind: string }[]).map((row) => [row.id, row.kind]),
   );
-
 
   const { data: sqRows } = await admin
     .from("session_questions")
@@ -250,8 +251,7 @@ export async function loadRelationships(
       ? [...selfAnswers].reverse().find((a) => a.participant_id === partner.id)
       : undefined;
 
-    const label = (key: string | undefined) =>
-      snap.options.find((o) => o.key === key)?.label ?? "";
+    const label = (key: string | undefined) => snap.options.find((o) => o.key === key)?.label ?? "";
 
     const mine = messages.filter((m) => m.session_question_id === sq.id);
     const readAt = reads.find(

@@ -25,7 +25,6 @@ export type QuestionRow = {
   reason_chips: { id: string; option_key: string; text: string }[] | null;
 };
 
-
 export function roomCode() {
   const bytes = crypto.getRandomValues(new Uint8Array(4));
   let out = "";
@@ -56,9 +55,6 @@ export async function sessionIdentities(admin: Admin, sessionId: string) {
     .eq("session_id", sessionId);
   return data ?? [];
 }
-
-
-
 
 /** Topics: union of everyone's picks, with topics they both chose weighted up. */
 export async function sessionTopics(admin: Admin, sessionId: string) {
@@ -94,9 +90,7 @@ export async function candidateQuestions(
   const limit = opts?.limit ?? 3;
   const rows = await drawQuestions(admin, {
     slots: [
-      opts?.spiceExact !== undefined
-        ? { count: limit, spice: opts.spiceExact }
-        : { count: limit },
+      opts?.spiceExact !== undefined ? { count: limit, spice: opts.spiceExact } : { count: limit },
     ],
     sessionId,
     modes: PAIR_MODES,
@@ -107,8 +101,6 @@ export async function candidateQuestions(
   });
   return rows as QuestionRow[];
 }
-
-
 
 /** True when these guests have already finished a session together before this one. */
 export async function pairPlayedBefore(admin: Admin, sessionId: string, guestTokens: string[]) {
@@ -193,7 +185,6 @@ export async function seedQuestions(
   const slots = Array.from({ length: Math.max(0, want) }, (_, i) => slotFor(offset + i, spiceMax));
   if (slots.length === 0) return 0;
 
-
   const chosen = (await drawQuestions(admin, {
     slots,
     sessionId,
@@ -215,4 +206,3 @@ export async function seedQuestions(
   );
   return chosen.length;
 }
-

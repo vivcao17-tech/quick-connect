@@ -44,7 +44,11 @@ export function track(
  */
 const VISIT_KEY = "nosure.last_visit";
 
-export function trackVisit(key: string, ctx: TrackContext = {}, extra: Record<string, unknown> = {}) {
+export function trackVisit(
+  key: string,
+  ctx: TrackContext = {},
+  extra: Record<string, unknown> = {},
+) {
   if (typeof window === "undefined") return;
   let previous: number | null = null;
   try {

@@ -93,7 +93,9 @@ function GroupSetup() {
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
         <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Group</p>
-        <h1 className="mt-6 text-5xl leading-tight">Everyone in the room, one question at a time.</h1>
+        <h1 className="mt-6 text-5xl leading-tight">
+          Everyone in the room, one question at a time.
+        </h1>
         <p className="mt-4 text-lg text-muted-foreground">Best with 3–6 people.</p>
 
         <input
@@ -150,7 +152,6 @@ function GroupSetup() {
             </button>
           ))}
         </div>
-
 
         <button
           onClick={open}

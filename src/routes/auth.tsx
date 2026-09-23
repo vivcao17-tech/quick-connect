@@ -122,7 +122,11 @@ function AuthPage() {
             autoComplete={mode === "signin" ? "current-password" : "new-password"}
             className="rounded-full border border-border bg-card px-5 py-3 outline-none focus:border-primary"
           />
-          <button type="submit" disabled={busy} className="btn-ink hover:opacity-90 disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={busy}
+            className="btn-ink hover:opacity-90 disabled:opacity-50"
+          >
             {busy ? "One moment…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
         </form>

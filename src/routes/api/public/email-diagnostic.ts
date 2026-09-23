@@ -25,7 +25,8 @@ export const Route = createFileRoute("/api/public/email-diagnostic")({
           from: FROM,
           to,
         };
-        if (!apiKey) return Response.json({ ...base, error: "RESEND_API_KEY missing" }, { status: 500 });
+        if (!apiKey)
+          return Response.json({ ...base, error: "RESEND_API_KEY missing" }, { status: 500 });
 
         const mode = url.searchParams.get("mode") ?? "";
         if (mode === "saved") {
@@ -36,10 +37,10 @@ export const Route = createFileRoute("/api/public/email-diagnostic")({
             .select("id, session_id")
             .eq("id", participantId)
             .maybeSingle();
-          if (!row) return Response.json({ ...base, error: "unknown_participant" }, { status: 404 });
-          const { ensureSessionLink, describeSessionForParticipant } = await import(
-            "@/lib/session-link.server"
-          );
+          if (!row)
+            return Response.json({ ...base, error: "unknown_participant" }, { status: 404 });
+          const { ensureSessionLink, describeSessionForParticipant } =
+            await import("@/lib/session-link.server");
           const linkToken = await ensureSessionLink(supabaseAdmin, {
             sessionId: row.session_id,
             participantId: row.id,
@@ -56,9 +57,12 @@ export const Route = createFileRoute("/api/public/email-diagnostic")({
             questionCount: target.questionCount,
             path: `/s/${linkToken}`,
           });
-          return Response.json({ ...base, target, linkToken, result }, {
-            headers: { "Cache-Control": "no-store" },
-          });
+          return Response.json(
+            { ...base, target, linkToken, result },
+            {
+              headers: { "Cache-Control": "no-store" },
+            },
+          );
         }
 
         try {

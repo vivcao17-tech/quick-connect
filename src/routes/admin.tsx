@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { exportCsv } from "@/lib/admin-csv";
-import { getAdminImpressions } from "@/lib/admin.functions";
+import { getAdminImpressions, rotateGuestToken } from "@/lib/admin.functions";
 import { getGuestToken } from "@/lib/guest";
 import {
   addTestIdentityFn,
@@ -677,6 +677,7 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
                 {t.summary.messagesSent} sent / {t.summary.messagesReceived} received ·{" "}
                 {t.summary.everInitiated ? "has started a session" : "only ever received"}
               </p>
+              <RotateTokenButton personKey={t.personKey} />
               <div className="mt-3">
                 <ExportButton
                   onClick={() =>
@@ -1432,6 +1433,35 @@ function TestingTab() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function RotateTokenButton({ personKey }: { personKey: string }) {
+  const rotate = useServerFn(rotateGuestToken);
+  const [state, setState] = useState<string>("");
+  async function run() {
+    if (!window.confirm("Replace this person's guest ID? Their old links stop working.")) return;
+    setState("Working…");
+    try {
+      const result = await rotate({ data: { personKey } });
+      setState(
+        result.rotated === 0
+          ? "No guest ID found for this person."
+          : result.resumePath
+            ? `Done. Send them this one-time link (24h): ${window.location.origin}${result.resumePath}`
+            : "Done.",
+      );
+    } catch {
+      setState("Couldn't rotate.");
+    }
+  }
+  return (
+    <div className="mt-3 text-sm">
+      <button type="button" onClick={run} className="rounded-md border border-border px-3 py-1.5">
+        Rotate guest ID (link leaked)
+      </button>
+      {state && <p className="mt-2 break-all text-muted-foreground">{state}</p>}
     </div>
   );
 }

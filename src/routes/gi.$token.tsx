@@ -83,9 +83,7 @@ function GroupInvitePage() {
             <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
               From {invite.fromName}
             </p>
-            {invite.note && (
-              <p className="mt-8 text-3xl leading-snug italic">"{invite.note}"</p>
-            )}
+            {invite.note && <p className="mt-8 text-3xl leading-snug italic">"{invite.note}"</p>}
             <h1 className="mt-8 text-4xl leading-tight">
               {invite.questionCount} questions. Answer whenever.
             </h1>

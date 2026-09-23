@@ -84,9 +84,7 @@ function SavedLinkPage() {
 
         {state?.status === "ready" && (
           <>
-            <p className="text-lg">
-              Back to your questions with {state.withName}.
-            </p>
+            <p className="text-lg">Back to your questions with {state.withName}.</p>
             <button type="button" className={button} disabled={busy} onClick={continueIn}>
               {busy ? "Opening…" : "Continue"}
             </button>
@@ -108,7 +106,11 @@ function SavedLinkPage() {
                 </button>
               )
             )}
-            <Link to="/auth" search={{ redirect: "/people" }} className="text-sm text-muted-foreground underline">
+            <Link
+              to="/auth"
+              search={{ redirect: "/people" }}
+              className="text-sm text-muted-foreground underline"
+            >
               Have an account? Sign in
             </Link>
           </>

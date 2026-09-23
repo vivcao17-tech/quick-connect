@@ -51,7 +51,12 @@ export const createAsyncGroup = createServerFn({ method: "POST" })
 
     const { data: session, error } = await supabaseAdmin
       .from("sessions")
-      .insert({ kind: ASYNC_GROUP_KIND, status: "answering", spice_max: 2, is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }) })
+      .insert({
+        kind: ASYNC_GROUP_KIND,
+        status: "answering",
+        spice_max: 2,
+        is_test: await resolveIsTest(supabaseAdmin, { guestToken: data.guestToken }),
+      })
       .select("id")
       .single();
     if (error) throw error;
@@ -139,7 +144,9 @@ export const getAsyncGroupState = createServerFn({ method: "POST" })
 
     const { data: answerRows } = await supabaseAdmin
       .from("answers")
-      .select("session_question_id, participant_id, option_key, created_at, answer_role, about_participant_id")
+      .select(
+        "session_question_id, participant_id, option_key, created_at, answer_role, about_participant_id",
+      )
       .in("session_question_id", sqs.length ? sqs.map((sq) => sq.id) : [""])
       .order("created_at");
 
@@ -176,7 +183,11 @@ export const getAsyncGroupState = createServerFn({ method: "POST" })
     if (!revealed) {
       const everyoneIn = people.length >= 2 && doneCount === people.length;
       if (everyoneIn || ageHours >= AUTO_REVEAL_HOURS) {
-        await revealAsyncSession(supabaseAdmin, data.sessionId, everyoneIn ? "everyone" : "timeout");
+        await revealAsyncSession(
+          supabaseAdmin,
+          data.sessionId,
+          everyoneIn ? "everyone" : "timeout",
+        );
         revealed = true;
       }
     }
@@ -215,7 +226,10 @@ export const getAsyncGroupState = createServerFn({ method: "POST" })
                         label: snap.options.find((o) => o.key === key)?.label ?? "",
                       };
                     })
-                    .filter((row): row is { name: string; optionKey: OptionKey; label: string } => row !== null)
+                    .filter(
+                      (row): row is { name: string; optionKey: OptionKey; label: string } =>
+                        row !== null,
+                    )
                 : [],
             }
           : null,
@@ -223,28 +237,30 @@ export const getAsyncGroupState = createServerFn({ method: "POST" })
     });
 
     const blocks: RevealBlock[] = revealed
-      ? sqs.filter((sq) => (sq.snapshot as Snapshot).kind !== "impression").map((sq) => {
-          const snap = sq.snapshot as Snapshot;
-          const groups = snap.options.map((option) => ({
-            optionKey: option.key,
-            label: option.label,
-            people: people
-              .filter((p) => picks.get(`${sq.id}:${p.id}`) === option.key)
-              .map((p) => ({ id: p.id, name: p.id === me.id ? "You" : p.name })),
-          }));
-          return {
-            sessionQuestionId: sq.id,
-            index: sq.order_index,
-            text: snap.text,
-            options: groups.map((g) => ({
-              key: g.optionKey,
-              label: g.label,
-              names: g.people.map((p) => p.name),
-              mine: g.people.some((p) => p.id === me.id),
-            })),
-            prompts: promptsFor(me.id, groups),
-          };
-        })
+      ? sqs
+          .filter((sq) => (sq.snapshot as Snapshot).kind !== "impression")
+          .map((sq) => {
+            const snap = sq.snapshot as Snapshot;
+            const groups = snap.options.map((option) => ({
+              optionKey: option.key,
+              label: option.label,
+              people: people
+                .filter((p) => picks.get(`${sq.id}:${p.id}`) === option.key)
+                .map((p) => ({ id: p.id, name: p.id === me.id ? "You" : p.name })),
+            }));
+            return {
+              sessionQuestionId: sq.id,
+              index: sq.order_index,
+              text: snap.text,
+              options: groups.map((g) => ({
+                key: g.optionKey,
+                label: g.label,
+                names: g.people.map((p) => p.name),
+                mine: g.people.some((p) => p.id === me.id),
+              })),
+              prompts: promptsFor(me.id, groups),
+            };
+          })
       : [];
 
     const { data: email } = await supabaseAdmin
@@ -302,9 +318,8 @@ export const answerInAsyncGroup = createServerFn({ method: "POST" })
       .eq("session_question_id", sq.id)
       .eq("participant_id", me.id)
       .eq("answer_role", role);
-    const { data: already } = await (aboutOther
-      ? query.eq("about_participant_id", data.aboutParticipantId!)
-      : query
+    const { data: already } = await (
+      aboutOther ? query.eq("about_participant_id", data.aboutParticipantId!) : query
     ).maybeSingle();
     if (already) return { ok: true };
 
@@ -345,7 +360,11 @@ export const revealAsyncGroup = createServerFn({ method: "POST" })
 export const saveAsyncGroupEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
-      .object({ guestToken: guest, sessionId: z.string().uuid(), email: z.string().email().max(160) })
+      .object({
+        guestToken: guest,
+        sessionId: z.string().uuid(),
+        email: z.string().email().max(160),
+      })
       .parse(input),
   )
   .handler(async ({ data }) => {
@@ -355,7 +374,10 @@ export const saveAsyncGroupEmail = createServerFn({ method: "POST" })
 
     await supabaseAdmin
       .from("participant_emails")
-      .upsert({ participant_id: me.id, email: data.email.trim().toLowerCase() }, { onConflict: "participant_id" });
+      .upsert(
+        { participant_id: me.id, email: data.email.trim().toLowerCase() },
+        { onConflict: "participant_id" },
+      );
 
     await supabaseAdmin.from("events").insert({
       guest_token: data.guestToken,
@@ -422,7 +444,8 @@ export const getAsyncGroupHub = createServerFn({ method: "POST" })
       hoursLeft: Math.max(
         0,
         Math.ceil(
-          AUTO_REVEAL_HOURS - (Date.now() - new Date(session?.created_at ?? Date.now()).getTime()) / 3_600_000,
+          AUTO_REVEAL_HOURS -
+            (Date.now() - new Date(session?.created_at ?? Date.now()).getTime()) / 3_600_000,
         ),
       ),
       invites: (invites ?? []).map((invite) => ({

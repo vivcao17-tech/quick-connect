@@ -8,7 +8,8 @@ export const Route = createFileRoute("/j/$code")({
       { title: "Join the room — NoSure" },
       {
         name: "description",
-        content: "Open the room with a four-letter code. Three questions, thirty seconds, no signup.",
+        content:
+          "Open the room with a four-letter code. Three questions, thirty seconds, no signup.",
       },
       { property: "og:title", content: "Join the room — NoSure" },
       { property: "og:description", content: "Three questions, thirty seconds, no signup." },

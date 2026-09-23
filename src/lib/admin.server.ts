@@ -36,9 +36,15 @@ export async function readMetrics(admin: Admin, windowDays: number): Promise<Adm
     admin.from("sessions").select("id, kind, created_at, ended_at").gte("created_at", since),
     admin.from("session_participants").select("id, session_id, profile_id, guest_token"),
     admin.from("answers").select("id, created_at").gte("created_at", since),
-    admin.from("invites").select("id, opened_at, completed_at, created_at").gte("created_at", since),
+    admin
+      .from("invites")
+      .select("id, opened_at, completed_at, created_at")
+      .gte("created_at", since),
     admin.from("session_questions").select("id, session_id, revealed_at"),
-    admin.from("thread_messages").select("id, session_question_id, created_at").gte("created_at", since),
+    admin
+      .from("thread_messages")
+      .select("id, session_question_id, created_at")
+      .gte("created_at", since),
   ]);
 
   const sessionRows = sessions.data ?? [];
@@ -151,7 +157,10 @@ function classify(counts: number[]): { imbalance: number; split: AdminQuestionBl
   // 0 when perfectly split across the used options, 1 when everyone agrees.
   const even = 1 / Math.max(counts.length, 2);
   const imbalance = total ? Math.min(1, Math.max(0, (share - even) / (1 - even))) : 0;
-  return { imbalance, split: imbalance <= 0.34 ? "even" : imbalance <= 0.67 ? "leaning" : "lopsided" };
+  return {
+    imbalance,
+    split: imbalance <= 0.34 ? "even" : imbalance <= 0.67 ? "leaning" : "lopsided",
+  };
 }
 
 /** Room list for the dashboard, newest first. */
@@ -204,7 +213,10 @@ export async function readSessionDetail(
   if (!session) return null;
 
   const [people, sqs] = await Promise.all([
-    admin.from("session_participants").select("display_name, joined_at").eq("session_id", sessionId),
+    admin
+      .from("session_participants")
+      .select("display_name, joined_at")
+      .eq("session_id", sessionId),
     admin
       .from("session_questions")
       .select(
@@ -240,9 +252,11 @@ export async function readSessionDetail(
     { about: Map<string, number>; self: Map<string, number>; times: string[] }
   >();
   for (const row of answers ?? []) {
-    const entry =
-      byQuestion.get(row.session_question_id) ??
-      { about: new Map<string, number>(), self: new Map<string, number>(), times: [] };
+    const entry = byQuestion.get(row.session_question_id) ?? {
+      about: new Map<string, number>(),
+      self: new Map<string, number>(),
+      times: [],
+    };
     const bucket = row.answer_role === "about_other" ? entry.about : entry.self;
     bucket.set(row.option_key, (bucket.get(row.option_key) ?? 0) + 1);
     entry.times.push(row.created_at);
@@ -368,9 +382,11 @@ export async function readQuestionAverages(admin: Admin): Promise<AdminQuestionA
     { about: Map<string, number>; self: Map<string, number>; times: string[] }
   >();
   for (const row of answers ?? []) {
-    const entry =
-      perSq.get(row.session_question_id) ??
-      { about: new Map<string, number>(), self: new Map<string, number>(), times: [] };
+    const entry = perSq.get(row.session_question_id) ?? {
+      about: new Map<string, number>(),
+      self: new Map<string, number>(),
+      times: [],
+    };
     const bucket = row.answer_role === "about_other" ? entry.about : entry.self;
     bucket.set(row.option_key, (bucket.get(row.option_key) ?? 0) + 1);
     entry.times.push(row.created_at);
@@ -388,9 +404,12 @@ export async function readQuestionAverages(admin: Admin): Promise<AdminQuestionA
     const isImpression = (q?.question_type ?? "") === "impression";
     const primary = isImpression ? entry.about : entry.self;
 
-    const bucket =
-      agg.get(questionId) ??
-      { asked: new Set<string>(), counts: new Map<string, number>(), total: 0, windows: [] };
+    const bucket = agg.get(questionId) ?? {
+      asked: new Set<string>(),
+      counts: new Map<string, number>(),
+      total: 0,
+      windows: [],
+    };
     bucket.asked.add(sqId);
     for (const [key, votes] of primary) {
       bucket.counts.set(key, (bucket.counts.get(key) ?? 0) + votes);

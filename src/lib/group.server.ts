@@ -44,7 +44,6 @@ export async function pickGroupQuestions(
   return rows as QuestionRow[];
 }
 
-
 export function questionSnapshot(q: QuestionRow) {
   return snapshotRow(q);
 }
@@ -89,7 +88,8 @@ export async function transferHost(admin: Admin, sessionId: string, toParticipan
 
   for (const person of people ?? []) {
     if (person.id === toParticipantId) {
-      if (person.role !== "host") await admin.from("session_participants").update({ role: "host" }).eq("id", person.id);
+      if (person.role !== "host")
+        await admin.from("session_participants").update({ role: "host" }).eq("id", person.id);
     } else if (isHostRole(person.role)) {
       await admin.from("session_participants").update({ role: "member" }).eq("id", person.id);
     }

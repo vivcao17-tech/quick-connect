@@ -81,8 +81,7 @@ export const getRevealPrompts = createServerFn({ method: "POST" })
     // Two fallbacks that still name this question's actual options, so the
     // continuation prompts are never generic filler.
     const chosen = [...latest.values()].map((a) => a.option_key);
-    const labelOf = (k: string | undefined) =>
-      snap.options.find((o) => o.key === k)?.label ?? "";
+    const labelOf = (k: string | undefined) => snap.options.find((o) => o.key === k)?.label ?? "";
     const first = labelOf(chosen[0]);
     const second = labelOf(chosen.find((k) => k !== chosen[0]));
     const templates: RevealPrompts =
@@ -142,7 +141,9 @@ export const getRevealPrompts = createServerFn({ method: "POST" })
           prompts?: unknown;
         };
         const prompts = Array.isArray(json.prompts)
-          ? json.prompts.filter((p): p is string => typeof p === "string" && p.trim().length > 0).slice(0, 2)
+          ? json.prompts
+              .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+              .slice(0, 2)
           : [];
         if (prompts.length > 0) {
           result = {
