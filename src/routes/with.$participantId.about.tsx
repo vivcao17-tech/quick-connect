@@ -203,8 +203,12 @@ function WithPersonPage() {
   return (
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto min-h-screen max-w-xl px-6 py-16">
-        <Link to="/people" className="text-sm text-muted-foreground underline underline-offset-4">
-          People
+        <Link
+          to="/with/$participantId"
+          params={{ participantId }}
+          className="text-sm text-muted-foreground underline underline-offset-4"
+        >
+          Back to the conversation
         </Link>
         <h1 className="mt-6 text-4xl leading-tight">You and {name}</h1>
         {data?.note.nickname && data.realName && (
@@ -220,24 +224,26 @@ function WithPersonPage() {
             .join(" · ")}
         </p>
 
-        {/* Their wall comes first — seeing how others read someone is the pull. */}
-        {wallHandle && (
-          <Link
-            to="/p/$handle"
-            params={{ handle: wallHandle }}
-            className="mt-8 block rounded-2xl border-2 border-primary px-6 py-5 text-center text-xl text-primary"
-          >
-            How people read {name}
-          </Link>
+        {viewer.guestToken && (
+          <Fold title="Preview">
+            <PackPreview
+              guestToken={viewer.guestToken}
+              {...(viewer.profileId ? { profileId: viewer.profileId } : {})}
+              personKey={participantId}
+              name={name}
+            />
+          </Fold>
         )}
 
         {viewer.guestToken && (
-          <PackPreview
-            guestToken={viewer.guestToken}
-            {...(viewer.profileId ? { profileId: viewer.profileId } : {})}
-            personKey={participantId}
-            name={name}
-          />
+          <Fold title="How you read each other">
+            <PairImpressions
+              guestToken={viewer.guestToken}
+              profileId={viewer.profileId}
+              personKey={participantId}
+              name={name}
+            />
+          </Fold>
         )}
 
         {data && sessions.length === 0 && (
@@ -245,11 +251,8 @@ function WithPersonPage() {
         )}
 
         {topicGroups.length > 0 && (
-          <div className="mt-10">
-            <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
-              Topics you've discussed
-            </p>
-            <div className="mt-4 flex flex-col gap-4">
+          <Fold title="Topics you've discussed" defaultOpen>
+            <div className="flex flex-col gap-4">
               {topicGroups.map((topic) => (
                 <section key={topic.id} className="card-soft overflow-hidden px-5 sm:px-6">
                   <header className="flex items-end justify-between gap-4 py-5">
@@ -264,8 +267,8 @@ function WithPersonPage() {
                     {topic.questions.map((question) => (
                       <Link
                         key={question.sessionQuestionId}
-                        to="/with/$participantId/$sessionId"
-                        params={{ participantId, sessionId: question.sessionId }}
+                        to="/with/$participantId"
+                        params={{ participantId }}
                         search={{ q: question.sessionQuestionId }}
                         className="group flex min-w-0 items-start gap-3 border-b border-border py-5 last:border-b-0"
                       >
@@ -302,11 +305,12 @@ function WithPersonPage() {
                 </section>
               ))}
             </div>
-          </div>
+          </Fold>
         )}
 
         {/* Private annotations — only ever shown to whoever wrote them. */}
-        <div className="card-soft mt-12 px-6 py-5">
+        <Fold title="Just for you">
+        <div className="card-soft px-6 py-5">
           <div className="flex items-baseline justify-between gap-4">
             <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
               Just for you
@@ -384,6 +388,7 @@ function WithPersonPage() {
             </form>
           )}
         </div>
+        </Fold>
 
         {sets.length > 0 && (
           <div className="mt-8">
