@@ -97,9 +97,15 @@ async function saveSignup(
     throw new Error("Use your Berkeley email.");
   }
 
+  const { resolveIsTest } = await import("@/lib/testing.server");
   const { data: session, error: sessionError } = await admin
     .from("sessions")
-    .insert({ kind: "meet_signup", status: "ended", ended_at: new Date().toISOString(), is_test: source === "paper" })
+    .insert({
+      kind: "meet_signup",
+      status: "ended",
+      ended_at: new Date().toISOString(),
+      is_test: await resolveIsTest(admin as never, { guestToken, profileId }),
+    })
     .select("id")
     .single();
   if (sessionError) throw sessionError;
@@ -198,7 +204,38 @@ export const getAdminMeet = createServerFn({ method: "GET" })
           .select("session_question_id, option_key, session_questions!inner(session_id, order_index, snapshot)")
           .in("session_questions.session_id", sessionIds)
       : { data: [] };
-    return { ...form, signups: signups ?? [], answerRows: answerRows ?? [] };
+    const answersBySession = new Map<string, { position: number; optionKey: string; text: string; option: string }[]>();
+    for (const row of (answerRows ?? []) as any[]) {
+      const sq = Array.isArray(row.session_questions) ? row.session_questions[0] : row.session_questions;
+      if (!sq?.session_id) continue;
+      const snap = sq.snapshot as { text?: string; options?: { key: string; label: string }[] } | null;
+      const list = answersBySession.get(sq.session_id) ?? [];
+      list.push({
+        position: Number(sq.order_index) + 1,
+        optionKey: row.option_key,
+        text: snap?.text ?? "",
+        option: snap?.options?.find((option) => option.key === row.option_key)?.label ?? row.option_key,
+      });
+      answersBySession.set(sq.session_id, list);
+    }
+    return {
+      ...form,
+      signups: (signups ?? []).map((signup) => ({
+        id: signup.id,
+        signupNumber: Number(signup.signup_number),
+        firstName: signup.first_name,
+        contact: signup.contact,
+        berkeleyEmail: signup.berkeley_email,
+        confirmed18: signup.confirmed_18,
+        consented: signup.consented,
+        availability: signup.availability,
+        signupAnswers: signup.signup_answers,
+        openAnswers: signup.open_answers,
+        source: signup.source,
+        createdAt: signup.created_at,
+        answers: [...(answersBySession.get(signup.answer_session_id ?? "") ?? [])].sort((a, b) => a.position - b.position),
+      })),
+    };
   });
 
 export const addAdminMeetSignup = createServerFn({ method: "POST" })
