@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { addAdminMeetSignup, getAdminMeet, updateMeetEvent } from "@/lib/meet.functions";
 
-export const Route = createFileRoute("/admin/meet")({
+export const Route = createFileRoute("/admin_/meet")({
   component: AdminMeetPage,
   head: () => ({
     meta: [

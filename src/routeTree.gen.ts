@@ -24,6 +24,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AdminMeetRouteImport } from './routes/admin_.meet'
 import { Route as CTokenRouteImport } from './routes/c.$token'
 import { Route as ChainWeekRouteImport } from './routes/chain.week'
 import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
@@ -119,6 +120,11 @@ const StartRoute = StartRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMeetRoute = AdminMeetRouteImport.update({
+  id: '/admin_/meet',
+  path: '/admin/meet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CTokenRoute = CTokenRouteImport.update({
@@ -245,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/admin/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
   '/g/$sessionId': typeof GSessionIdRoute
@@ -283,6 +290,7 @@ export interface FileRoutesByTo {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/admin/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
   '/g/$sessionId': typeof GSessionIdRoute
@@ -322,6 +330,7 @@ export interface FileRoutesById {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/admin_/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
   '/g/$sessionId': typeof GSessionIdRoute
@@ -362,6 +371,7 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/admin/meet'
     | '/c/$token'
     | '/chain/week'
     | '/g/$sessionId'
@@ -400,6 +410,7 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/admin/meet'
     | '/c/$token'
     | '/chain/week'
     | '/g/$sessionId'
@@ -438,6 +449,7 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/admin_/meet'
     | '/c/$token'
     | '/chain/week'
     | '/g/$sessionId'
@@ -477,6 +489,7 @@ export interface RootRouteChildren {
   RemoteRoute: typeof RemoteRoute
   StartRoute: typeof StartRoute
   TermsRoute: typeof TermsRoute
+  AdminMeetRoute: typeof AdminMeetRoute
   CTokenRoute: typeof CTokenRoute
   GSessionIdRoute: typeof GSessionIdRoute
   GaSessionIdRoute: typeof GaSessionIdRoute
@@ -604,6 +617,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/meet': {
+      id: '/admin_/meet'
+      path: '/admin/meet'
+      fullPath: '/admin/meet'
+      preLoaderRoute: typeof AdminMeetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/c/$token': {
@@ -782,6 +802,7 @@ const rootRouteChildren: RootRouteChildren = {
   RemoteRoute: RemoteRoute,
   StartRoute: StartRoute,
   TermsRoute: TermsRoute,
+  AdminMeetRoute: AdminMeetRoute,
   CTokenRoute: CTokenRoute,
   GSessionIdRoute: GSessionIdRoute,
   GaSessionIdRoute: GaSessionIdRoute,
