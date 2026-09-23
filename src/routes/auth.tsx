@@ -5,9 +5,9 @@ import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { supabase } from "@/integrations/supabase/client";
 
 function safeRedirect(value: unknown): string {
-  if (typeof value !== "string") return "/";
+  if (typeof value !== "string") return "/people";
   // Same-origin paths only — never bounce to an external URL.
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/people";
   return value;
 }
 

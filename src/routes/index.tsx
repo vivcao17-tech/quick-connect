@@ -41,7 +41,10 @@ function Home() {
   useEffect(() => {
     if (!viewer.ready) return;
     if (viewer.profileId) {
-      void navigate({ to: "/people", replace: true });
+      const stored = typeof window !== "undefined" ? window.sessionStorage.getItem("nosure.after_signin") : null;
+      if (stored) window.sessionStorage.removeItem("nosure.after_signin");
+      const destination = stored?.startsWith("/") && !stored.startsWith("//") ? stored : "/people";
+      void navigate({ to: destination, replace: true });
       return;
     }
     trackVisit("home", viewer.profileId ? { profileId: viewer.profileId } : {});

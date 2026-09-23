@@ -6,7 +6,6 @@ import { useState } from "react";
 import { MeetSignupForm, type MeetSignupValues } from "@/components/MeetSignupForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
 import { addAdminMeetSignup, getAdminMeet, updateMeetEvent } from "@/lib/meet.functions";
 
 export const Route = createFileRoute("/admin_/meet")({
@@ -44,11 +43,17 @@ function pacificToIso(local: string) {
   const [date, time] = local.split("T");
   const [year, month, day] = (date ?? "").split("-").map(Number);
   const [hour, minute] = (time ?? "").split(":").map(Number);
-  let guess = Date.UTC(year, month - 1, day, hour, minute);
+  if (![year, month, day, hour, minute].every(Number.isFinite)) throw new Error("Choose a valid Pacific date and time.");
+  const y = year ?? 0;
+  const m = month ?? 1;
+  const d = day ?? 1;
+  const h = hour ?? 0;
+  const min = minute ?? 0;
+  let guess = Date.UTC(y, m - 1, d, h, min);
   for (let pass = 0; pass < 2; pass += 1) {
     const shown = pacificInput(new Date(guess).toISOString());
     const shownMs = Date.parse(`${shown}:00Z`);
-    const targetMs = Date.UTC(year, month - 1, day, hour, minute);
+    const targetMs = Date.UTC(y, m - 1, d, h, min);
     guess += targetMs - shownMs;
   }
   return new Date(guess).toISOString();
