@@ -1,52 +1,65 @@
-# Dynamic share cards and one-question reconnects
+# Signed-in app shell and People inbox
 
-## Goal
-Every private round invite, Chain link, and public wall link produces a rich server-rendered link preview. People who have not played together for 30 days get a direct one-question way to reconnect from “You & them.”
+## Scope
 
-## Build
+Build only the signed-in four-tab shell and the People list. Keep every existing conversation, thread, `/with/:id`, reveal, Chain gameplay, and group flow unchanged. Existing URLs continue to work.
 
-### Private round invite cards (`/i/:token`)
-- Expand the existing read-only preview lookup to return the sender’s first name and the round’s impression question prompt plus its two options.
-- Keep preview lookup separate from opening the invite so a messaging crawler cannot mark a link opened or change any session state.
-- Render these tags in the initial server HTML:
-  - title: “{name} has one question for you”
-  - description: the impression question
-  - image: a 1200×630 NoSure card with that title, prompt, and both options
-- Never read or render the sender’s selected option, recipient answer, reason, or result.
+## App shell
 
-### Chain cards (`/c/:token`)
-- Add a read-only Chain preview lookup for sender first name, the week’s prompt, and both options.
-- Use it in the route loader so the personalized title, description, and image URL are present before JavaScript runs.
-- Generate the same 1200×630 question-card format, without the stored guess, reason, answer, match, or result.
+- Add a shared bottom tab bar on the signed-in app destinations only:
+  - **People** → `/people`
+  - **Meet** → `/meet`
+  - **You** → `/me`
+  - **This week** → `/chain`
+- Use TanStack links so switching tabs stays client-side without a full-page reload.
+- Fix the bar to the bottom, include device safe-area spacing, provide clear active states, and reserve page-bottom space so content is never covered.
+- Add `/meet` with exactly: “Meetups are coming. Check back soon.”
+- Show a red dot on **This week** while the current weekly question is open and the signed-in person has not answered it. Reuse the existing Chain week read; do not change Chain behavior.
+- On `/`, wait for the existing session check: signed-in people go to `/people` with history replacement; signed-out people keep the current landing page unchanged and see no tab bar.
+- Never show the tab bar on invite/share links, room/setup flows, public walls, auth, admin, legal pages, conversations, threads, or `/with/:id` pages. A signed-out person opening an invite still sees only the current invite experience.
 
-### Public wall cards (`/p/:handle`)
-- Keep the existing server-loaded public profile name and change its preview to:
-  - title/image heading: “{name}’s wall”
-  - image line: “See how people guess {name} — then guess them yourself.”
-- Do not include any wall read, option, answer, count, or result in metadata or the image.
-- Treat the wall as the current “guess me” link; do not add another feature.
+## People tab
 
-### Image delivery
-- Add public image endpoints that return 1200×630 PNG responses generated on demand in NoSure’s cream, rust, green, and ink palette.
-- Use an Edge-compatible renderer with embedded styling and safe text wrapping.
-- Set `og:image`, `twitter:image`, dimensions, MIME type, canonical/`og:url`, and large-image Twitter metadata to absolute `https://nosure.app` URLs.
-- Return conservative generic cards for invalid links and cache successful images without exposing secrets.
+- Replace the current directory-style rows with a conversation list sorted by latest activity.
+- Each person row includes:
+  - a stable circular initial avatar whose color is derived from the name using the existing brand palette;
+  - the displayed name;
+  - a red dot when that person has unread activity;
+  - one concise status line chosen from existing pair data.
+- Compute status safely from the existing relationship detail and pack rules, with this priority:
+  1. unread revealed mismatch with a reason → “Guessed you wrong on … — see why”;
+  2. questions answered by them but still waiting on the viewer → “Waiting on you · …”;
+  3. a currently unlocked pack → “[Pack] unlocked”;
+  4. otherwise a neutral latest-activity or waiting status.
+- Never include either person’s option in a list status before both answers exist. Statuses only describe state; existing reveal rules remain authoritative.
+- Keep each person row linked to the existing `/with/:id` page; do not change that page.
+- Add a small person-plus action at top right that starts the existing new-person remote invite flow.
+- Add a prominent floating plus action at bottom right. It opens a person picker over the People page:
+  - first row: “Someone new →”;
+  - remaining rows: existing people, most recent first;
+  - selecting an existing person opens the current pair-aware pack picker via `/remote?person=…`;
+  - selecting someone new opens the current new-person remote flow.
+- For an empty account, show one short explanatory line and make the floating plus the dominant action; do not render an empty list shell.
 
-### “It’s been a while” one-question round
-- On both `/people` rows and `/with/:person`, show “It’s been a while. One question?” only when the pair has a prior session and their latest shared activity is at least 30 days old.
-- Tapping starts a focused one-question screen for that person. The server selects one active pair A/B question that neither person has answered, using existing identity matching and question-selection rules.
-- After the sender answers, create a separate one-question remote session and private `/i/:token` invite, then open the native share sheet. Fall back to copying the message and link when native sharing is unavailable.
-- The resulting `/i/` page uses the singular one-question copy and normal answer/reveal/thread behavior.
+## Existing test data
+
+- Add a one-time migration that marks every existing session as test and records every existing participant identity—signed-in profiles and guest devices—as test.
+- Preserve all rows; do not migrate old conversations into a new structure and do not delete questions, answers, sessions, or people.
+- Keep the existing automatic test propagation for future rooms involving a flagged identity.
 
 ## Technical details
-- Add new server functions rather than weakening the existing three-question round validator.
-- Keep all data reads and writes behind the existing service-role server-function boundary.
-- Preserve the existing session, participant, question snapshot, answer, invite, and test-session exclusion structures; no schema change is expected.
-- Use both people’s known guest/profile identifiers for the mutually-unanswered draw, with the existing legacy fallback only when the unseen pool is exhausted.
-- Do not change Chain gameplay, in-person pair gameplay, or any group mode.
+
+- Reuse `relationships_detail` for one list-level read, then derive row status and pack unlocks server-side with bulk question metadata rather than issuing one request per person.
+- Keep all private reads behind the existing service-role server-function boundary.
+- Add only the small shared tab-bar/picker presentation needed for these routes; do not reorganize unrelated route files.
+- Preserve the current signed-out landing page and all public metadata.
 
 ## Verification
-- Fetch `/i/:token`, `/c/:token`, and `/p/:handle` as plain HTML and confirm complete metadata exists without browser JavaScript.
-- Fetch each image endpoint and confirm a valid 1200×630 PNG with no answer data.
-- Test first-name handling, long prompt wrapping, invalid links, and existing three-question invites.
-- Test the 30-day threshold on `/people` and `/with/:person`, complete the one-question sender step, verify native-share fallback, open the recipient link, answer, reveal, and reopen the shared thread.
+
+- Verify signed-in `/` opens `/people`, while signed-out `/` remains the current landing page.
+- Verify all four tabs switch without document reload, remain clear on mobile safe areas, and do not cover content.
+- Verify no tab bar appears on signed-out invite links or any excluded flow.
+- Verify People ordering, stable avatar colors, unread dots, each status type, person links, both plus actions, person picker ordering, and empty state.
+- Verify unrevealed choices never appear in People responses or UI.
+- Confirm all pre-existing sessions and participant identities are test-marked.
+- Run the project typecheck and a focused desktop/mobile browser pass without changing the deferred pages or gameplay.
