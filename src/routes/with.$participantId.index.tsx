@@ -97,7 +97,6 @@ function ConversationPage() {
     const result = await load({
       data: { ...identity(), personKey: participantId, ...(q ? { focus: q } : {}) },
     });
-    console.log("DBGR", JSON.stringify((result as any).dbg), result.items.length, result.personKey, viewer.profileId ? "prof" : "noprof");
     setName(result.name);
     setHeader(result.header);
     setItems((current) => merge(current, result.items));
@@ -115,7 +114,7 @@ function ConversationPage() {
 
   useEffect(() => {
     if (!viewer.ready) return;
-    void refresh().catch((e) => { console.error("DBGC", e); setLoaded(true); });
+    void refresh().catch(() => setLoaded(true));
     const timer = window.setInterval(() => void refresh().catch(() => undefined), 5000);
     return () => window.clearInterval(timer);
   }, [viewer.ready, refresh]);

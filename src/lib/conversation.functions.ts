@@ -79,7 +79,6 @@ async function buildTimeline(data: {
   const [mine, notes] = await Promise.all([myParticipants(admin, ident), loadNotes(admin, ident)]);
   const sessionIds = [...new Set(mine.map((p) => p.session_id))];
   const empty = { personKey: data.personKey, name: "", items: [] as TimelineItem[], pairQs: [] };
-  (globalThis as any).__dbg = ["mine", mine.length, Boolean(data.profileId)];
   if (sessionIds.length === 0) return empty;
 
   const { data: everyone } = await admin
@@ -97,7 +96,6 @@ async function buildTimeline(data: {
     const key = personKeyOf(p as never);
     return key === wanted || key === legacy;
   });
-  (globalThis as any).__dbg = ["conv", mine.length, (everyone ?? []).length, partners.length, wanted];
   if (partners.length === 0) return empty;
   const personKey = personKeyOf(partners[0] as never);
   const realName = partners.find((p) => p.display_name)?.display_name ?? "Someone";
@@ -348,7 +346,6 @@ export const getConversation = createServerFn({ method: "POST" })
       header,
       items,
       hasMore: start > 0,
-      dbg: (globalThis as any).__dbg,
       mutualCount: built.pairQs.filter((q) => q.revealed && q.kind !== "impression").length,
     };
   });
