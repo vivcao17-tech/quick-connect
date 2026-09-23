@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { verifyProfileId } from "@/lib/verify-profile";
 
-const choice = z.enum(["a", "b", "c"]);
+const choice = z.enum(["a", "b"]);
 const signupOnly = z.object({
   priority: z.enum(["fits", "different"]),
   friendRead: z.enum(["guess", "impression", "neither"]),
@@ -96,6 +96,18 @@ async function saveSignup(
   if (!/@berkeley\.edu$/i.test(input.berkeleyEmail)) {
     throw new Error("Use your Berkeley email.");
   }
+  if (input.availability !== form.event.slotLabel) {
+    throw new Error("Choose the listed meetup time.");
+  }
+  if (profileId) {
+    const { data: existing } = await admin
+      .from("meet_signups")
+      .select("signup_number")
+      .eq("event_id", form.event.id)
+      .eq("profile_id", profileId)
+      .maybeSingle();
+    if (existing) throw new Error("You're already signed up for this meetup.");
+  }
 
   const { resolveIsTest } = await import("@/lib/testing.server");
   const { data: session, error: sessionError } = await admin
@@ -114,7 +126,10 @@ async function saveSignup(
     .insert({ session_id: session.id, profile_id: profileId, guest_token: guestToken, display_name: input.firstName, role: "meet_signup" })
     .select("id")
     .single();
-  if (participantError) throw participantError;
+  if (participantError) {
+    await admin.from("sessions").delete().eq("id", session.id);
+    throw participantError;
+  }
   const { data: sessionQuestions, error: questionError } = await admin
     .from("session_questions")
     .insert(form.questions.map((question, index) => ({
@@ -124,7 +139,10 @@ async function saveSignup(
       snapshot: { text: question.text, kind: "standard", options: [{ key: "a", label: question.optionA }, { key: "b", label: question.optionB }], chips: [] },
     })))
     .select("id, question_id, order_index");
-  if (questionError) throw questionError;
+  if (questionError) {
+    await admin.from("sessions").delete().eq("id", session.id);
+    throw questionError;
+  }
   const ordered = [...(sessionQuestions ?? [])].sort((a, b) => a.order_index - b.order_index);
   const { error: answerError } = await admin.from("answers").insert(
     input.answers.map((answer, index) => ({
@@ -135,7 +153,10 @@ async function saveSignup(
       visibility: "session",
     })),
   );
-  if (answerError) throw answerError;
+  if (answerError) {
+    await admin.from("sessions").delete().eq("id", session.id);
+    throw answerError;
+  }
   const { data: signup, error: signupError } = await admin
     .from("meet_signups")
     .insert({
@@ -155,7 +176,13 @@ async function saveSignup(
     })
     .select("signup_number")
     .single();
-  if (signupError) throw signupError;
+  if (signupError) {
+    await admin.from("sessions").delete().eq("id", session.id);
+    if (String(signupError.message).toLowerCase().includes("duplicate")) {
+      throw new Error("You're already signed up for this meetup.");
+    }
+    throw signupError;
+  }
   return { ok: true, signupNumber: Number(signup.signup_number) };
 }
 
@@ -198,15 +225,22 @@ export const getAdminMeet = createServerFn({ method: "GET" })
   const sessionIds = (signups ?? [])
     .map((row) => row.answer_session_id as string | null)
     .filter((id): id is string => Boolean(id));
-    const { data: answerRows } = sessionIds.length
+    const { data: sessionQuestionRows, error: sessionQuestionsError } = sessionIds.length
       ? await supabaseAdmin
-          .from("answers")
-          .select("session_question_id, option_key, session_questions!inner(session_id, order_index, snapshot)")
-          .in("session_questions.session_id", sessionIds)
-      : { data: [] };
+          .from("session_questions")
+          .select("id, session_id, order_index, snapshot")
+          .in("session_id", sessionIds)
+      : { data: [], error: null };
+    if (sessionQuestionsError) throw sessionQuestionsError;
+    const questionById = new Map((sessionQuestionRows ?? []).map((row) => [row.id, row]));
+    const sessionQuestionIds = [...questionById.keys()];
+    const { data: answerRows, error: answersError } = sessionQuestionIds.length
+      ? await supabaseAdmin.from("answers").select("session_question_id, option_key").in("session_question_id", sessionQuestionIds)
+      : { data: [], error: null };
+    if (answersError) throw answersError;
     const answersBySession = new Map<string, { position: number; optionKey: string; text: string; option: string }[]>();
     for (const row of (answerRows ?? []) as any[]) {
-      const sq = Array.isArray(row.session_questions) ? row.session_questions[0] : row.session_questions;
+      const sq = questionById.get(row.session_question_id);
       if (!sq?.session_id) continue;
       const snap = sq.snapshot as { text?: string; options?: { key: string; label: string }[] } | null;
       const list = answersBySession.get(sq.session_id) ?? [];
