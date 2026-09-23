@@ -5,9 +5,9 @@ import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { supabase } from "@/integrations/supabase/client";
 
 function safeRedirect(value: unknown): string {
-  if (typeof value !== "string") return "/";
+  if (typeof value !== "string") return "/people";
   // Same-origin paths only — never bounce to an external URL.
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/people";
   return value;
 }
 
@@ -34,6 +34,7 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
+  const [code, setCode] = useState("");
 
   // Already signed in → go straight to where they were headed.
   useEffect(() => {
@@ -78,6 +79,12 @@ function AuthPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function onCode(value: string) {
+    const next = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 4);
+    setCode(next);
+    if (next.length === 4) void navigate({ to: "/join/$code", params: { code: next } });
   }
 
   if (checking) {
@@ -142,6 +149,11 @@ function AuthPage() {
         >
           {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
         </button>
+
+        <label className="mt-10 flex items-center gap-3 border-t border-border pt-6 text-sm text-muted-foreground">
+          <span>Got a code?</span>
+          <input value={code} onChange={(event) => onCode(event.target.value)} autoCapitalize="characters" autoComplete="off" maxLength={4} aria-label="Four letter room code" className="w-32 rounded-full border border-border bg-card px-4 py-2 text-center text-base tracking-[0.4em] uppercase outline-none focus:border-primary" />
+        </label>
       </section>
     </main>
   );
