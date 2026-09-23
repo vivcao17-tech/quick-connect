@@ -236,10 +236,7 @@ export const listPeople = createServerFn({ method: "POST" })
         _profile_id: data.profileId ?? null,
       }),
       loadDetail(supabaseAdmin as never, data.guestToken, data.profileId),
-      supabaseAdmin
-        .from("questions")
-        .select("id, pack, question_type")
-        .not("pack", "is", null),
+      supabaseAdmin.from("questions").select("id, pack, question_type").not("pack", "is", null),
     ]);
     const { data: overview, error } = overviewResult;
     if (error) throw new Error(error.message);
