@@ -79,6 +79,7 @@ async function buildTimeline(data: {
   const [mine, notes] = await Promise.all([myParticipants(admin, ident), loadNotes(admin, ident)]);
   const sessionIds = [...new Set(mine.map((p) => p.session_id))];
   const empty = { personKey: data.personKey, name: "", items: [] as TimelineItem[], pairQs: [] };
+  console.log("DBG mine", mine.length, Boolean(data.profileId));
   if (sessionIds.length === 0) return empty;
 
   const { data: everyone } = await admin
