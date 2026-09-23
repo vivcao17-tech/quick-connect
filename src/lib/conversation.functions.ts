@@ -42,7 +42,14 @@ export type TimelineMessage = {
   id: string;
   type: "message";
   timestamp: string;
-  data: { sessionQuestionId: string; kind: string; body: string; mine: boolean };
+  data: {
+    /** Set only when sent from a question's Talk; shown as a quoted line. */
+    sessionQuestionId: string | null;
+    quote: string;
+    kind: string;
+    body: string;
+    mine: boolean;
+  };
 };
 export type TimelineSystem = {
   id: string;
@@ -101,24 +108,31 @@ async function buildTimeline(data: {
   const sqIds = sqs.map((q) => q.id);
   const qIds = [...new Set(sqs.map((q) => q.question_id))];
   const NIL = ["00000000-0000-0000-0000-000000000000"];
-  const [{ data: answerRows }, { data: messageRows }, { data: qRows }] = await Promise.all([
-    admin
-      .from("answers")
-      .select(
-        "session_question_id, participant_id, option_key, reason_text, answer_role, created_at",
-      )
-      .in("session_question_id", sqIds.length ? sqIds : NIL)
-      .order("created_at"),
-    admin
-      .from("thread_messages")
-      .select("id, session_question_id, participant_id, kind, body, created_at")
-      .in("session_question_id", sqIds.length ? sqIds : NIL)
-      .order("created_at"),
-    admin
-      .from("questions")
-      .select("id, pack, question_type")
-      .in("id", qIds.length ? qIds : NIL),
-  ]);
+  const [{ data: answerRows }, { data: messageRows }, { data: qRows }, { data: looseRows }] =
+    await Promise.all([
+      admin
+        .from("answers")
+        .select(
+          "session_question_id, participant_id, option_key, reason_text, answer_role, created_at",
+        )
+        .in("session_question_id", sqIds.length ? sqIds : NIL)
+        .order("created_at"),
+      admin
+        .from("thread_messages")
+        .select("id, session_question_id, participant_id, kind, body, created_at")
+        .in("session_question_id", sqIds.length ? sqIds : NIL)
+        .order("created_at"),
+      admin
+        .from("questions")
+        .select("id, pack, question_type")
+        .in("id", qIds.length ? qIds : NIL),
+      admin
+        .from("thread_messages")
+        .select("id, session_question_id, participant_id, kind, body, created_at")
+        .in("session_id", ids)
+        .is("session_question_id", null)
+        .order("created_at"),
+    ]);
   const answers = (answerRows ?? []) as Row[];
   const qMeta = new Map(((qRows ?? []) as Row[]).map((q) => [q.id, q]));
   const sessionAt = new Map(((sessionRows ?? []) as Row[]).map((s) => [s.id, s]));
@@ -222,14 +236,19 @@ async function buildTimeline(data: {
     if (revealed) revealedIds.add(sq.id);
   }
 
-  for (const m of (messageRows ?? []) as Row[]) {
-    if (!revealedIds.has(m.session_question_id)) continue;
+  const partnerIds = new Set(partners.map((p) => p.id as string));
+  const sqText = new Map(sqs.map((q) => [q.id as string, (q.snapshot as Snapshot | null)?.text ?? ""]));
+  for (const m of [...((messageRows ?? []) as Row[]), ...((looseRows ?? []) as Row[])]) {
+    // Replies stay hidden until their question is revealed; standalone messages always show.
+    if (m.session_question_id && !revealedIds.has(m.session_question_id)) continue;
+    if (!myIds.has(m.participant_id) && !partnerIds.has(m.participant_id)) continue;
     items.push({
       id: `m:${m.id}`,
       type: "message",
       timestamp: m.created_at,
       data: {
-        sessionQuestionId: m.session_question_id,
+        sessionQuestionId: m.session_question_id ?? null,
+        quote: m.session_question_id ? (sqText.get(m.session_question_id) ?? "") : "",
         kind: m.kind,
         body: m.body ?? "",
         mine: myIds.has(m.participant_id),
