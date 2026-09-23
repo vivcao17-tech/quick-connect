@@ -43,6 +43,7 @@ import { Route as ApiPublicEmailDiagnosticRouteImport } from './routes/api/publi
 import { Route as ApiPublicUnsubscribeRouteImport } from './routes/api/public/unsubscribe'
 import { Route as WithParticipantIdIndexRouteImport } from './routes/with.$participantId.index'
 import { Route as WithParticipantIdSessionIdRouteImport } from './routes/with.$participantId.$sessionId'
+import { Route as WithParticipantIdAboutRouteImport } from './routes/with.$participantId.about'
 import { Route as ApiPublicOgKindKeyRouteImport } from './routes/api/public/og.$kind.$key'
 
 const IndexRoute = IndexRouteImport.update({
@@ -217,6 +218,11 @@ const WithParticipantIdSessionIdRoute =
     path: '/with/$participantId/$sessionId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const WithParticipantIdAboutRoute = WithParticipantIdAboutRouteImport.update({
+  id: '/with/$participantId/about',
+  path: '/with/$participantId/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOgKindKeyRoute = ApiPublicOgKindKeyRouteImport.update({
   id: '/api/public/og/$kind/$key',
   path: '/api/public/og/$kind/$key',
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
+  '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
   '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
@@ -294,6 +301,7 @@ export interface FileRoutesByTo {
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
+  '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId': typeof WithParticipantIdIndexRoute
   '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
@@ -332,6 +340,7 @@ export interface FileRoutesById {
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
+  '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
   '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
@@ -371,6 +380,7 @@ export interface FileRouteTypes {
     | '/api/public/email-diagnostic'
     | '/api/public/unsubscribe'
     | '/with/$participantId/$sessionId'
+    | '/with/$participantId/about'
     | '/with/$participantId/'
     | '/api/public/og/$kind/$key'
   fileRoutesByTo: FileRoutesByTo
@@ -408,6 +418,7 @@ export interface FileRouteTypes {
     | '/api/public/email-diagnostic'
     | '/api/public/unsubscribe'
     | '/with/$participantId/$sessionId'
+    | '/with/$participantId/about'
     | '/with/$participantId'
     | '/api/public/og/$kind/$key'
   id:
@@ -445,6 +456,7 @@ export interface FileRouteTypes {
     | '/api/public/email-diagnostic'
     | '/api/public/unsubscribe'
     | '/with/$participantId/$sessionId'
+    | '/with/$participantId/about'
     | '/with/$participantId/'
     | '/api/public/og/$kind/$key'
   fileRoutesById: FileRoutesById
@@ -482,6 +494,7 @@ export interface RootRouteChildren {
   ApiPublicEmailDiagnosticRoute: typeof ApiPublicEmailDiagnosticRoute
   ApiPublicUnsubscribeRoute: typeof ApiPublicUnsubscribeRoute
   WithParticipantIdSessionIdRoute: typeof WithParticipantIdSessionIdRoute
+  WithParticipantIdAboutRoute: typeof WithParticipantIdAboutRoute
   WithParticipantIdIndexRoute: typeof WithParticipantIdIndexRoute
   ApiPublicOgKindKeyRoute: typeof ApiPublicOgKindKeyRoute
 }
@@ -726,6 +739,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WithParticipantIdSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/with/$participantId/about': {
+      id: '/with/$participantId/about'
+      path: '/with/$participantId/about'
+      fullPath: '/with/$participantId/about'
+      preLoaderRoute: typeof WithParticipantIdAboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/og/$kind/$key': {
       id: '/api/public/og/$kind/$key'
       path: '/api/public/og/$kind/$key'
@@ -779,6 +799,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicEmailDiagnosticRoute: ApiPublicEmailDiagnosticRoute,
   ApiPublicUnsubscribeRoute: ApiPublicUnsubscribeRoute,
   WithParticipantIdSessionIdRoute: WithParticipantIdSessionIdRoute,
+  WithParticipantIdAboutRoute: WithParticipantIdAboutRoute,
   WithParticipantIdIndexRoute: WithParticipantIdIndexRoute,
   ApiPublicOgKindKeyRoute: ApiPublicOgKindKeyRoute,
 }
