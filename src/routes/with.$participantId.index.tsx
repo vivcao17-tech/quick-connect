@@ -10,6 +10,7 @@ import {
   type TimelineItem,
   type TimelineQuestion,
 } from "@/lib/conversation.functions";
+import { fillName } from "@/components/QuestionText";
 import { postThreadMessage } from "@/lib/remote.functions";
 import { track } from "@/lib/track";
 import { useViewer } from "@/lib/viewer";
@@ -334,7 +335,7 @@ function ConversationPage() {
                 body={item.data.body}
                 mine={item.data.mine}
                 kind={item.data.kind}
-                quote={item.data.quote.replaceAll("{name}", display)}
+                quote={fillName(item.data.quote, display)}
               />
             ) : (
               <p key={item.id} className="py-2 text-center text-xs text-muted-foreground">
@@ -373,7 +374,7 @@ function ConversationPage() {
         {targetQ && (
           <div className="mx-auto flex max-w-xl items-center gap-2 px-4 pt-2 text-xs text-muted-foreground">
             <span className="min-w-0 flex-1 truncate border-l-2 border-border pl-2">
-              {targetQ.text.replaceAll("{name}", display)}
+              {fillName(targetQ.text, display)}
             </span>
             <button
               type="button"
@@ -498,7 +499,7 @@ function QuestionCard({
   onSimilar: () => void;
   onPick: (key: string) => void;
 }) {
-  const withName = (text: string) => text.replaceAll("{name}", name);
+  const withName = (text: string) => fillName(text, name);
   const prompt =
     q.state === "waiting_me" && q.kind === "impression"
       ? withName((q.needs === "about_other" ? q.stemOther : q.stemSelf) || q.text)

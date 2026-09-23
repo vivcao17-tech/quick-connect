@@ -1,3 +1,4 @@
+import { fillName } from "@/components/QuestionText";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
@@ -55,7 +56,7 @@ export function PairSummary({
         </button>
 
         <div className="mt-6 border-b border-border pb-6">
-          <h2 className="text-3xl leading-tight">{question.text}</h2>
+          <h2 className="text-3xl leading-tight">{fillName(question.text, otherName)}</h2>
           <p className="mt-6 text-base">
             <span className="text-muted-foreground">You: </span>
             {question.myLabel || "—"}
@@ -100,7 +101,7 @@ export function PairSummary({
             onClick={() => setFocused(q.sessionQuestionId)}
             className="card-soft px-6 py-5 text-left"
           >
-            <p className="text-lg">{q.text}</p>
+            <p className="text-lg">{fillName(q.text, otherName)}</p>
             <p className="mt-3 text-base">
               <span className="text-muted-foreground">You: </span>
               {q.myLabel || "—"}
