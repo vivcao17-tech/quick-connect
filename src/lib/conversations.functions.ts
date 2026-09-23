@@ -149,19 +149,62 @@ export const listUnreadThreads = createServerFn({ method: "POST" })
  * aggregation and unread counting inside Postgres. Each PostgREST call costs
  * 150–600ms of network, so the old loop of ~12 sequential queries took seconds.
  */
+/**
+ * Mirrors the pack_config table (pack, unlock_threshold, display_order).
+ * Inlined so the People list skips a round trip; update both together.
+ */
+const PACK_THRESHOLDS = [
+  { pack: "click", unlock_threshold: 4, display_order: 1 },
+  { pack: "talk", unlock_threshold: 5, display_order: 2 },
+  { pack: "bring_out", unlock_threshold: 5, display_order: 3 },
+  { pack: "clash", unlock_threshold: 6, display_order: 4 },
+];
+
+/** Names, unread and activity only — enough to draw the rows immediately. */
+export const listPeopleBasic = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object(identity).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: overview, error } = await (
+      supabaseAdmin as unknown as {
+        rpc: (
+          fn: string,
+          args: Record<string, unknown>,
+        ) => Promise<{
+          data: {
+            people?: {
+              personKey: string;
+              name: string;
+              nickname: string;
+              unread: number;
+              lastActivity: string;
+            }[];
+          } | null;
+          error: { message: string } | null;
+        }>;
+      }
+    ).rpc("people_overview", {
+      _guest_token: data.guestToken,
+      _profile_id: data.profileId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return {
+      people: (overview?.people ?? []).map((row) => ({
+        personKey: row.personKey,
+        name: row.name,
+        nickname: row.nickname,
+        unread: row.unread,
+        lastActivity: row.lastActivity,
+      })),
+    };
+  });
+
 export const listPeople = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object(identity).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { linkProfileToGuestRows } = await import("@/lib/identity.server");
     const { loadDetail, metLabel } = await import("@/lib/relationships.server");
-
-    // Stamps profile ids onto old guest rows; the overview matches either key,
-    // so it doesn't need to wait for the write.
-    const linking = linkProfileToGuestRows(supabaseAdmin as never, {
-      guestToken: data.guestToken,
-      profileId: data.profileId,
-    });
+    // Guest-row linking happens once at sign-in (useLinkIdentity), not on reads.
 
     type OverviewRow = {
       personKey: string;
@@ -175,7 +218,9 @@ export const listPeople = createServerFn({ method: "POST" })
       lastActivity: string;
     };
 
-    const [overviewResult, detail] = await Promise.all([
+    // Everything runs at once. Pack question metadata is fetched for the whole
+    // (small) pack bank instead of waiting for the detail's question ids.
+    const [overviewResult, detail, questionResult] = await Promise.all([
       (
         supabaseAdmin as unknown as {
           rpc: (
@@ -191,30 +236,13 @@ export const listPeople = createServerFn({ method: "POST" })
         _profile_id: data.profileId ?? null,
       }),
       loadDetail(supabaseAdmin as never, data.guestToken, data.profileId),
+      supabaseAdmin
+        .from("questions")
+        .select("id, pack, question_type")
+        .not("pack", "is", null),
     ]);
-    await linking;
     const { data: overview, error } = overviewResult;
     if (error) throw new Error(error.message);
-
-    const questionIds = [
-      ...new Set(
-        detail.people.flatMap((person) =>
-          person.sessions.flatMap((session) =>
-            session.questions.map((question) => question.questionId),
-          ),
-        ),
-      ),
-    ];
-    const questionResult = questionIds.length
-      ? await supabaseAdmin
-          .from("questions")
-          .select("id, pack, question_type")
-          .in("id", questionIds)
-      : { data: [] };
-    const { data: packRows } = await supabaseAdmin
-      .from("pack_config")
-      .select("pack, unlock_threshold, display_order")
-      .order("display_order");
 
     const questionMeta = new Map(
       (questionResult.data ?? []).map((row) => [
@@ -222,11 +250,7 @@ export const listPeople = createServerFn({ method: "POST" })
         { pack: row.pack, type: row.question_type },
       ]),
     );
-    const packs = (packRows ?? []) as {
-      pack: string;
-      unlock_threshold: number;
-      display_order: number;
-    }[];
+    const packs = PACK_THRESHOLDS;
     const details = new Map(detail.people.map((person) => [person.personKey, person]));
 
     function statusFor(personKey: string, name: string, unread: number) {
