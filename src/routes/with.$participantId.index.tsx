@@ -97,6 +97,7 @@ function ConversationPage() {
     const result = await load({
       data: { ...identity(), personKey: participantId, ...(q ? { focus: q } : {}) },
     });
+    console.log("DBGR", result.items.length, result.personKey, viewer.profileId ? "prof" : "noprof");
     setName(result.name);
     setHeader(result.header);
     setItems((current) => merge(current, result.items));
