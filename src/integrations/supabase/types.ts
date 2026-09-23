@@ -909,21 +909,27 @@ export type Database = {
       session_links: {
         Row: {
           created_at: string
+          expires_at: string
           participant_id: string
           session_id: string
           token: string
+          used_at: string | null
         }
         Insert: {
           created_at?: string
+          expires_at?: string
           participant_id: string
           session_id: string
           token: string
+          used_at?: string | null
         }
         Update: {
           created_at?: string
+          expires_at?: string
           participant_id?: string
           session_id?: string
           token?: string
+          used_at?: string | null
         }
         Relationships: [
           {
@@ -1373,6 +1379,10 @@ export type Database = {
       profile_wall: {
         Args: { _phase?: string; _profile_id: string }
         Returns: Json
+      }
+      public_person_key: {
+        Args: { _guest_token: string; _id: string; _profile_id: string }
+        Returns: string
       }
       question_tally: {
         Args: { _question_id: string }

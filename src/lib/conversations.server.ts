@@ -1,17 +1,27 @@
+import { createHash } from "node:crypto";
+
 import type { Snapshot } from "@/lib/remote-shared";
 
 /**
  * Person identity across sessions.
  *
- * A registered person is keyed by profile_id, a guest by guest_token. Both are
- * uuids, so one column of route param covers both. A signed-in viewer is matched
+ * A registered person is keyed by profile_id. A guest is keyed by a one-way hash
+ * of their guest token ("g" + 32 hex) — never the token itself, because this key
+ * ends up in /with/ URLs and responses the other person can see. Must match
+ * public.public_person_key() in the database. A signed-in viewer is matched
  * by profile_id as well as by the guest token of the browser they are on, so
  * their history follows them across devices. If a guest loses their token
  * (cleared storage, new device, private window) they become a new person until
  * they sign in.
  */
 export function personKeyOf(row: { profile_id: string | null; guest_token: string | null; id: string }) {
-  return row.profile_id ?? row.guest_token ?? row.id;
+  if (row.profile_id) return row.profile_id;
+  if (row.guest_token) return guestPersonKey(row.guest_token);
+  return row.id;
+}
+
+export function guestPersonKey(guestToken: string) {
+  return "g" + createHash("sha256").update(guestToken, "utf8").digest("hex").slice(0, 32);
 }
 
 type Admin = {

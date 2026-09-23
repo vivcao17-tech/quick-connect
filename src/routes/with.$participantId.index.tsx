@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
@@ -102,6 +102,7 @@ const field =
 function WithPersonPage() {
   const { participantId } = Route.useParams();
   const viewer = useViewer();
+  const navigate = useNavigate();
   const [data, setData] = useState<Data | null>(null);
   const [editing, setEditing] = useState(false);
   const [nickname, setNickname] = useState("");
@@ -134,6 +135,13 @@ function WithPersonPage() {
     })
       .then((result) => {
         setData(result);
+        if ("personKey" in result && result.personKey && result.personKey !== participantId) {
+          void navigate({
+            to: "/with/$participantId",
+            params: { participantId: result.personKey },
+            replace: true,
+          });
+        }
         setNickname(result.note.nickname);
         setContact(result.note.contact);
         setNote(result.note.note);
@@ -147,7 +155,7 @@ function WithPersonPage() {
           sessions: [],
         }),
       );
-  }, [load, participantId, viewer.ready, viewer.guestToken, viewer.profileId]);
+  }, [load, navigate, participantId, viewer.ready, viewer.guestToken, viewer.profileId]);
 
   // Meeting someone new is the usual trigger for reusing a set, so the sets are
   // ready before the page even knows there is nothing between you two yet.

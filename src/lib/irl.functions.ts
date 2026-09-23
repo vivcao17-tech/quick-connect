@@ -689,15 +689,38 @@ export const saveSessionEmail = createServerFn({ method: "POST" })
     return { ok: true, sent: result.sent };
   });
 
-/** Opens a saved link: restores who this person was and where they left off. */
-export const openSessionLink = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ token: z.string().min(8).max(64) }).parse(input))
+const linkToken = z.object({ token: z.string().min(8).max(64) });
+
+/** Looks at a saved link without using it up. */
+export const previewSessionLinkFn = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => linkToken.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { resolveSessionLink } = await import("@/lib/session-link.server");
-    const resolved = await resolveSessionLink(supabaseAdmin, data.token);
+    const { previewSessionLink } = await import("@/lib/session-link.server");
+    return previewSessionLink(supabaseAdmin, data.token);
+  });
+
+/** Opens a saved link: uses it up, restores who this person was and where they left off. */
+export const openSessionLink = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => linkToken.parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { claimSessionLink } = await import("@/lib/session-link.server");
+    const resolved = await claimSessionLink(supabaseAdmin, data.token);
     if (!resolved) return { ok: false as const };
     return { ok: true as const, guestToken: resolved.guestToken, path: resolved.path };
+  });
+
+/** Mails a fresh link to the address on file. Always answers the same way. */
+export const resendSessionLinkFn = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => linkToken.parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resendSessionLink } = await import("@/lib/session-link.server");
+    await resendSessionLink(supabaseAdmin, data.token).catch((error) =>
+      console.error("[session-link] resend failed", error),
+    );
+    return { ok: true as const };
   });
 
 export type RoomState = Awaited<ReturnType<typeof getRoomState>>;
