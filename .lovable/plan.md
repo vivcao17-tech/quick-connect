@@ -8,13 +8,13 @@ Build only the signed-in four-tab shell and the People list. Keep every existing
 
 - Add a shared bottom tab bar on the signed-in app destinations only:
   - **People** → `/people`
-  - **Meet** → `/meet`
-  - **You** → `/me`
   - **This week** → `/chain`
+  - **You** → `/me`
+  - **Meet** → `/meet`
 - Use TanStack links so switching tabs stays client-side without a full-page reload.
 - Fix the bar to the bottom, include device safe-area spacing, provide clear active states, and reserve page-bottom space so content is never covered.
 - Add `/meet` with exactly: “Meetups are coming. Check back soon.”
-- Show a red dot on **This week** while the current weekly question is open and the signed-in person has not answered it. Reuse the existing Chain week read; do not change Chain behavior.
+- Show a red dot on **This week** while the current weekly question is open and the signed-in person has not answered it. Clear it immediately when they answer, regardless of whether a recipient has responded. Reuse the existing Chain week read; do not change Chain behavior.
 - On `/`, wait for the existing session check: signed-in people go to `/people` with history replacement; signed-out people keep the current landing page unchanged and see no tab bar.
 - Never show the tab bar on invite/share links, room/setup flows, public walls, auth, admin, legal pages, conversations, threads, or `/with/:id` pages. A signed-out person opening an invite still sees only the current invite experience.
 

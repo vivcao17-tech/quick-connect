@@ -137,7 +137,11 @@ function PeoplePage() {
             <GoogleSignIn redirectPath="/people" />
             <p className="mt-3 text-sm text-muted-foreground">
               Keeps your answers if you switch phones.{" "}
-              <Link to="/auth" search={{ redirect: "/people" }} className="underline underline-offset-4">
+              <Link
+                to="/auth"
+                search={{ redirect: "/people" }}
+                className="underline underline-offset-4"
+              >
                 or use email
               </Link>
             </p>
@@ -166,7 +170,9 @@ function PeoplePage() {
             className="max-h-[80vh] w-full max-w-xl overflow-hidden rounded-t-lg bg-card shadow-xl sm:rounded-lg"
           >
             <header className="flex items-center justify-between border-b border-border px-6 py-5">
-              <h2 id="person-picker-title" className="text-3xl">Who do you want to ask?</h2>
+              <h2 id="person-picker-title" className="text-3xl">
+                Who do you want to ask?
+              </h2>
               <Button
                 type="button"
                 variant="ghost"

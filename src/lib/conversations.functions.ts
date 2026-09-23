@@ -176,15 +176,17 @@ export const listPeople = createServerFn({ method: "POST" })
     };
 
     const [overviewResult, detail] = await Promise.all([
-      (supabaseAdmin as unknown as {
-        rpc: (
-          fn: string,
-          args: Record<string, unknown>,
-        ) => Promise<{
-          data: { people?: OverviewRow[] } | null;
-          error: { message: string } | null;
-        }>;
-      }).rpc("people_overview", {
+      (
+        supabaseAdmin as unknown as {
+          rpc: (
+            fn: string,
+            args: Record<string, unknown>,
+          ) => Promise<{
+            data: { people?: OverviewRow[] } | null;
+            error: { message: string } | null;
+          }>;
+        }
+      ).rpc("people_overview", {
         _guest_token: data.guestToken,
         _profile_id: data.profileId ?? null,
       }),
@@ -197,7 +199,9 @@ export const listPeople = createServerFn({ method: "POST" })
     const questionIds = [
       ...new Set(
         detail.people.flatMap((person) =>
-          person.sessions.flatMap((session) => session.questions.map((question) => question.questionId)),
+          person.sessions.flatMap((session) =>
+            session.questions.map((question) => question.questionId),
+          ),
         ),
       ),
     ];
@@ -270,7 +274,8 @@ export const listPeople = createServerFn({ method: "POST" })
       const waiting = questions.filter(
         (question) => !question.revealed && question.myLabel && !question.theirLabel,
       ).length;
-      if (waiting > 0) return `Waiting on ${name} · ${waiting} ${waiting === 1 ? "question" : "questions"}`;
+      if (waiting > 0)
+        return `Waiting on ${name} · ${waiting} ${waiting === 1 ? "question" : "questions"}`;
       return "Start another round";
     }
 
