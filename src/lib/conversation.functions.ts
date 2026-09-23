@@ -430,3 +430,81 @@ export const getConversationPrompt = createServerFn({ method: "POST" })
       text: pool[Math.floor(Math.random() * pool.length)] ?? "What's the story behind that?",
     };
   });
+
+/** A message to one person. No question needed; a reference only when sent from Talk. */
+export const postConversationMessage = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        ...identity,
+        personKey: z.string().min(1).max(80),
+        sessionQuestionId: z.string().uuid().optional(),
+        kind: z.enum(["reaction", "text"]),
+        body: z.string().min(1).max(240),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as unknown as { from: (t: string) => any };
+    const { myParticipants } = await import("@/lib/identity.server");
+    const { personKeyOf, guestPersonKey } = await import("@/lib/conversations.server");
+    const ident = { guestToken: data.guestToken, profileId: data.profileId };
+    const mine = await myParticipants(admin as never, ident);
+    const sessionIds = [...new Set(mine.map((p) => p.session_id))];
+    if (!sessionIds.length) throw new Error("Not your conversation");
+    const { data: everyone } = await admin
+      .from("session_participants")
+      .select("id, session_id, profile_id, guest_token")
+      .in("session_id", sessionIds);
+    const myIds = new Set(mine.map((p) => p.id));
+    const legacy = guestPersonKey(data.personKey);
+    const shared = new Set(
+      ((everyone ?? []) as Row[])
+        .filter((p) => !myIds.has(p.id))
+        .filter((p) => {
+          const key = personKeyOf(p as never);
+          return key === data.personKey || key === legacy;
+        })
+        .map((p) => p.session_id as string),
+    );
+    if (!shared.size) throw new Error("Not your conversation");
+
+    let sessionId: string;
+    let sessionQuestionId: string | null = null;
+    if (data.sessionQuestionId) {
+      const { data: sq } = await admin
+        .from("session_questions")
+        .select("id, session_id, revealed_at")
+        .eq("id", data.sessionQuestionId)
+        .maybeSingle();
+      if (!sq || !shared.has(sq.session_id) || !sq.revealed_at) throw new Error("Not your question");
+      sessionId = sq.session_id;
+      sessionQuestionId = sq.id;
+    } else {
+      const { data: latest } = await admin
+        .from("sessions")
+        .select("id")
+        .in("id", [...shared])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      sessionId = latest?.id ?? [...shared][0]!;
+    }
+    const me = mine.find((p) => p.session_id === sessionId)!;
+    const { error } = await admin.from("thread_messages").insert({
+      session_id: sessionId,
+      session_question_id: sessionQuestionId,
+      participant_id: me.id,
+      kind: data.kind,
+      body: data.body,
+    });
+    if (error) throw error;
+    await admin.from("events").insert({
+      guest_token: data.guestToken,
+      session_id: sessionId,
+      name: data.kind === "reaction" ? "reaction_added" : "thread_message_sent",
+      props: { kind: data.kind, standalone: !sessionQuestionId },
+    });
+    return { ok: true };
+  });
