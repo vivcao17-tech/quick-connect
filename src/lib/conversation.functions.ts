@@ -96,6 +96,7 @@ async function buildTimeline(data: {
     const key = personKeyOf(p as never);
     return key === wanted || key === legacy;
   });
+  console.log("DBG conv", mine.length, (everyone ?? []).length, partners.length, wanted, Boolean(data.profileId));
   if (partners.length === 0) return empty;
   const personKey = personKeyOf(partners[0] as never);
   const realName = partners.find((p) => p.display_name)?.display_name ?? "Someone";
