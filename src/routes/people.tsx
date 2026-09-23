@@ -34,7 +34,7 @@ type People = Awaited<ReturnType<typeof listPeople>>["people"];
 
 function colorFor(name: string) {
   let total = 0;
-  for (const letter of name) total = (total * 31 + letter.codePointAt(0)!) % 6;
+  for (const letter of name) total = (total * 31 + (letter.codePointAt(0) ?? 0)) % 6;
   return `var(--code-ink-${total + 1})`;
 }
 

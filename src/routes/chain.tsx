@@ -62,7 +62,11 @@ function ChainPage() {
   useEffect(refresh, [refresh]);
 
   if (!state) {
-    return <main className="paper min-h-screen bg-background" />;
+    return (
+      <main className="paper min-h-screen bg-background pb-28">
+        <AppTabs />
+      </main>
+    );
   }
 
   const week = state.week;
@@ -81,6 +85,7 @@ function ChainPage() {
             Back
           </Link>
         </section>
+        <AppTabs />
       </main>
     );
   }
