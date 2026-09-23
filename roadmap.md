@@ -93,7 +93,10 @@
 
 - [ ] Simplify the signed-out home and add the Meet sign-in handoff
 - [ ] Make Google the primary sign-in option, move room-code entry to sign-in, and preserve guest linking
-- [ ] Replace the Meet placeholder with the Sunday signup form and fixed 10-question set
-- [ ] Save meetup answers as normal answers and exclude them from future pair questions
+- [ ] Replace the Meet placeholder with the exact 17-question paper form in matching order
+- [ ] Verify all ten named pack questions by key; add only the two explicitly allowed missing questions
+- [ ] Save questions 1–10 as normal answers and questions 11–17 only on the signup record
 - [ ] Add editable meetup time-slot settings and signup/contact tools under `/admin/meet`
+- [ ] Add contact-free plain-text signup export with readable A/B answers, open answers, and availability
+- [ ] Do not build or scaffold grouping, scoring, compatibility, or matching logic; matching stays outside the app
 - [ ] Verify signed-out, signed-in, signup, completion, and admin flows
