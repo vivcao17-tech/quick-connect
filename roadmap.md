@@ -88,3 +88,12 @@
 - [x] People rows, statuses, invite action, floating person picker, and empty state
 - [x] Mark all existing sessions and participant identities as test
 - [x] Verify tab exclusions, navigation, privacy, mobile and desktop
+
+## Signed-out entry and Berkeley meetup
+
+- [ ] Simplify the signed-out home and add the Meet sign-in handoff
+- [ ] Make Google the primary sign-in option, move room-code entry to sign-in, and preserve guest linking
+- [ ] Replace the Meet placeholder with the Sunday signup form and fixed 10-question set
+- [ ] Save meetup answers as normal answers and exclude them from future pair questions
+- [ ] Add editable meetup time-slot settings and signup/contact tools under `/admin/meet`
+- [ ] Verify signed-out, signed-in, signup, completion, and admin flows
