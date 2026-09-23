@@ -1211,7 +1211,8 @@ export type Database = {
           id: string
           kind: string
           participant_id: string
-          session_question_id: string
+          session_id: string | null
+          session_question_id: string | null
         }
         Insert: {
           body?: string | null
@@ -1219,7 +1220,8 @@ export type Database = {
           id?: string
           kind?: string
           participant_id: string
-          session_question_id: string
+          session_id?: string | null
+          session_question_id?: string | null
         }
         Update: {
           body?: string | null
@@ -1227,7 +1229,8 @@ export type Database = {
           id?: string
           kind?: string
           participant_id?: string
-          session_question_id?: string
+          session_id?: string | null
+          session_question_id?: string | null
         }
         Relationships: [
           {
@@ -1235,6 +1238,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
           {
