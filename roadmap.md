@@ -97,4 +97,6 @@
 - [ ] Verify all ten named pack questions by key; add only the two explicitly allowed missing questions
 - [ ] Save questions 1–10 as normal answers and questions 11–17 only on the signup record
 - [ ] Add editable meetup time-slot settings and signup/contact tools under `/admin/meet`
+- [ ] Add contact-free plain-text signup export with readable A/B answers, open answers, and availability
+- [ ] Do not build or scaffold grouping, scoring, compatibility, or matching logic; matching stays outside the app
 - [ ] Verify signed-out, signed-in, signup, completion, and admin flows
