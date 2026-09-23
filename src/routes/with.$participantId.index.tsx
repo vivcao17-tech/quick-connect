@@ -6,6 +6,7 @@ import {
   answerInConversation,
   getConversation,
   getConversationPrompt,
+  postConversationMessage,
   type TimelineItem,
   type TimelineQuestion,
 } from "@/lib/conversation.functions";
@@ -60,6 +61,7 @@ function ConversationPage() {
 
   const load = useServerFn(getConversation);
   const post = useServerFn(postThreadMessage);
+  const postLoose = useServerFn(postConversationMessage);
   const answer = useServerFn(answerInConversation);
   const loadPrompt = useServerFn(getConversationPrompt);
 
@@ -175,13 +177,12 @@ function ConversationPage() {
   }, [hasMore, loadOlder]);
 
   const questions = items.filter((i): i is TimelineQuestion => i.type === "question");
-  const lastRevealed = [...questions].reverse().find((i) => i.data.state === "revealed");
-  const targetId = target || lastRevealed?.data.sessionQuestionId || "";
-  const targetQ = questions.find((i) => i.data.sessionQuestionId === targetId)?.data;
+  // Only a Talk tap attaches a question; otherwise the message stands alone.
+  const targetQ = questions.find((i) => i.data.sessionQuestionId === target)?.data;
   const display = name || "them";
 
   function fill(text: string, sessionQuestionId?: string) {
-    if (sessionQuestionId) setTarget(sessionQuestionId);
+    setTarget(sessionQuestionId ?? "");
     setDraft(text);
     window.setTimeout(() => {
       inputRef.current?.focus();
@@ -192,17 +193,26 @@ function ConversationPage() {
 
   async function send(kind: "text" | "reaction", body: string) {
     const clean = body.trim();
-    if (!clean || busy || !targetId) return;
+    if (!clean || busy || !viewer.guestToken) return;
     setBusy(true);
     try {
-      await post({ data: { ...identity(), sessionQuestionId: targetId, kind, body: clean } });
+      if (targetQ) {
+        await post({
+          data: { ...identity(), sessionQuestionId: targetQ.sessionQuestionId, kind, body: clean },
+        });
+      } else {
+        await postLoose({ data: { ...identity(), personKey: participantId, kind, body: clean } });
+      }
       track(kind === "reaction" ? "reaction_sent" : "thread_message_sent", {
         kind,
         chars: clean.length,
-        session_question_id: targetId,
+        session_question_id: targetQ?.sessionQuestionId ?? null,
         surface: "conversation",
       });
-      if (kind === "text") setDraft("");
+      if (kind === "text") {
+        setDraft("");
+        setTarget("");
+      }
       await refresh();
       window.setTimeout(
         () => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }),
