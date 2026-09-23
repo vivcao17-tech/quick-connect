@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 
 import { ChainGuess } from "@/components/ChainGuess";
+import { AppTabs } from "@/components/AppTabs";
 import { selfStem } from "@/lib/chain-shared";
 import type { ChainOption } from "@/lib/chain-shared";
 import { addChainGuess, answerChainSelf, getChainWeek } from "@/lib/chain.functions";
@@ -99,6 +100,7 @@ function ChainPage() {
           option,
         },
       });
+      window.dispatchEvent(new Event("nosure:chain-answered"));
       track("chain_self_answered", { week: week.id });
       refresh();
     } finally {
@@ -130,7 +132,7 @@ function ChainPage() {
   }
 
   return (
-    <main className="paper min-h-screen bg-background">
+    <main className="paper min-h-screen bg-background pb-28">
       <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
         <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">
           This week's read
@@ -230,6 +232,7 @@ function ChainPage() {
           Back
         </Link>
       </section>
+      <AppTabs />
     </main>
   );
 }

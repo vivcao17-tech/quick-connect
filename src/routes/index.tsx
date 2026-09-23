@@ -57,8 +57,12 @@ function Home() {
   // Return visits: the gap since this browser last opened the app.
   useEffect(() => {
     if (!viewer.ready) return;
+    if (viewer.profileId) {
+      void navigate({ to: "/people", replace: true });
+      return;
+    }
     trackVisit("home", viewer.profileId ? { profileId: viewer.profileId } : {});
-  }, [viewer.ready, viewer.profileId]);
+  }, [navigate, viewer.ready, viewer.profileId]);
 
   useEffect(() => {
     if (!viewer.ready || !viewer.guestToken) return;
