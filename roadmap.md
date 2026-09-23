@@ -79,3 +79,12 @@
 - [x] Randomize the six-question starter pool, enforce exactly two A/B picks, and keep one starter impression read
 - [x] Conservatively tag clearly fitting featured questions without changing their wording, featured status, or topics
 - [x] Verify remote and in-person pair flows without changing Chain or group modes
+
+## Signed-in app shell and People inbox
+
+- [x] Signed-in root opens People; signed-out root keeps the landing page
+- [x] Bottom tabs in order: People / This week / You / Meet
+- [x] This week dot shows only while the open question is unanswered
+- [x] People rows, statuses, invite action, floating person picker, and empty state
+- [x] Mark all existing sessions and participant identities as test
+- [x] Verify tab exclusions, navigation, privacy, mobile and desktop

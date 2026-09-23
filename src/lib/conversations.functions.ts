@@ -154,7 +154,7 @@ export const listPeople = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { linkProfileToGuestRows } = await import("@/lib/identity.server");
-    const { metLabel } = await import("@/lib/relationships.server");
+    const { loadDetail, metLabel } = await import("@/lib/relationships.server");
 
     // Stamps profile ids onto old guest rows; the overview matches either key,
     // so it doesn't need to wait for the write.
@@ -175,22 +175,109 @@ export const listPeople = createServerFn({ method: "POST" })
       lastActivity: string;
     };
 
-    const { data: overview, error } = await (
-      supabaseAdmin as unknown as {
-        rpc: (
-          fn: string,
-          args: Record<string, unknown>,
-        ) => Promise<{
-          data: { people?: OverviewRow[] } | null;
-          error: { message: string } | null;
-        }>;
-      }
-    ).rpc("people_overview", {
-      _guest_token: data.guestToken,
-      _profile_id: data.profileId ?? null,
-    });
+    const [overviewResult, detail] = await Promise.all([
+      (
+        supabaseAdmin as unknown as {
+          rpc: (
+            fn: string,
+            args: Record<string, unknown>,
+          ) => Promise<{
+            data: { people?: OverviewRow[] } | null;
+            error: { message: string } | null;
+          }>;
+        }
+      ).rpc("people_overview", {
+        _guest_token: data.guestToken,
+        _profile_id: data.profileId ?? null,
+      }),
+      loadDetail(supabaseAdmin as never, data.guestToken, data.profileId),
+    ]);
     await linking;
+    const { data: overview, error } = overviewResult;
     if (error) throw new Error(error.message);
+
+    const questionIds = [
+      ...new Set(
+        detail.people.flatMap((person) =>
+          person.sessions.flatMap((session) =>
+            session.questions.map((question) => question.questionId),
+          ),
+        ),
+      ),
+    ];
+    const questionResult = questionIds.length
+      ? await supabaseAdmin
+          .from("questions")
+          .select("id, pack, question_type")
+          .in("id", questionIds)
+      : { data: [] };
+    const { data: packRows } = await supabaseAdmin
+      .from("pack_config")
+      .select("pack, unlock_threshold, display_order")
+      .order("display_order");
+
+    const questionMeta = new Map(
+      (questionResult.data ?? []).map((row) => [
+        row.id,
+        { pack: row.pack, type: row.question_type },
+      ]),
+    );
+    const packs = (packRows ?? []) as {
+      pack: string;
+      unlock_threshold: number;
+      display_order: number;
+    }[];
+    const details = new Map(detail.people.map((person) => [person.personKey, person]));
+
+    function statusFor(personKey: string, name: string, unread: number) {
+      const person = details.get(personKey);
+      if (!person) return "Start your first round";
+      const questions = person.sessions.flatMap((session) => session.questions);
+      const wrongWithReason = questions.filter(
+        (question) =>
+          question.revealed &&
+          question.matched === false &&
+          question.unread > 0 &&
+          question.theirReason,
+      ).length;
+      if (wrongWithReason > 0) return `Guessed you wrong on ${wrongWithReason} — see why`;
+      if (unread > 0) return unread === 1 ? "One new reply" : `${unread} new replies`;
+
+      const answeredByPack = new Map<string, Set<string>>();
+      for (const question of questions) {
+        const info = questionMeta.get(question.questionId);
+        if (
+          !question.revealed ||
+          !question.myLabel ||
+          !question.theirLabel ||
+          !info?.pack ||
+          (info.type !== "ab" && info.type !== "ab_reason")
+        )
+          continue;
+        const ids = answeredByPack.get(info.pack) ?? new Set<string>();
+        ids.add(question.sessionQuestionId);
+        answeredByPack.set(info.pack, ids);
+      }
+      const unlocked = [...packs]
+        .reverse()
+        .find((pack) => (answeredByPack.get(pack.pack)?.size ?? 0) >= pack.unlock_threshold);
+      if (unlocked) {
+        const labels: Record<string, string> = {
+          click: "Click",
+          talk: "Talk",
+          bring_out: "Bring out",
+          clash: "Clash",
+        };
+        return `${labels[unlocked.pack] ?? unlocked.pack} unlocked`;
+      }
+
+      const waiting = questions.filter(
+        (question) => !question.revealed && question.myLabel && !question.theirLabel,
+      ).length;
+      if (waiting > 0)
+        return `Waiting on ${name} · ${waiting} ${waiting === 1 ? "question" : "questions"}`;
+      return "Start another round";
+    }
 
     return {
       people: (overview?.people ?? []).map((row) => ({
@@ -202,6 +289,7 @@ export const listPeople = createServerFn({ method: "POST" })
         sessionCount: row.sessionCount,
         unread: row.unread,
         lastActivity: row.lastActivity,
+        status: statusFor(row.personKey, row.nickname || row.name, row.unread),
         met: metLabel(row.metKind),
         sessionsLabel:
           row.sessionCount === 0

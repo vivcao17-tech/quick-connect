@@ -18,6 +18,7 @@ import { Route as GremoteRouteImport } from './routes/gremote'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as MeRouteImport } from './routes/me'
+import { Route as MeetRouteImport } from './routes/meet'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RemoteRouteImport } from './routes/remote'
@@ -87,6 +88,11 @@ const InboxRoute = InboxRouteImport.update({
 const MeRoute = MeRouteImport.update({
   id: '/me',
   path: '/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeetRoute = MeetRouteImport.update({
+  id: '/meet',
+  path: '/meet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PeopleRoute = PeopleRouteImport.update({
@@ -227,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/me': typeof MeRoute
+  '/meet': typeof MeetRoute
   '/people': typeof PeopleRoute
   '/privacy': typeof PrivacyRoute
   '/remote': typeof RemoteRoute
@@ -263,6 +270,7 @@ export interface FileRoutesByTo {
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/me': typeof MeRoute
+  '/meet': typeof MeetRoute
   '/people': typeof PeopleRoute
   '/privacy': typeof PrivacyRoute
   '/remote': typeof RemoteRoute
@@ -300,6 +308,7 @@ export interface FileRoutesById {
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
   '/me': typeof MeRoute
+  '/meet': typeof MeetRoute
   '/people': typeof PeopleRoute
   '/privacy': typeof PrivacyRoute
   '/remote': typeof RemoteRoute
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/group'
     | '/inbox'
     | '/me'
+    | '/meet'
     | '/people'
     | '/privacy'
     | '/remote'
@@ -374,6 +384,7 @@ export interface FileRouteTypes {
     | '/group'
     | '/inbox'
     | '/me'
+    | '/meet'
     | '/people'
     | '/privacy'
     | '/remote'
@@ -410,6 +421,7 @@ export interface FileRouteTypes {
     | '/group'
     | '/inbox'
     | '/me'
+    | '/meet'
     | '/people'
     | '/privacy'
     | '/remote'
@@ -447,6 +459,7 @@ export interface RootRouteChildren {
   GroupRoute: typeof GroupRoute
   InboxRoute: typeof InboxRoute
   MeRoute: typeof MeRoute
+  MeetRoute: typeof MeetRoute
   PeopleRoute: typeof PeopleRoute
   PrivacyRoute: typeof PrivacyRoute
   RemoteRoute: typeof RemoteRoute
@@ -536,6 +549,13 @@ declare module '@tanstack/react-router' {
       path: '/me'
       fullPath: '/me'
       preLoaderRoute: typeof MeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meet': {
+      id: '/meet'
+      path: '/meet'
+      fullPath: '/meet'
+      preLoaderRoute: typeof MeetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/people': {
@@ -736,6 +756,7 @@ const rootRouteChildren: RootRouteChildren = {
   GroupRoute: GroupRoute,
   InboxRoute: InboxRoute,
   MeRoute: MeRoute,
+  MeetRoute: MeetRoute,
   PeopleRoute: PeopleRoute,
   PrivacyRoute: PrivacyRoute,
   RemoteRoute: RemoteRoute,
