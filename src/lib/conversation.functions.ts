@@ -52,10 +52,15 @@ export type TimelineSystem = {
 };
 export type TimelineItem = TimelineQuestion | TimelineMessage | TimelineSystem;
 
-type Row = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = any;
 
 /** Everything between me and one person, in time order. Server decides what's revealed. */
-async function buildTimeline(data: { guestToken: string; profileId?: string; personKey: string }) {
+async function buildTimeline(data: {
+  guestToken: string;
+  profileId?: string | undefined;
+  personKey: string;
+}) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const admin = supabaseAdmin as unknown as { from: (t: string) => any };
   const { myParticipants } = await import("@/lib/identity.server");
@@ -99,7 +104,9 @@ async function buildTimeline(data: { guestToken: string; profileId?: string; per
   const [{ data: answerRows }, { data: messageRows }, { data: qRows }] = await Promise.all([
     admin
       .from("answers")
-      .select("session_question_id, participant_id, option_key, reason_text, answer_role, created_at")
+      .select(
+        "session_question_id, participant_id, option_key, reason_text, answer_role, created_at",
+      )
       .in("session_question_id", sqIds.length ? sqIds : NIL)
       .order("created_at"),
     admin
@@ -145,7 +152,9 @@ async function buildTimeline(data: { guestToken: string; profileId?: string; per
           (a) =>
             a.session_question_id === sq.id &&
             a.participant_id === pid &&
-            (role === "about_other" ? a.answer_role === "about_other" : a.answer_role !== "about_other"),
+            (role === "about_other"
+              ? a.answer_role === "about_other"
+              : a.answer_role !== "about_other"),
         );
     const mySelf = latest(me.id, "about_self");
     const myOther = latest(me.id, "about_other");
@@ -246,8 +255,8 @@ async function packLine(pairQs: Awaited<ReturnType<typeof buildTimeline>>["pairQ
   const { packPreview, nextPack } = await import("@/lib/packs.server");
   const packs = await packPreview(supabaseAdmin as never, pairQs);
   const unlocked = packs.filter((p) => p.unlocked).map((p) => `${p.label} unlocked`);
-  const next = packs.find((p) => !p.unlocked && p.pack !== "clash") ??
-    packs.find((p) => !p.unlocked);
+  const next =
+    packs.find((p) => !p.unlocked && p.pack !== "clash") ?? packs.find((p) => !p.unlocked);
   let tail = "";
   if (next) {
     const another = packs.some((p) => p.pack !== "clash" && p.unlocked);
@@ -286,7 +295,9 @@ export const getConversation = createServerFn({ method: "POST" })
       if (start < 0) start = all.length;
       start = Math.min(start, Math.max(0, all.length - 15));
       if (data.focus) {
-        const at = all.findIndex((i) => i.type === "question" && i.data.sessionQuestionId === data.focus);
+        const at = all.findIndex(
+          (i) => i.type === "question" && i.data.sessionQuestionId === data.focus,
+        );
         if (at >= 0) start = Math.min(start, at);
       }
     }
@@ -381,7 +392,9 @@ export const answerInConversation = createServerFn({ method: "POST" })
 /** A prompt for a pack (or any pack), from conversation_prompts. */
 export const getConversationPrompt = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ pack: z.string().max(20).nullable().optional(), skip: z.string().optional() }).parse(input),
+    z
+      .object({ pack: z.string().max(20).nullable().optional(), skip: z.string().optional() })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -391,6 +404,10 @@ export const getConversationPrompt = createServerFn({ method: "POST" })
       .eq("active", true);
     if (data.pack) query = query.eq("pack", data.pack);
     const { data: rows } = await query;
-    const pool = ((rows ?? []) as { text: string }[]).map((r) => r.text).filter((t) => t !== data.skip);
-    return { text: pool[Math.floor(Math.random() * pool.length)] ?? "What's the story behind that?" };
+    const pool = ((rows ?? []) as { text: string }[])
+      .map((r) => r.text)
+      .filter((t) => t !== data.skip);
+    return {
+      text: pool[Math.floor(Math.random() * pool.length)] ?? "What's the story behind that?",
+    };
   });
