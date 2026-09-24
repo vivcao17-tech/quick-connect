@@ -107,3 +107,10 @@
 - [x] Add an editable Friday 5 PM Pacific signup deadline
 - [x] Replace the form with email capture after the deadline
 - [x] Split signup into four retained-answer steps and remove pack labels
+
+## Meetup thank-you screen
+
+- [ ] After submitting, thank them and say we will let them know when the matching result is out
+- [ ] Add an Explore button that opens the page where three questions are easiest to start
+- [ ] Verify the button works both signed in and signed out
+
