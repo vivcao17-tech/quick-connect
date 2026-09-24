@@ -85,7 +85,7 @@ function MeetPage() {
         <p className="text-sm uppercase tracking-[0.28em] text-muted-foreground">Berkeley students only</p>
         {!started && !closed && <div className="mt-8">
           <h1 className="text-5xl leading-tight">Berkeley meetup · Sunday, Sept 27, 2 PM</h1>
-          <p className="mt-8 text-xl leading-relaxed">Answer a few questions. I’ll put together a small group of people you’d probably get along with — 4 to 6 people, one afternoon, free.</p>
+          <p className="mt-8 text-xl leading-relaxed">Answer a few questions. We will put together a small group of people you’d probably get along with — 4 to 6 people, one afternoon, free.</p>
           <p className="mt-5 text-muted-foreground">Takes about 3 minutes. Signups close Friday 5 PM.</p>
           <Button className="mt-8" size="lg" onClick={() => void start()}>Start</Button>
         </div>}
