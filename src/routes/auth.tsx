@@ -39,14 +39,21 @@ function AuthPage() {
   // Already signed in → go straight to where they were headed.
   useEffect(() => {
     let alive = true;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!alive) return;
-      if (data.user) {
-        void navigate({ to: redirect, replace: true });
-      } else {
-        setChecking(false);
-      }
-    });
+    void supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (!alive) return;
+        if (data.user) {
+          void navigate({ to: redirect, replace: true });
+        } else {
+          setChecking(false);
+        }
+      })
+      // If the stored sign-in can't be read, show the sign-in options rather
+      // than leaving the page stuck on "checking".
+      .catch(() => {
+        if (alive) setChecking(false);
+      });
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") void navigate({ to: redirect, replace: true });
     });
