@@ -27,8 +27,11 @@ export type MeetSignupValues = {
     friendRead: "guess" | "impression" | "neither";
     meetingStyle: "online" | "one" | "group";
     weekly: "come" | "maybe" | "probably_not";
+    meetHow: "class" | "club" | "friends" | "parties";
+    meetOften: "most_weeks" | "few_semester" | "rarely";
+    bringFriend: "yes" | "maybe" | "alone";
   };
-  openAnswers: { interests: string; easier: string; missedConnection: string };
+  openAnswers: { interests: string; easier: string; missedConnection: string; notCome: string };
 };
 
 type FormState = Omit<MeetSignupValues, "confirmed18" | "consented" | "answers"> & {
@@ -45,8 +48,8 @@ const initial = (availability: string): FormState => ({
   consented: false,
   availability,
   answers: {},
-  signupAnswers: { priority: "" as never, friendRead: "" as never, meetingStyle: "" as never, weekly: "" as never },
-  openAnswers: { interests: "", easier: "", missedConnection: "" },
+  signupAnswers: { priority: "" as never, friendRead: "" as never, meetingStyle: "" as never, weekly: "" as never, meetHow: "" as never, meetOften: "" as never, bringFriend: "" as never },
+  openAnswers: { interests: "", easier: "", missedConnection: "", notCome: "" },
 });
 
 function ChoiceSet({
@@ -99,8 +102,8 @@ export function MeetSignupForm({
   const [step, setStep] = useState(1);
   const ready = questions.every((question) => form.answers[question.id]);
   const stepOneReady = Boolean(form.firstName.trim() && form.contact.trim() && /.+@berkeley\.edu$/i.test(form.berkeleyEmail.trim()) && form.confirmed18 && form.consented);
-  const stepTwoReady = questions.slice(0, 6).every((question) => form.answers[question.id]);
-  const stepThreeReady = questions.slice(6, 10).every((question) => form.answers[question.id]) && Object.values(form.signupAnswers).every(Boolean);
+  const stepTwoReady = questions.slice(0, 9).every((question) => form.answers[question.id]);
+  const stepThreeReady = questions.slice(9, 10).every((question) => form.answers[question.id]) && Object.values(form.signupAnswers).every(Boolean);
   const stepFourReady = Boolean(form.openAnswers.interests.trim() && form.availability);
 
   async function submit(event: React.FormEvent) {
@@ -142,7 +145,7 @@ export function MeetSignupForm({
       </section>}
 
       {step === 2 && <div className="space-y-8">
-        {questions.slice(0, 6).map((question) => (
+        {questions.slice(0, 9).map((question) => (
             <section key={question.id}>
               <p className="text-lg"><span className="mr-2 text-muted-foreground">{question.position}.</span>{question.text}</p>
               <ChoiceSet name={`question-${question.id}`} value={form.answers[question.id]} options={[{ value: "a", label: question.optionA }, { value: "b", label: question.optionB }]} onChange={(value) => setForm((current) => ({ ...current, answers: { ...current.answers, [question.id]: value as "a" | "b" } }))} />
@@ -151,17 +154,21 @@ export function MeetSignupForm({
       </div>}
 
       {step === 3 && <div className="space-y-8">
-        {questions.slice(6, 10).map((question) => <section key={question.id}><p className="text-lg"><span className="mr-2 text-muted-foreground">{question.position}.</span>{question.text}</p><ChoiceSet name={`question-${question.id}`} value={form.answers[question.id]} options={[{ value: "a", label: question.optionA }, { value: "b", label: question.optionB }]} onChange={(value) => setForm((current) => ({ ...current, answers: { ...current.answers, [question.id]: value as "a" | "b" } }))} /></section>)}
-        <section><p className="text-lg">11. You’d rather meet someone who:</p><ChoiceSet name="priority" value={form.signupAnswers.priority} options={[{ value: "fits", label: "Fits naturally into how I already live" }, { value: "different", label: "Pulls me into things I wouldn’t normally do" }]} onChange={(value) => updateSignup("priority", value as MeetSignupValues["signupAnswers"]["priority"])} /></section>
-        <section><p className="text-lg">12. If a friend told you one thing about you:</p><ChoiceSet name="friendRead" value={form.signupAnswers.friendRead} options={[{ value: "guess", label: "Their guess about what you’d do" }, { value: "impression", label: "What they think you’re like" }, { value: "neither", label: "I’d rather not hear either" }]} onChange={(value) => updateSignup("friendRead", value as MeetSignupValues["signupAnswers"]["friendRead"])} /></section>
+        {questions.slice(9, 10).map((question) => <section key={question.id}><p className="text-lg"><span className="mr-2 text-muted-foreground">{question.position}.</span>{question.text}</p><ChoiceSet name={`question-${question.id}`} value={form.answers[question.id]} options={[{ value: "a", label: question.optionA }, { value: "b", label: question.optionB }]} onChange={(value) => setForm((current) => ({ ...current, answers: { ...current.answers, [question.id]: value as "a" | "b" } }))} /></section>)}
+        <section><p className="text-lg">11. You’d rather meet someone who:</p><ChoiceSet name="priority" value={form.signupAnswers.priority} options={[{ value: "fits", label: "Fits naturally into how I live" }, { value: "different", label: "Pulls me into things I wouldn’t normally do" }]} onChange={(value) => updateSignup("priority", value as MeetSignupValues["signupAnswers"]["priority"])} /></section>
+        <section><p className="text-lg">12. If a friend told you one thing about you, you’d rather hear:</p><ChoiceSet name="friendRead" value={form.signupAnswers.friendRead} options={[{ value: "guess", label: "Their guess about what you’d do" }, { value: "impression", label: "What they think you’re like" }, { value: "neither", label: "I’d rather not hear either" }]} onChange={(value) => updateSignup("friendRead", value as MeetSignupValues["signupAnswers"]["friendRead"])} /></section>
         <section><p className="text-lg">13. To meet new people, you’d:</p><ChoiceSet name="meetingStyle" value={form.signupAnswers.meetingStyle} options={[{ value: "online", label: "Keep it online" }, { value: "one", label: "Meet one-on-one" }, { value: "group", label: "Meet in a small group" }]} onChange={(value) => updateSignup("meetingStyle", value as MeetSignupValues["signupAnswers"]["meetingStyle"])} /></section>
         <section><p className="text-lg">14. If this happened every week:</p><ChoiceSet name="weekly" value={form.signupAnswers.weekly} options={[{ value: "come", label: "I’d come" }, { value: "maybe", label: "Maybe" }, { value: "probably_not", label: "Probably not" }]} onChange={(value) => updateSignup("weekly", value as MeetSignupValues["signupAnswers"]["weekly"])} /></section>
+        <section><p className="text-lg">15. How do you usually meet new people here?</p><ChoiceSet name="meetHow" value={form.signupAnswers.meetHow} options={[{ value: "class", label: "Class or lab" }, { value: "club", label: "A club or org" }, { value: "friends", label: "Through friends" }, { value: "parties", label: "Parties and events" }]} onChange={(value) => updateSignup("meetHow", value as MeetSignupValues["signupAnswers"]["meetHow"])} /></section>
+        <section><p className="text-lg">16. How often do you meet someone you’d want to see again?</p><ChoiceSet name="meetOften" value={form.signupAnswers.meetOften} options={[{ value: "most_weeks", label: "Most weeks" }, { value: "few_semester", label: "A few times a semester" }, { value: "rarely", label: "Rarely" }]} onChange={(value) => updateSignup("meetOften", value as MeetSignupValues["signupAnswers"]["meetOften"])} /></section>
+        <section><p className="text-lg">17. Would you bring a friend to something like this?</p><ChoiceSet name="bringFriend" value={form.signupAnswers.bringFriend} options={[{ value: "yes", label: "Yes, I have someone in mind" }, { value: "maybe", label: "Maybe" }, { value: "alone", label: "I’d rather come alone" }]} onChange={(value) => updateSignup("bringFriend", value as MeetSignupValues["signupAnswers"]["bringFriend"])} /></section>
       </div>}
 
       {step === 4 && <><section className="space-y-6">
-        <label className="block text-lg">15. What’s something you’re into, and what you like about it?<Textarea required maxLength={300} value={form.openAnswers.interests} onChange={(e) => setForm({ ...form, openAnswers: { ...form.openAnswers, interests: e.target.value } })} className="mt-3" /></label>
-        <label className="block text-lg">16. What’s one thing you wish was easier about meeting people at Berkeley?<Textarea maxLength={500} value={form.openAnswers.easier} onChange={(e) => setForm({ ...form, openAnswers: { ...form.openAnswers, easier: e.target.value } })} className="mt-3" /></label>
-        <label className="block text-lg">17. Someone you wanted to get to know better but never did — no names, just the situation.<Textarea maxLength={500} value={form.openAnswers.missedConnection} onChange={(e) => setForm({ ...form, openAnswers: { ...form.openAnswers, missedConnection: e.target.value } })} className="mt-3" /></label>
+        <label className="block text-lg">18. What’s something you’re into, and what you like about it?<Textarea required maxLength={300} value={form.openAnswers.interests} onChange={(e) => setForm({ ...form, openAnswers: { ...form.openAnswers, interests: e.target.value } })} className="mt-3" /></label>
+        <label className="block text-lg">19. What’s one thing you wish was easier about meeting people at Berkeley? <span className="text-sm text-muted-foreground">(optional)</span><Textarea maxLength={500} value={form.openAnswers.easier} onChange={(e) => setForm({ ...form, openAnswers: { ...form.openAnswers, easier: e.target.value } })} className="mt-3" /></label>
+        <label className="block text-lg">20. Someone you wanted to know better but never did — no names, just the relation and why. <span className="text-sm text-muted-foreground">(optional)</span><Textarea maxLength={500} value={form.openAnswers.missedConnection} onChange={(e) => setForm({ ...form, openAnswers: { ...form.openAnswers, missedConnection: e.target.value } })} className="mt-3" /></label>
+        <label className="block text-lg">21. Anything that would make you not come on Sunday? <span className="text-sm text-muted-foreground">(optional)</span><Textarea maxLength={500} value={form.openAnswers.notCome} onChange={(e) => setForm({ ...form, openAnswers: { ...form.openAnswers, notCome: e.target.value } })} className="mt-3" /></label>
       </section>
 
       <section><p className="text-lg">Availability</p><ChoiceSet name="availability" value={form.availability} options={[{ value: slotLabel, label: slotLabel }]} onChange={(value) => setForm({ ...form, availability: value })} /></section>
