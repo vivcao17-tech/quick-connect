@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AppTabs } from "@/components/AppTabs";
 import { MeetSignupForm, type MeetSignupValues } from "@/components/MeetSignupForm";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getMeetForm, getMeetLanding, joinMeetWaitlist, submitMeetSignup } from "@/lib/meet.functions";
 import { useViewer } from "@/lib/viewer";
 
@@ -38,10 +39,16 @@ function MeetPage() {
   const [landing, setLanding] = useState<Awaited<ReturnType<typeof getMeetLanding>> | null>(null);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistDone, setWaitlistDone] = useState(false);
+  const [closed, setClosed] = useState(false);
 
   useEffect(() => {
     void loadLanding().then(setLanding).catch(() => setError("The meetup isn't available right now."));
   }, [loadLanding]);
+
+  useEffect(() => {
+    if (!landing) return;
+    setClosed(Date.now() >= new Date(landing.event.signupDeadline).getTime());
+  }, [landing]);
 
   useEffect(() => {
     if (!viewer.ready || !viewer.profileId) return;
@@ -57,8 +64,6 @@ function MeetPage() {
     await submitSignup({ data: { ...values, profileId: viewer.profileId, guestToken: viewer.guestToken } });
     setDone(true);
   }
-
-  const closed = landing ? Date.now() >= new Date(landing.event.signupDeadline).getTime() : false;
 
   async function start() {
     if (!viewer.profileId) {
@@ -88,7 +93,7 @@ function MeetPage() {
         {closed && <div className="mt-8">
           <h1 className="text-4xl leading-tight">Signups are closed for Sunday.</h1>
           <p className="mt-4 text-lg">Leave your email and I’ll tell you about the next one.</p>
-          {waitlistDone ? <p className="mt-8 text-primary">You’re on the list.</p> : <form className="mt-8 flex gap-3" onSubmit={(event) => void saveWaitlist(event)}><input aria-label="Email" type="email" required value={waitlistEmail} onChange={(event) => setWaitlistEmail(event.target.value)} placeholder="you@example.com" className="min-w-0 flex-1 rounded-full border border-border bg-card px-5 py-3 outline-none focus:border-primary" /><Button type="submit">Let me know</Button></form>}
+          {waitlistDone ? <p className="mt-8 text-primary">You’re on the list.</p> : <form className="mt-8 flex gap-3" onSubmit={(event) => void saveWaitlist(event)}><Input aria-label="Email" type="email" required value={waitlistEmail} onChange={(event) => setWaitlistEmail(event.target.value)} placeholder="you@example.com" className="min-w-0 flex-1 rounded-full" /><Button type="submit">Let me know</Button></form>}
         </div>}
 
         {!viewer.ready && <p className="mt-10 text-muted-foreground">Loading…</p>}
