@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -70,8 +70,13 @@ function MyProfile() {
   // Which reads were new when this visit started. Kept for the whole visit so
   // the "New" marks don't vanish the moment the page marks them as seen.
   const [newIds, setNewIds] = useState<Set<string>>(() => new Set<string>());
+  const [email, setEmail] = useState("");
+  // Assumed installed until the browser says otherwise, so the instructions
+  // never flash for people who already added the app.
+  const [notInstalled, setNotInstalled] = useState(false);
   const started = useRef(false);
   const capturedNew = useRef(false);
+  const navigate = useNavigate();
 
   const fillDetails = useCallback(async () => {
     try {
