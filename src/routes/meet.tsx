@@ -85,7 +85,7 @@ function MeetPage() {
         <p className="text-sm uppercase tracking-[0.28em] text-muted-foreground">3 min form → we match you → meet Sunday</p>
         {!started && !closed && <div className="mt-8">
           <h1 className="text-5xl leading-tight">Berkeley meetup · Sunday, Sept 27, 2 PM</h1>
-          <p className="mt-8 text-xl leading-relaxed">Meet someone you’d click with. Answer a few questions and I’ll put you in a small group — 4 to 6 people, one afternoon.</p>
+          <p className="mt-8 text-xl leading-relaxed">Meet someone you’d click with. Answer a few questions and we will put you in a small group — 4 to 6 people, one afternoon.</p>
           <p className="mt-5 text-sm uppercase tracking-[0.2em] text-muted-foreground">Friendship only · Free · Berkeley students</p>
           <p className="mt-3 text-muted-foreground">Takes about 3 minutes. Signups close Friday 5 PM.</p>
           <Button className="mt-8" size="lg" onClick={() => void start()}>Start</Button>
@@ -93,7 +93,7 @@ function MeetPage() {
 
         {closed && <div className="mt-8">
           <h1 className="text-4xl leading-tight">Signups are closed for Sunday.</h1>
-          <p className="mt-4 text-lg">Leave your email and I’ll tell you about the next one.</p>
+          <p className="mt-4 text-lg">Leave your email and we will tell you about the next one.</p>
           {waitlistDone ? <p className="mt-8 text-primary">You’re on the list.</p> : <form className="mt-8 flex gap-3" onSubmit={(event) => void saveWaitlist(event)}><Input aria-label="Email" type="email" required value={waitlistEmail} onChange={(event) => setWaitlistEmail(event.target.value)} placeholder="you@example.com" className="min-w-0 flex-1 rounded-full" /><Button type="submit">Let me know</Button></form>}
         </div>}
 
@@ -101,7 +101,7 @@ function MeetPage() {
         {error && <p className="mt-10 text-muted-foreground">{error}</p>}
         {started && viewer.profileId && !data && !error && !closed && <p className="mt-10 text-muted-foreground">Loading…</p>}
         {started && data?.alreadySignedUp && !done && !closed && (
-          <div className="mt-10 border-t border-border pt-8"><p className="text-2xl">You’re already in.</p><p className="mt-2 text-muted-foreground">I’ll text you Saturday with the details.</p></div>
+          <div className="mt-10 border-t border-border pt-8"><p className="text-2xl">You’re already in.</p><p className="mt-2 text-muted-foreground">We will text you Saturday with the details.</p></div>
         )}
         {started && data && !data.alreadySignedUp && !done && !closed && (
           <div className="mt-10"><MeetSignupForm questions={data.questions} slotLabel={data.event.slotLabel} onSubmit={save} /></div>
@@ -109,7 +109,7 @@ function MeetPage() {
         {done && !closed && (
           <div className="mt-10 border-t border-border pt-8">
             <h2 className="text-4xl">You’re in.</h2>
-            <p className="mt-3 text-lg">I’ll text you Saturday with the details.</p>
+            <p className="mt-3 text-lg">We will text you Saturday with the details.</p>
             <Link to="/start" className="mt-8 inline-block text-primary underline underline-offset-4">While you wait, guess something about a friend →</Link>
           </div>
         )}
