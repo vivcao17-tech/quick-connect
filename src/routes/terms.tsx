@@ -35,7 +35,7 @@ function TermsPage() {
       <section className="mx-auto max-w-2xl px-6 py-16">
         <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Legal</p>
         <h1 className="mt-6 text-4xl leading-tight">Terms of Service</h1>
-        <p className="mt-4 text-sm text-muted-foreground">Last updated: September 9, 2026</p>
+        <p className="mt-4 text-sm text-muted-foreground">Last updated: September 24, 2026</p>
 
         <p className="mt-8 text-lg leading-relaxed text-foreground">
           By using NoSure, you agree to these terms.
@@ -73,6 +73,19 @@ function TermsPage() {
           Answers and messages come from other users. We don't verify them, and we're not
           responsible for them. Impressions on a profile are other people's readings of someone, not
           statements of fact.
+        </p>
+
+        <h2 className="mt-10 text-2xl leading-tight">Meetups</h2>
+        <p className="mt-4 leading-relaxed text-foreground">
+          NoSure introduces people who sign up. We don't screen or verify anyone.
+        </p>
+        <p className="mt-4 leading-relaxed text-foreground">
+          Meeting people you don't know carries risk, and you're responsible for your own safety.
+          Meet in public places, tell someone where you're going, and leave if you're uncomfortable.
+          We're not responsible for what happens at or after a meetup.
+        </p>
+        <p className="mt-4 leading-relaxed text-foreground">
+          Meetups are for people 18 or older.
         </p>
 
         <h2 className="mt-10 text-2xl leading-tight">The service</h2>

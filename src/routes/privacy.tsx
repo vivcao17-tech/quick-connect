@@ -32,7 +32,7 @@ function PrivacyPage() {
       <section className="mx-auto max-w-2xl px-6 py-16">
         <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Legal</p>
         <h1 className="mt-6 text-4xl leading-tight">Privacy Policy</h1>
-        <p className="mt-4 text-sm text-muted-foreground">Last updated: September 9, 2026</p>
+        <p className="mt-4 text-sm text-muted-foreground">Last updated: September 24, 2026</p>
 
         <p className="mt-8 text-lg leading-relaxed text-foreground">
           NoSure is a service for answering questions alongside people you know and comparing your
@@ -50,6 +50,10 @@ function PrivacyPage() {
           </li>
           <li>An email address, if you choose to give one</li>
           <li>Private notes you write about people you've played with</li>
+          <li>
+            A phone number or Instagram handle, a school email, your availability, and your meetup
+            form answers — collected when you sign up for a meetup
+          </li>
         </ul>
 
         <h3 className="mt-6 text-lg font-medium">What happens automatically</h3>
@@ -98,6 +102,13 @@ function PrivacyPage() {
           sessions. They are not shown to other users.
         </p>
 
+        <p className="mt-4 leading-relaxed text-foreground">
+          <strong>Meetups</strong> — we share your first name and the contact you gave with the
+          other people in your group, only after you confirm you're joining, so you can arrange to
+          meet. We don't share your email, your answers, or your written responses with them. We may
+          describe what you have in common with someone in general terms when introducing the group.
+        </p>
+
         <h2 className="mt-10 text-2xl leading-tight">How we use it</h2>
         <p className="mt-4 leading-relaxed text-foreground">We use what you provide to:</p>
         <ul className="mt-3 list-disc space-y-2 pl-5 leading-relaxed text-foreground">
@@ -111,6 +122,7 @@ function PrivacyPage() {
           <li>
             Understand how the service is used and improve it, including which questions work well
           </li>
+          <li>Put together meetup groups and tell you the time and place</li>
         </ul>
 
         <h2 className="mt-10 text-2xl leading-tight">Who we share it with</h2>
@@ -137,6 +149,10 @@ function PrivacyPage() {
         <p className="mt-4 leading-relaxed text-foreground">
           We keep your information while your account or history is active. Email us and we'll
           delete your data.
+        </p>
+        <p className="mt-4 leading-relaxed text-foreground">
+          Meetup contact details are kept while you're signed up for meetups, and removed on
+          request.
         </p>
 
         <h2 className="mt-10 text-2xl leading-tight">Your choices</h2>

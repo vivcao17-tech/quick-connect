@@ -74,6 +74,7 @@ function MyProfile() {
   // Assumed installed until the browser says otherwise, so the instructions
   // never flash for people who already added the app.
   const [notInstalled, setNotInstalled] = useState(false);
+  const [showContact, setShowContact] = useState(false);
   const started = useRef(false);
   const capturedNew = useRef(false);
   const navigate = useNavigate();
@@ -352,10 +353,33 @@ function MyProfile() {
           <Link to="/privacy" className="underline underline-offset-4">
             Privacy
           </Link>
-          <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+          <button
+            type="button"
+            aria-expanded={showContact}
+            onClick={() => setShowContact((v) => !v)}
+            className="underline underline-offset-4"
+          >
             Contact
-          </a>
+          </button>
         </div>
+        {showContact && (
+          <p className="leading-relaxed">
+            Email{" "}
+            <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+              hello@nosure.app
+            </a>
+            , or follow{" "}
+            <a
+              href="https://instagram.com/nosure.app"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-4"
+            >
+              nosure.app
+            </a>{" "}
+            on Instagram to DM us any questions.
+          </p>
+        )}
         <div>
           <button
             type="button"
