@@ -352,10 +352,33 @@ function MyProfile() {
           <Link to="/privacy" className="underline underline-offset-4">
             Privacy
           </Link>
-          <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+          <button
+            type="button"
+            aria-expanded={showContact}
+            onClick={() => setShowContact((v) => !v)}
+            className="underline underline-offset-4"
+          >
             Contact
-          </a>
+          </button>
         </div>
+        {showContact && (
+          <p className="leading-relaxed">
+            Email{" "}
+            <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+              hello@nosure.app
+            </a>
+            , or follow{" "}
+            <a
+              href="https://instagram.com/nosure.app"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-4"
+            >
+              nosure.app
+            </a>{" "}
+            on Instagram to DM us any questions.
+          </p>
+        )}
         <div>
           <button
             type="button"
