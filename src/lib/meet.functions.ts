@@ -10,11 +10,15 @@ const signupOnly = z.object({
   friendRead: z.enum(["guess", "impression", "neither"]),
   meetingStyle: z.enum(["online", "one", "group"]),
   weekly: z.enum(["come", "maybe", "probably_not"]),
+  meetHow: z.enum(["class", "club", "friends", "parties"]),
+  meetOften: z.enum(["most_weeks", "few_semester", "rarely"]),
+  bringFriend: z.enum(["yes", "maybe", "alone"]),
 });
 const openAnswers = z.object({
   interests: z.string().trim().min(1).max(300),
   easier: z.string().trim().max(500).default(""),
   missedConnection: z.string().trim().max(500).default(""),
+  notCome: z.string().trim().max(500).default(""),
 });
 const waitlistEmail = z.object({ email: z.string().trim().email().max(160) });
 const fields = z.object({

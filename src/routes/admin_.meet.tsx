@@ -24,11 +24,20 @@ export const Route = createFileRoute("/admin_/meet")({
 });
 
 const signupLabels = {
-  priority: { fits: "Fits naturally into how I already live", different: "Pulls me into things I wouldn’t normally do" },
+  priority: { fits: "Fits naturally into how I live", different: "Pulls me into things I wouldn’t normally do" },
   friendRead: { guess: "Their guess about what you’d do", impression: "What they think you’re like", neither: "I’d rather not hear either" },
   meetingStyle: { online: "Keep it online", one: "Meet one-on-one", group: "Meet in a small group" },
   weekly: { come: "I’d come", maybe: "Maybe", probably_not: "Probably not" },
+  meetHow: { class: "Class or lab", club: "A club or org", friends: "Through friends", parties: "Parties and events" },
+  meetOften: { most_weeks: "Most weeks", few_semester: "A few times a semester", rarely: "Rarely" },
+  bringFriend: { yes: "Yes, I have someone in mind", maybe: "Maybe", alone: "I’d rather come alone" },
 } as const;
+
+function label(key: keyof typeof signupLabels, sa: Record<string, string>) {
+  const value = sa[key];
+  if (!value) return "—";
+  return (signupLabels[key] as Record<string, string>)[value] ?? value;
+}
 
 function pacificInput(iso: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -93,13 +102,17 @@ function AdminMeetPage() {
     return [
       `${signup.firstName} #${signup.signupNumber}`,
       ...signup.answers.map((answer) => `${answer.position}. ${answer.text} — ${answer.option}`),
-      `11. You’d rather meet someone who — ${signupLabels.priority[sa["priority"] as keyof typeof signupLabels.priority] ?? sa["priority"]}`,
-      `12. If a friend told you one thing about you — ${signupLabels.friendRead[sa["friendRead"] as keyof typeof signupLabels.friendRead] ?? sa["friendRead"]}`,
-      `13. To meet new people, you’d — ${signupLabels.meetingStyle[sa["meetingStyle"] as keyof typeof signupLabels.meetingStyle] ?? sa["meetingStyle"]}`,
-      `14. If this happened every week — ${signupLabels.weekly[sa["weekly"] as keyof typeof signupLabels.weekly] ?? sa["weekly"]}`,
-      `15. What’s something you’re into, and what you like about it? — ${oa["interests"] ?? ""}`,
-      `16. What’s one thing you wish was easier about meeting people at Berkeley? — ${oa["easier"] || "—"}`,
-      `17. Someone you wanted to get to know better but never did — ${oa["missedConnection"] || "—"}`,
+      `11. You’d rather meet someone who — ${label("priority", sa)}`,
+      `12. If a friend told you one thing about you, you’d rather hear — ${label("friendRead", sa)}`,
+      `13. To meet new people, you’d — ${label("meetingStyle", sa)}`,
+      `14. If this happened every week — ${label("weekly", sa)}`,
+      `15. How do you usually meet new people here? — ${label("meetHow", sa)}`,
+      `16. How often do you meet someone you’d want to see again? — ${label("meetOften", sa)}`,
+      `17. Would you bring a friend to something like this? — ${label("bringFriend", sa)}`,
+      `18. What’s something you’re into, and what you like about it? — ${oa["interests"] ?? ""}`,
+      `19. What’s one thing you wish was easier about meeting people at Berkeley? — ${oa["easier"] || "—"}`,
+      `20. Someone you wanted to know better but never did — ${oa["missedConnection"] || "—"}`,
+      `21. Anything that would make you not come on Sunday? — ${oa["notCome"] || "—"}`,
       `Availability — ${signup.availability}`,
     ].join("\n");
   }).join("\n\n");
@@ -139,7 +152,7 @@ function AdminMeetPage() {
                 {signup.answers.map((answer) => <li key={answer.position}><span className="text-muted-foreground">{answer.position}.</span> {answer.text} — <strong>{answer.option}</strong></li>)}
               </ol>
               <pre className="mt-4 whitespace-pre-wrap font-sans text-sm text-muted-foreground">{JSON.stringify(signup.signupAnswers, null, 2)}</pre>
-              <div className="mt-3 space-y-2 text-sm"><p><strong>Into:</strong> {(signup.openAnswers as Record<string, string>)["interests"]}</p><p><strong>Easier:</strong> {(signup.openAnswers as Record<string, string>)["easier"] || "—"}</p><p><strong>Missed connection:</strong> {(signup.openAnswers as Record<string, string>)["missedConnection"] || "—"}</p></div>
+              <div className="mt-3 space-y-2 text-sm"><p><strong>Into:</strong> {(signup.openAnswers as Record<string, string>)["interests"]}</p><p><strong>Easier:</strong> {(signup.openAnswers as Record<string, string>)["easier"] || "—"}</p><p><strong>Missed connection:</strong> {(signup.openAnswers as Record<string, string>)["missedConnection"] || "—"}</p><p><strong>Might not come:</strong> {(signup.openAnswers as Record<string, string>)["notCome"] || "—"}</p></div>
             </article>
           ))}
           {data.signups.length === 0 && <p className="text-muted-foreground">No signups yet.</p>}
