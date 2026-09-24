@@ -74,6 +74,7 @@ function MyProfile() {
   // Assumed installed until the browser says otherwise, so the instructions
   // never flash for people who already added the app.
   const [notInstalled, setNotInstalled] = useState(false);
+  const [showContact, setShowContact] = useState(false);
   const started = useRef(false);
   const capturedNew = useRef(false);
   const navigate = useNavigate();
