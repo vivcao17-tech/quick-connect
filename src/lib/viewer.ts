@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { readLocalSession } from "@/lib/auth-session";
 import { supabase } from "@/integrations/supabase/client";
 import { getGuestToken } from "@/lib/guest";
 
@@ -37,11 +38,6 @@ export function useViewer(): Viewer {
  */
 export async function readLocalViewer(): Promise<{ guestToken: string; profileId?: string }> {
   const guestToken = getGuestToken();
-  try {
-    const { data } = await supabase.auth.getSession();
-    const profileId = data.session?.user.id;
-    return profileId ? { guestToken, profileId } : { guestToken };
-  } catch {
-    return { guestToken };
-  }
+  const { userId } = await readLocalSession();
+  return userId ? { guestToken, profileId: userId } : { guestToken };
 }

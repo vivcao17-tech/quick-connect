@@ -3,7 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
 
-export type LocalSession = { accessToken?: string; email?: string };
+export type LocalSession = { accessToken?: string; email?: string; userId?: string };
 
 /**
  * Read the sign-in from the browser without ever throwing.
@@ -37,7 +37,11 @@ export async function readLocalSession(): Promise<LocalSession> {
   }
 
   if (!session) return {};
-  return { accessToken: session.access_token, email: session.user?.email ?? undefined };
+  return {
+    accessToken: session.access_token,
+    email: session.user?.email ?? undefined,
+    userId: session.user?.id,
+  };
 }
 
 /**

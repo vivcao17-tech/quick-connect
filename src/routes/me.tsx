@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { readLocalSession } from "@/lib/auth-session";
 import { AppTabs } from "@/components/AppTabs";
 import {
   getMyProfile,
@@ -93,12 +94,12 @@ function MyProfile() {
   const refresh = useCallback(async () => {
     try {
       // Without a live token the call is rejected server-side, so ask first.
-      const { data } = await supabase.auth.getSession();
-      if (!data.session?.access_token) {
+      const { accessToken, email: sessionEmail } = await readLocalSession();
+      if (!accessToken) {
         setSignedOut(true);
         return;
       }
-      setEmail(data.session.user?.email ?? "");
+      setEmail(sessionEmail ?? "");
       const result = await load();
       if (!capturedNew.current) {
         capturedNew.current = true;
