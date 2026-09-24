@@ -108,9 +108,16 @@ function MeetPage() {
         )}
         {done && !closed && (
           <div className="mt-10 border-t border-border pt-8">
-            <h2 className="text-4xl">You’re in.</h2>
-            <p className="mt-3 text-lg">We will text you Saturday with the details.</p>
-            <Link to="/start" className="mt-8 inline-block text-primary underline underline-offset-4">While you wait, guess something about a friend →</Link>
+            <h2 className="text-4xl">Thank you for filling this in.</h2>
+            <p className="mt-3 text-lg">We’ll let you know when the matching result is out.</p>
+            <p className="mt-2 text-muted-foreground">We will text you Saturday with the details.</p>
+            <div className="mt-8 border-t border-border pt-8">
+              <p className="text-xl">While you wait: three questions with someone you know.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Takes 30 seconds. No account needed.</p>
+              <Button asChild className="mt-6" size="lg">
+                <Link to="/start">Explore</Link>
+              </Button>
+            </div>
           </div>
         )}
       </section>
