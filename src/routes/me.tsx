@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -70,8 +70,13 @@ function MyProfile() {
   // Which reads were new when this visit started. Kept for the whole visit so
   // the "New" marks don't vanish the moment the page marks them as seen.
   const [newIds, setNewIds] = useState<Set<string>>(() => new Set<string>());
+  const [email, setEmail] = useState("");
+  // Assumed installed until the browser says otherwise, so the instructions
+  // never flash for people who already added the app.
+  const [notInstalled, setNotInstalled] = useState(false);
   const started = useRef(false);
   const capturedNew = useRef(false);
+  const navigate = useNavigate();
 
   const fillDetails = useCallback(async () => {
     try {
@@ -92,6 +97,7 @@ function MyProfile() {
         setSignedOut(true);
         return;
       }
+      setEmail(data.session.user?.email ?? "");
       const result = await load();
       if (!capturedNew.current) {
         capturedNew.current = true;
@@ -122,6 +128,19 @@ function MyProfile() {
     if (!profile || profile.newSince === 0) return;
     void seen().catch(() => undefined);
   }, [profile, seen]);
+
+  // Installed apps report display-mode: standalone (iOS home-screen web apps
+  // set navigator.standalone instead).
+  useEffect(() => {
+    const media = window.matchMedia("(display-mode: standalone)");
+    const iosStandalone = "standalone" in window.navigator && Boolean(window.navigator.standalone);
+    setNotInstalled(!media.matches && !iosStandalone);
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    await navigate({ to: "/" });
+  }, [navigate]);
 
   if (signedOut) {
     return (
@@ -324,6 +343,36 @@ function MyProfile() {
       >
         Home
       </Link>
+
+      <footer className="mt-16 flex flex-col gap-4 border-t border-border pt-8 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link to="/terms" className="underline underline-offset-4">
+            Terms
+          </Link>
+          <Link to="/privacy" className="underline underline-offset-4">
+            Privacy
+          </Link>
+          <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+            Contact
+          </a>
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="underline underline-offset-4"
+          >
+            Sign out
+          </button>
+          {email && <p className="mt-2">{email}</p>}
+        </div>
+        {notInstalled && (
+          <p>
+            On iPhone: tap the Share button, then “Add to Home Screen” to keep NoSure on your
+            home screen.
+          </p>
+        )}
+      </footer>
     </Shell>
   );
 }
