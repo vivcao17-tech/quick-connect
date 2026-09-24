@@ -16,6 +16,7 @@ const openAnswers = z.object({
   easier: z.string().trim().max(500).default(""),
   missedConnection: z.string().trim().max(500).default(""),
 });
+const waitlistEmail = z.object({ email: z.string().trim().email().max(160) });
 const fields = z.object({
   firstName: z.string().trim().min(1).max(40),
   contact: z.string().trim().min(1).max(120),
@@ -42,7 +43,7 @@ type MeetQuestion = {
 async function activeMeet(admin: AdminClient) {
   const { data: event, error } = await admin
     .from("meet_events")
-    .select("id, title, slot_label, starts_at, time_zone")
+    .select("id, title, slot_label, starts_at, time_zone, signup_deadline")
     .eq("active", true)
     .order("starts_at")
     .limit(1)
@@ -76,6 +77,7 @@ async function activeMeet(admin: AdminClient) {
       slotLabel: event.slot_label as string,
       startsAt: event.starts_at as string,
       timeZone: event.time_zone as string,
+      signupDeadline: event.signup_deadline as string,
     },
     questions,
   };
@@ -89,6 +91,9 @@ async function saveSignup(
   guestToken: string,
 ) {
   const form = await activeMeet(admin);
+  if (source === "online" && Date.now() >= new Date(form.event.signupDeadline).getTime()) {
+    throw new Error("Signups are closed for Sunday.");
+  }
   const expected = form.questions.map((question) => question.id);
   if (input.answers.some((answer, index) => answer.questionId !== expected[index])) {
     throw new Error("The meetup questions changed. Refresh and try again.");
@@ -185,6 +190,28 @@ async function saveSignup(
   }
   return { ok: true, signupNumber: Number(signup.signup_number) };
 }
+
+export const getMeetLanding = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { event } = await activeMeet(supabaseAdmin as unknown as AdminClient);
+  return { event };
+});
+
+export const joinMeetWaitlist = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => waitlistEmail.parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { event } = await activeMeet(supabaseAdmin as unknown as AdminClient);
+    if (Date.now() < new Date(event.signupDeadline).getTime()) {
+      throw new Error("Signups are still open.");
+    }
+    const { error } = await supabaseAdmin.from("meet_waitlist").upsert(
+      { event_id: event.id, email: data.email.toLowerCase() },
+      { onConflict: "event_id,email", ignoreDuplicates: true },
+    );
+    if (error) throw error;
+    return { ok: true };
+  });
 
 export const getMeetForm = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -284,12 +311,12 @@ export const addAdminMeetSignup = createServerFn({ method: "POST" })
 
 export const updateMeetEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ eventId: z.string().uuid(), slotLabel: z.string().trim().min(1).max(100), startsAt: z.string().datetime() }).parse(input))
+  .inputValidator((input: unknown) => z.object({ eventId: z.string().uuid(), slotLabel: z.string().trim().min(1).max(100), startsAt: z.string().datetime(), signupDeadline: z.string().datetime() }).parse(input))
   .handler(async ({ data, context }) => {
     const { assertAdmin } = await import("@/lib/admin.server");
     assertAdmin(context.claims);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("meet_events").update({ slot_label: data.slotLabel, starts_at: data.startsAt, time_zone: "America/Los_Angeles" }).eq("id", data.eventId);
+    const { error } = await supabaseAdmin.from("meet_events").update({ slot_label: data.slotLabel, starts_at: data.startsAt, signup_deadline: data.signupDeadline, time_zone: "America/Los_Angeles" }).eq("id", data.eventId);
     if (error) throw error;
     return { ok: true };
   });

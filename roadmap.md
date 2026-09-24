@@ -100,3 +100,10 @@
 - [ ] Add contact-free plain-text signup export with “FirstName #ID”, readable A/B answers, open answers, and availability
 - [ ] Do not build or scaffold grouping, scoring, compatibility, or matching logic; matching stays outside the app
 - [ ] Verify signed-out, signed-in, signup, completion, and admin flows
+
+## Meetup intro and deadline
+
+- [x] Add the Sunday meetup intro before the form
+- [x] Add an editable Friday 5 PM Pacific signup deadline
+- [x] Replace the form with email capture after the deadline
+- [x] Split signup into four retained-answer steps and remove pack labels

@@ -617,6 +617,7 @@ export type Database = {
           active: boolean
           created_at: string
           id: string
+          signup_deadline: string
           slot_label: string
           starts_at: string
           time_zone: string
@@ -627,6 +628,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          signup_deadline: string
           slot_label: string
           starts_at: string
           time_zone?: string
@@ -637,6 +639,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          signup_deadline?: string
           slot_label?: string
           starts_at?: string
           time_zone?: string
@@ -723,6 +726,35 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meet_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          event_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          event_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          event_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meet_waitlist_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "meet_events"
             referencedColumns: ["id"]
           },
         ]
