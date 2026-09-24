@@ -25,6 +25,16 @@ export const Route = createFileRoute("/meet")({
   }),
 });
 
+function ShareMeet() {
+  return (
+    <p className="mt-8 text-sm text-muted-foreground">
+      Know someone who’d wanna come? Send them to{" "}
+      <Link to="/meet" search={{ start: false }} className="text-primary underline underline-offset-4">nosure.app/meet</Link>{" "}
+      (form submission required for matching purposes)
+    </p>
+  );
+}
+
 function MeetPage() {
   const viewer = useViewer();
   const search = Route.useSearch();
@@ -101,7 +111,7 @@ function MeetPage() {
         {error && <p className="mt-10 text-muted-foreground">{error}</p>}
         {started && viewer.profileId && !data && !error && !closed && <p className="mt-10 text-muted-foreground">Loading…</p>}
         {started && data?.alreadySignedUp && !done && !closed && (
-          <div className="mt-10 border-t border-border pt-8"><p className="text-2xl">You’re already in.</p><p className="mt-2 text-muted-foreground">We will text you Saturday with the details.</p></div>
+          <div className="mt-10 border-t border-border pt-8"><p className="text-2xl">You’re already in.</p><p className="mt-2 text-muted-foreground">We will text you Saturday with the details.</p><ShareMeet /></div>
         )}
         {started && data && !data.alreadySignedUp && !done && !closed && (
           <div className="mt-10"><MeetSignupForm questions={data.questions} slotLabel={data.event.slotLabel} onSubmit={save} /></div>
@@ -118,6 +128,7 @@ function MeetPage() {
                 <Link to="/start">Explore</Link>
               </Button>
             </div>
+            <ShareMeet />
           </div>
         )}
       </section>
