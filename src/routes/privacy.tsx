@@ -102,6 +102,13 @@ function PrivacyPage() {
           sessions. They are not shown to other users.
         </p>
 
+        <p className="mt-4 leading-relaxed text-foreground">
+          <strong>Meetups</strong> — we share your first name and the contact you gave with the
+          other people in your group, only after you confirm you're joining, so you can arrange to
+          meet. We don't share your email, your answers, or your written responses with them. We may
+          describe what you have in common with someone in general terms when introducing the group.
+        </p>
+
         <h2 className="mt-10 text-2xl leading-tight">How we use it</h2>
         <p className="mt-4 leading-relaxed text-foreground">We use what you provide to:</p>
         <ul className="mt-3 list-disc space-y-2 pl-5 leading-relaxed text-foreground">
@@ -115,6 +122,7 @@ function PrivacyPage() {
           <li>
             Understand how the service is used and improve it, including which questions work well
           </li>
+          <li>Put together meetup groups and tell you the time and place</li>
         </ul>
 
         <h2 className="mt-10 text-2xl leading-tight">Who we share it with</h2>
