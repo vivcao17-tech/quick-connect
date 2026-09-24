@@ -150,6 +150,10 @@ function PrivacyPage() {
           We keep your information while your account or history is active. Email us and we'll
           delete your data.
         </p>
+        <p className="mt-4 leading-relaxed text-foreground">
+          Meetup contact details are kept while you're signed up for meetups, and removed on
+          request.
+        </p>
 
         <h2 className="mt-10 text-2xl leading-tight">Your choices</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 leading-relaxed text-foreground">
