@@ -77,7 +77,7 @@ function Home() {
 
         <div className="mt-8">
           <Button asChild variant="outline" className="h-auto w-full rounded-full py-4 text-base"><Link to="/auth" search={{ redirect: "/meet" }}>Meet people you’d get along with</Link></Button>
-          <p className="mt-3 text-sm text-muted-foreground">Answer a few questions. We’ll match you with a few people at Berkeley.</p>
+          <p className="mt-3 text-sm text-muted-foreground">Answer a few questions. We’ll match you with a few people at Berkeley. Friendship only.</p>
         </div>
 
         <p className="mt-auto pt-16 text-center text-sm text-muted-foreground">Already have an account? <Link to="/auth" search={{ redirect: "/people" }} className="underline underline-offset-4">Sign in</Link></p>
