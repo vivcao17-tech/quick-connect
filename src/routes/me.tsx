@@ -97,6 +97,7 @@ function MyProfile() {
         setSignedOut(true);
         return;
       }
+      setEmail(data.session.user?.email ?? "");
       const result = await load();
       if (!capturedNew.current) {
         capturedNew.current = true;
@@ -127,6 +128,19 @@ function MyProfile() {
     if (!profile || profile.newSince === 0) return;
     void seen().catch(() => undefined);
   }, [profile, seen]);
+
+  // Installed apps report display-mode: standalone (iOS home-screen web apps
+  // set navigator.standalone instead).
+  useEffect(() => {
+    const media = window.matchMedia("(display-mode: standalone)");
+    const iosStandalone = "standalone" in window.navigator && Boolean(window.navigator.standalone);
+    setNotInstalled(!media.matches && !iosStandalone);
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    await navigate({ to: "/" });
+  }, [navigate]);
 
   if (signedOut) {
     return (
