@@ -74,11 +74,12 @@ function AdminMeetPage() {
   const data = query.data;
   const [slotLabel, setSlotLabel] = useState("");
   const [startsAt, setStartsAt] = useState("");
+  const [signupDeadline, setSignupDeadline] = useState("");
 
   const saveEvent = useMutation({
     mutationFn: () => {
       if (!data) throw new Error("Meetup unavailable");
-      return updateEvent({ data: { eventId: data.event.id, slotLabel: slotLabel || data.event.slotLabel, startsAt: pacificToIso(startsAt || pacificInput(data.event.startsAt)) } });
+      return updateEvent({ data: { eventId: data.event.id, slotLabel: slotLabel || data.event.slotLabel, startsAt: pacificToIso(startsAt || pacificInput(data.event.startsAt)), signupDeadline: pacificToIso(signupDeadline || pacificInput(data.event.signupDeadline)) } });
     },
     onSuccess: () => void client.invalidateQueries({ queryKey: ["admin-meet"] }),
   });
@@ -113,9 +114,10 @@ function AdminMeetPage() {
     <main className="paper min-h-screen bg-background">
       <section className="mx-auto max-w-5xl px-6 py-14">
         <div className="flex flex-wrap items-baseline justify-between gap-3"><h1 className="text-4xl">Meet signups</h1><Link to="/admin" className="text-sm underline">Dashboard</Link></div>
-        <div className="mt-8 grid gap-3 border-y border-border py-5 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="mt-8 grid gap-3 border-y border-border py-5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
           <label className="text-sm">Availability label<Input className="mt-1" value={slotLabel || data.event.slotLabel} onChange={(e) => setSlotLabel(e.target.value)} /></label>
           <label className="text-sm">Pacific date and time<Input className="mt-1" type="datetime-local" value={startsAt || pacificInput(data.event.startsAt)} onChange={(e) => setStartsAt(e.target.value)} /></label>
+          <label className="text-sm">Signup deadline · Pacific<Input className="mt-1" type="datetime-local" value={signupDeadline || pacificInput(data.event.signupDeadline)} onChange={(e) => setSignupDeadline(e.target.value)} /></label>
           <Button className="self-end" onClick={() => saveEvent.mutate()} disabled={saveEvent.isPending}>Save time</Button>
         </div>
 
