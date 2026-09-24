@@ -144,9 +144,14 @@ function AdminPage() {
 
   useEffect(() => {
     let alive = true;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (alive) setSignedIn(Boolean(data.user));
-    });
+    void supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (alive) setSignedIn(Boolean(data.user));
+      })
+      .catch(() => {
+        if (alive) setSignedIn(false);
+      });
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") setSignedIn(true);
       if (event === "SIGNED_OUT") setSignedIn(false);

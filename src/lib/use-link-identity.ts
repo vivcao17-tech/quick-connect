@@ -20,9 +20,14 @@ export function useLinkIdentity(): void {
       void link({ data: { guestToken: getGuestToken() } }).catch(() => undefined);
     };
 
-    void supabase.auth.getUser().then(({ data }) => {
-      if (data.user) run();
-    });
+    void supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (data.user) run();
+      })
+      // A rejected token (device clock skew, for instance) must not leave an
+      // unhandled rejection behind; the person keeps their guest identity.
+      .catch(() => undefined);
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "USER_UPDATED") && session) run();
