@@ -343,6 +343,36 @@ function MyProfile() {
       >
         Home
       </Link>
+
+      <footer className="mt-16 flex flex-col gap-4 border-t border-border pt-8 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link to="/terms" className="underline underline-offset-4">
+            Terms
+          </Link>
+          <Link to="/privacy" className="underline underline-offset-4">
+            Privacy
+          </Link>
+          <a href="mailto:hello@nosure.app" className="underline underline-offset-4">
+            Contact
+          </a>
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="underline underline-offset-4"
+          >
+            Sign out
+          </button>
+          {email && <p className="mt-2">{email}</p>}
+        </div>
+        {notInstalled && (
+          <p>
+            On iPhone: tap the Share button, then “Add to Home Screen” to keep NoSure on your
+            home screen.
+          </p>
+        )}
+      </footer>
     </Shell>
   );
 }
