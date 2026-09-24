@@ -152,7 +152,7 @@ function AdminMeetPage() {
                 {signup.answers.map((answer) => <li key={answer.position}><span className="text-muted-foreground">{answer.position}.</span> {answer.text} — <strong>{answer.option}</strong></li>)}
               </ol>
               <pre className="mt-4 whitespace-pre-wrap font-sans text-sm text-muted-foreground">{JSON.stringify(signup.signupAnswers, null, 2)}</pre>
-              <div className="mt-3 space-y-2 text-sm"><p><strong>Into:</strong> {(signup.openAnswers as Record<string, string>)["interests"]}</p><p><strong>Easier:</strong> {(signup.openAnswers as Record<string, string>)["easier"] || "—"}</p><p><strong>Missed connection:</strong> {(signup.openAnswers as Record<string, string>)["missedConnection"] || "—"}</p></div>
+              <div className="mt-3 space-y-2 text-sm"><p><strong>Into:</strong> {(signup.openAnswers as Record<string, string>)["interests"]}</p><p><strong>Easier:</strong> {(signup.openAnswers as Record<string, string>)["easier"] || "—"}</p><p><strong>Missed connection:</strong> {(signup.openAnswers as Record<string, string>)["missedConnection"] || "—"}</p><p><strong>Might not come:</strong> {(signup.openAnswers as Record<string, string>)["notCome"] || "—"}</p></div>
             </article>
           ))}
           {data.signups.length === 0 && <p className="text-muted-foreground">No signups yet.</p>}
