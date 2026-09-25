@@ -496,6 +496,101 @@ export type Database = {
           },
         ]
       }
+      impression_cards: {
+        Row: {
+          created_at: string
+          id: string
+          is_test: boolean
+          participant_id: string
+          seen_at: string | null
+          session_id: string
+          subject_guest_token: string
+          subject_name: string
+          subject_profile_id: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_test?: boolean
+          participant_id: string
+          seen_at?: string | null
+          session_id: string
+          subject_guest_token: string
+          subject_name: string
+          subject_profile_id?: string | null
+          token: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_test?: boolean
+          participant_id?: string
+          seen_at?: string | null
+          session_id?: string
+          subject_guest_token?: string
+          subject_name?: string
+          subject_profile_id?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impression_cards_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "session_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impression_cards_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      impression_guesses: {
+        Row: {
+          card_id: string
+          created_at: string
+          guessed_option: string
+          guesser_display_name: string
+          guesser_profile_id: string | null
+          guesser_session_id: string
+          id: string
+          question_key: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          guessed_option: string
+          guesser_display_name: string
+          guesser_profile_id?: string | null
+          guesser_session_id: string
+          id?: string
+          question_key: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          guessed_option?: string
+          guesser_display_name?: string
+          guesser_profile_id?: string | null
+          guesser_session_id?: string
+          id?: string
+          question_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impression_guesses_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "impression_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invites: {
         Row: {
           child_session_id: string | null
