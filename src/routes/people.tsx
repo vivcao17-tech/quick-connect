@@ -94,6 +94,9 @@ function PeoplePage() {
           </Link>
         </header>
 
+        {signedIn && <KnowCard />}
+
+
         {people === null && (
           <div aria-busy="true" aria-label="Loading people" className="mt-10 flex flex-col">
             {[0, 1, 2, 3].map((i) => (

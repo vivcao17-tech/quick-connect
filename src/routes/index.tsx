@@ -65,6 +65,14 @@ function Home() {
 
         <div className="mt-12">
           <Button
+            variant="outline"
+            className="mb-4 h-auto w-full rounded-full py-4 text-base"
+            onClick={() => void navigate({ to: "/know" })}
+          >
+            See how your friends read you
+          </Button>
+
+          <Button
             className="h-auto w-full rounded-full py-5 text-xl"
             onClick={() => void navigate({ to: "/start" })}
           >
