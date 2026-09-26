@@ -65,6 +65,9 @@ export function AppTabs({ deferChecks = false }: { deferChecks?: boolean } = {})
           >
             <span className="relative">
               <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
+              {to === "/me" && newGuesses > 0 && (
+                <span aria-label="New guesses" className="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-primary" />
+              )}
               {to === "/chain" && weekNeedsAnswer && (
                 <span
                   aria-label="New weekly question"
