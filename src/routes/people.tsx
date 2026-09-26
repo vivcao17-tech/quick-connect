@@ -7,6 +7,7 @@ import { AppTabs } from "@/components/AppTabs";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { Button } from "@/components/ui/button";
 import { listPeople, listPeopleBasic } from "@/lib/conversations.functions";
+import { getMyImpressions } from "@/lib/know.functions";
 import { readLocalViewer, useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/people")({

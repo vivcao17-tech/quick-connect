@@ -4,6 +4,7 @@ import { CalendarDays, MapPin, UserRound, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { getChainWeek } from "@/lib/chain.functions";
+import { getMyImpressions } from "@/lib/know.functions";
 import { useViewer } from "@/lib/viewer";
 
 const tabs = [
@@ -33,6 +34,18 @@ export function AppTabs({ deferChecks = false }: { deferChecks?: boolean } = {})
     window.addEventListener("nosure:chain-answered", answered);
     return () => window.removeEventListener("nosure:chain-answered", answered);
   }, []);
+
+  const loadImpressions = useServerFn(getMyImpressions);
+  const [newGuesses, setNewGuesses] = useState(0);
+  useEffect(() => {
+    if (deferChecks || !viewer.ready || !viewer.profileId || !viewer.guestToken) return;
+    void loadImpressions({ data: { guestToken: viewer.guestToken, profileId: viewer.profileId, markSeen: false } })
+      .then((r) => setNewGuesses(r?.newCount ?? 0))
+      .catch(() => setNewGuesses(0));
+    const seen = () => setNewGuesses(0);
+    window.addEventListener("nosure:impressions-seen", seen);
+    return () => window.removeEventListener("nosure:impressions-seen", seen);
+  }, [deferChecks, loadImpressions, viewer.guestToken, viewer.profileId, viewer.ready]);
 
   if (!viewer.ready || !viewer.profileId) return null;
 
