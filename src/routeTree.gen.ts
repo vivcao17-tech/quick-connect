@@ -17,6 +17,7 @@ import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as GremoteRouteImport } from './routes/gremote'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as KnowRouteImport } from './routes/know'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as MeetRouteImport } from './routes/meet'
 import { Route as PeopleRouteImport } from './routes/people'
@@ -31,9 +32,11 @@ import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
 import { Route as GaSessionIdRouteImport } from './routes/ga.$sessionId'
 import { Route as GiTokenRouteImport } from './routes/gi.$token'
 import { Route as GsendSessionIdRouteImport } from './routes/gsend.$sessionId'
+import { Route as GuessTokenRouteImport } from './routes/guess.$token'
 import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as JCodeRouteImport } from './routes/j.$code'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
+import { Route as MeImpressionsRouteImport } from './routes/me_.impressions'
 import { Route as PHandleRouteImport } from './routes/p.$handle'
 import { Route as RoomSessionIdRouteImport } from './routes/room.$sessionId'
 import { Route as STokenRouteImport } from './routes/s.$token'
@@ -85,6 +88,11 @@ const GroupRoute = GroupRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KnowRoute = KnowRouteImport.update({
+  id: '/know',
+  path: '/know',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MeRoute = MeRouteImport.update({
@@ -157,6 +165,11 @@ const GsendSessionIdRoute = GsendSessionIdRouteImport.update({
   path: '/gsend/$sessionId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuessTokenRoute = GuessTokenRouteImport.update({
+  id: '/guess/$token',
+  path: '/guess/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ITokenRoute = ITokenRouteImport.update({
   id: '/i/$token',
   path: '/i/$token',
@@ -170,6 +183,11 @@ const JCodeRoute = JCodeRouteImport.update({
 const JoinCodeRoute = JoinCodeRouteImport.update({
   id: '/join/$code',
   path: '/join/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeImpressionsRoute = MeImpressionsRouteImport.update({
+  id: '/me_/impressions',
+  path: '/me/impressions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PHandleRoute = PHandleRouteImport.update({
@@ -244,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/know': typeof KnowRoute
   '/me': typeof MeRoute
   '/meet': typeof MeetRoute
   '/people': typeof PeopleRoute
@@ -258,9 +277,11 @@ export interface FileRoutesByFullPath {
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
   '/gsend/$sessionId': typeof GsendSessionIdRoute
+  '/guess/$token': typeof GuessTokenRoute
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/me/impressions': typeof MeImpressionsRoute
   '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
@@ -283,6 +304,7 @@ export interface FileRoutesByTo {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/know': typeof KnowRoute
   '/me': typeof MeRoute
   '/meet': typeof MeetRoute
   '/people': typeof PeopleRoute
@@ -297,9 +319,11 @@ export interface FileRoutesByTo {
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
   '/gsend/$sessionId': typeof GsendSessionIdRoute
+  '/guess/$token': typeof GuessTokenRoute
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/me/impressions': typeof MeImpressionsRoute
   '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
@@ -323,6 +347,7 @@ export interface FileRoutesById {
   '/gremote': typeof GremoteRoute
   '/group': typeof GroupRoute
   '/inbox': typeof InboxRoute
+  '/know': typeof KnowRoute
   '/me': typeof MeRoute
   '/meet': typeof MeetRoute
   '/people': typeof PeopleRoute
@@ -337,9 +362,11 @@ export interface FileRoutesById {
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
   '/gsend/$sessionId': typeof GsendSessionIdRoute
+  '/guess/$token': typeof GuessTokenRoute
   '/i/$token': typeof ITokenRoute
   '/j/$code': typeof JCodeRoute
   '/join/$code': typeof JoinCodeRoute
+  '/me_/impressions': typeof MeImpressionsRoute
   '/p/$handle': typeof PHandleRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
   '/s/$token': typeof STokenRoute
@@ -364,6 +391,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/know'
     | '/me'
     | '/meet'
     | '/people'
@@ -378,9 +406,11 @@ export interface FileRouteTypes {
     | '/ga/$sessionId'
     | '/gi/$token'
     | '/gsend/$sessionId'
+    | '/guess/$token'
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/me/impressions'
     | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
@@ -403,6 +433,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/know'
     | '/me'
     | '/meet'
     | '/people'
@@ -417,9 +448,11 @@ export interface FileRouteTypes {
     | '/ga/$sessionId'
     | '/gi/$token'
     | '/gsend/$sessionId'
+    | '/guess/$token'
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/me/impressions'
     | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
@@ -442,6 +475,7 @@ export interface FileRouteTypes {
     | '/gremote'
     | '/group'
     | '/inbox'
+    | '/know'
     | '/me'
     | '/meet'
     | '/people'
@@ -456,9 +490,11 @@ export interface FileRouteTypes {
     | '/ga/$sessionId'
     | '/gi/$token'
     | '/gsend/$sessionId'
+    | '/guess/$token'
     | '/i/$token'
     | '/j/$code'
     | '/join/$code'
+    | '/me_/impressions'
     | '/p/$handle'
     | '/room/$sessionId'
     | '/s/$token'
@@ -482,6 +518,7 @@ export interface RootRouteChildren {
   GremoteRoute: typeof GremoteRoute
   GroupRoute: typeof GroupRoute
   InboxRoute: typeof InboxRoute
+  KnowRoute: typeof KnowRoute
   MeRoute: typeof MeRoute
   MeetRoute: typeof MeetRoute
   PeopleRoute: typeof PeopleRoute
@@ -495,9 +532,11 @@ export interface RootRouteChildren {
   GaSessionIdRoute: typeof GaSessionIdRoute
   GiTokenRoute: typeof GiTokenRoute
   GsendSessionIdRoute: typeof GsendSessionIdRoute
+  GuessTokenRoute: typeof GuessTokenRoute
   ITokenRoute: typeof ITokenRoute
   JCodeRoute: typeof JCodeRoute
   JoinCodeRoute: typeof JoinCodeRoute
+  MeImpressionsRoute: typeof MeImpressionsRoute
   PHandleRoute: typeof PHandleRoute
   RoomSessionIdRoute: typeof RoomSessionIdRoute
   STokenRoute: typeof STokenRoute
@@ -568,6 +607,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/know': {
+      id: '/know'
+      path: '/know'
+      fullPath: '/know'
+      preLoaderRoute: typeof KnowRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/me': {
@@ -668,6 +714,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GsendSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/guess/$token': {
+      id: '/guess/$token'
+      path: '/guess/$token'
+      fullPath: '/guess/$token'
+      preLoaderRoute: typeof GuessTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/i/$token': {
       id: '/i/$token'
       path: '/i/$token'
@@ -687,6 +740,13 @@ declare module '@tanstack/react-router' {
       path: '/join/$code'
       fullPath: '/join/$code'
       preLoaderRoute: typeof JoinCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me_/impressions': {
+      id: '/me_/impressions'
+      path: '/me/impressions'
+      fullPath: '/me/impressions'
+      preLoaderRoute: typeof MeImpressionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/p/$handle': {
@@ -795,6 +855,7 @@ const rootRouteChildren: RootRouteChildren = {
   GremoteRoute: GremoteRoute,
   GroupRoute: GroupRoute,
   InboxRoute: InboxRoute,
+  KnowRoute: KnowRoute,
   MeRoute: MeRoute,
   MeetRoute: MeetRoute,
   PeopleRoute: PeopleRoute,
@@ -808,9 +869,11 @@ const rootRouteChildren: RootRouteChildren = {
   GaSessionIdRoute: GaSessionIdRoute,
   GiTokenRoute: GiTokenRoute,
   GsendSessionIdRoute: GsendSessionIdRoute,
+  GuessTokenRoute: GuessTokenRoute,
   ITokenRoute: ITokenRoute,
   JCodeRoute: JCodeRoute,
   JoinCodeRoute: JoinCodeRoute,
+  MeImpressionsRoute: MeImpressionsRoute,
   PHandleRoute: PHandleRoute,
   RoomSessionIdRoute: RoomSessionIdRoute,
   STokenRoute: STokenRoute,

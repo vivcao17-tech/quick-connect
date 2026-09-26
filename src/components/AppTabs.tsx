@@ -4,6 +4,7 @@ import { CalendarDays, MapPin, UserRound, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { getChainWeek } from "@/lib/chain.functions";
+import { getMyImpressions } from "@/lib/know.functions";
 import { useViewer } from "@/lib/viewer";
 
 const tabs = [
@@ -34,6 +35,18 @@ export function AppTabs({ deferChecks = false }: { deferChecks?: boolean } = {})
     return () => window.removeEventListener("nosure:chain-answered", answered);
   }, []);
 
+  const loadImpressions = useServerFn(getMyImpressions);
+  const [newGuesses, setNewGuesses] = useState(0);
+  useEffect(() => {
+    if (deferChecks || !viewer.ready || !viewer.profileId || !viewer.guestToken) return;
+    void loadImpressions({ data: { guestToken: viewer.guestToken, profileId: viewer.profileId, markSeen: false } })
+      .then((r) => setNewGuesses(r?.newCount ?? 0))
+      .catch(() => setNewGuesses(0));
+    const seen = () => setNewGuesses(0);
+    window.addEventListener("nosure:impressions-seen", seen);
+    return () => window.removeEventListener("nosure:impressions-seen", seen);
+  }, [deferChecks, loadImpressions, viewer.guestToken, viewer.profileId, viewer.ready]);
+
   if (!viewer.ready || !viewer.profileId) return null;
 
   return (
@@ -52,6 +65,9 @@ export function AppTabs({ deferChecks = false }: { deferChecks?: boolean } = {})
           >
             <span className="relative">
               <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
+              {to === "/me" && newGuesses > 0 && (
+                <span aria-label="New guesses" className="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-primary" />
+              )}
               {to === "/chain" && weekNeedsAnswer && (
                 <span
                   aria-label="New weekly question"
