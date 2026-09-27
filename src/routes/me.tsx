@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { readLocalSession } from "@/lib/auth-session";
 import { AppTabs } from "@/components/AppTabs";
+import { getMyImpressions } from "@/lib/know.functions";
+import { readLocalViewer } from "@/lib/viewer";
 import {
   getMyProfile,
   getMyProfileDetails,
@@ -189,6 +191,9 @@ function MyProfile() {
       <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Their read on you</p>
       <h1 className="mt-6 text-5xl leading-[1.05]">{profile.displayName}</h1>
       <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
+
+      <EntryCards />
+
 
       {shareUrl && (
         <div className="card-soft mt-8 px-6 py-5">
