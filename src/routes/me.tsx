@@ -462,6 +462,12 @@ function EntryCards() {
             >
               See who's guessed
             </Link>
+            <Link
+              to="/example/impressions"
+              className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
+            >
+              See an example →
+            </Link>
           </>
         )}
       </div>
@@ -473,6 +479,12 @@ function EntryCards() {
         </p>
         <Link to="/start" className="btn-quiet mt-4 inline-block">
           Start
+        </Link>
+        <Link
+          to="/example/preview"
+          className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
+        >
+          See an example →
         </Link>
       </div>
     </div>
