@@ -74,11 +74,6 @@ function ExampleImpressions() {
                 <p className="text-lg">{q.text}</p>
                 <div className="relative mt-3 h-3 overflow-hidden rounded-full bg-secondary">
                   <div className="h-full bg-primary" style={{ width: `${pctA}%` }} />
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-y-0 w-0.5 bg-foreground"
-                    style={{ left: "calc(100% - 1px)" }}
-                  />
                 </div>
                 <div className="mt-2 flex justify-between gap-4 text-sm">
                   <span className={q.self === "a" ? "text-primary" : "text-muted-foreground"}>

@@ -437,6 +437,12 @@ function EntryCards() {
             <Link to="/know" className="btn-ink mt-4 inline-block">
               Start
             </Link>
+            <Link
+              to="/example/impressions"
+              className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
+            >
+              See an example →
+            </Link>
           </>
         ) : (
           <>
