@@ -115,3 +115,13 @@
 - [x] Verify the button works both signed in and signed out
 - [x] Add the "Know someone who'd wanna come? Send them to nosure.app/meet" share line
 
+## You tab entry cards and example pages
+
+- [x] Add the two entry cards (friends-read-you card, answer-with-someone card) to the You tab
+- [x] Add a "See an example →" text link under each entry card
+- [x] Build read-only /example/impressions with sample-data split bars and the most-missed line
+- [x] Build read-only /example/preview with sample-data side-by-side rows and summary lines
+- [x] Keep sample content in one data file; charts in CSS/SVG, light and dark, phone-readable
+- [x] Leave room below both pages for a multi-axis chart, not settled yet
+- [x] Verify both pages signed out at phone width
+

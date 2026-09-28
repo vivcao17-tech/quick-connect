@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { readLocalSession } from "@/lib/auth-session";
 import { AppTabs } from "@/components/AppTabs";
+import { getMyImpressions } from "@/lib/know.functions";
+import { readLocalViewer } from "@/lib/viewer";
 import {
   getMyProfile,
   getMyProfileDetails,
@@ -189,6 +191,9 @@ function MyProfile() {
       <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Their read on you</p>
       <h1 className="mt-6 text-5xl leading-[1.05]">{profile.displayName}</h1>
       <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
+
+      <EntryCards />
+
 
       {shareUrl && (
         <div className="card-soft mt-8 px-6 py-5">
@@ -399,6 +404,96 @@ function MyProfile() {
         )}
       </footer>
     </Shell>
+  );
+}
+
+/** The two things you can start from here. Kept separate on purpose: one is
+ * you answering about yourself for friends to guess; the other is a 1:1 round. */
+function EntryCards() {
+  const load = useServerFn(getMyImpressions);
+  const [card, setCard] = useState<{ token: string; guessCount: number } | null | undefined>(undefined);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    void readLocalViewer()
+      .then((v) => load({ data: { ...v, markSeen: false } }))
+      .then((r) => setCard(r ? { token: r.token, guessCount: r.guessCount } : null))
+      .catch(() => setCard(undefined));
+  }, [load]);
+
+  const guessUrl = card ? `https://nosure.app/guess/${card.token}` : "";
+
+  return (
+    <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="card-soft border-primary px-5 py-5">
+        <p className="text-xl leading-snug">See how your friends read you</p>
+        {card === undefined ? (
+          <span aria-hidden="true" className="mt-3 block h-10 animate-pulse rounded bg-muted" />
+        ) : card === null ? (
+          <>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Answer five questions about yourself. Send the link. See who reads you right.
+            </p>
+            <Link to="/know" className="btn-ink mt-4 inline-block">
+              Start
+            </Link>
+            <Link
+              to="/example/impressions"
+              className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
+            >
+              See an example →
+            </Link>
+          </>
+        ) : (
+          <>
+            <p className="mt-3 break-all text-sm">{`nosure.app/guess/${card.token}`}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="btn-quiet"
+                onClick={() => {
+                  void navigator.clipboard.writeText(guessUrl);
+                  setCopied(true);
+                }}
+              >
+                {copied ? "Copied" : "Copy link"}
+              </button>
+              <span className="text-sm text-muted-foreground">
+                {card.guessCount} {card.guessCount === 1 ? "person has" : "people have"} guessed
+              </span>
+            </div>
+            <Link
+              to="/me/impressions"
+              className="mt-4 inline-block text-sm underline underline-offset-4"
+            >
+              See who's guessed
+            </Link>
+            <Link
+              to="/example/impressions"
+              className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
+            >
+              See an example →
+            </Link>
+          </>
+        )}
+      </div>
+
+      <div className="card-soft px-5 py-5">
+        <p className="text-xl leading-snug">Answer questions with someone</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Three questions, both of you answer, then you see where you line up.
+        </p>
+        <Link to="/start" className="btn-quiet mt-4 inline-block">
+          Start
+        </Link>
+        <Link
+          to="/example/preview"
+          className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
+        >
+          See an example →
+        </Link>
+      </div>
+    </div>
   );
 }
 

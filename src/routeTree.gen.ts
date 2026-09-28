@@ -28,6 +28,8 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AdminMeetRouteImport } from './routes/admin_.meet'
 import { Route as CTokenRouteImport } from './routes/c.$token'
 import { Route as ChainWeekRouteImport } from './routes/chain.week'
+import { Route as ExampleImpressionsRouteImport } from './routes/example.impressions'
+import { Route as ExamplePreviewRouteImport } from './routes/example.preview'
 import { Route as GSessionIdRouteImport } from './routes/g.$sessionId'
 import { Route as GaSessionIdRouteImport } from './routes/ga.$sessionId'
 import { Route as GiTokenRouteImport } from './routes/gi.$token'
@@ -144,6 +146,16 @@ const ChainWeekRoute = ChainWeekRouteImport.update({
   id: '/week',
   path: '/week',
   getParentRoute: () => ChainRoute,
+} as any)
+const ExampleImpressionsRoute = ExampleImpressionsRouteImport.update({
+  id: '/example/impressions',
+  path: '/example/impressions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamplePreviewRoute = ExamplePreviewRouteImport.update({
+  id: '/example/preview',
+  path: '/example/preview',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const GSessionIdRoute = GSessionIdRouteImport.update({
   id: '/g/$sessionId',
@@ -273,6 +285,8 @@ export interface FileRoutesByFullPath {
   '/admin/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
+  '/example/impressions': typeof ExampleImpressionsRoute
+  '/example/preview': typeof ExamplePreviewRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -315,6 +329,8 @@ export interface FileRoutesByTo {
   '/admin/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
+  '/example/impressions': typeof ExampleImpressionsRoute
+  '/example/preview': typeof ExamplePreviewRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -358,6 +374,8 @@ export interface FileRoutesById {
   '/admin_/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
+  '/example/impressions': typeof ExampleImpressionsRoute
+  '/example/preview': typeof ExamplePreviewRoute
   '/g/$sessionId': typeof GSessionIdRoute
   '/ga/$sessionId': typeof GaSessionIdRoute
   '/gi/$token': typeof GiTokenRoute
@@ -402,6 +420,8 @@ export interface FileRouteTypes {
     | '/admin/meet'
     | '/c/$token'
     | '/chain/week'
+    | '/example/impressions'
+    | '/example/preview'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -444,6 +464,8 @@ export interface FileRouteTypes {
     | '/admin/meet'
     | '/c/$token'
     | '/chain/week'
+    | '/example/impressions'
+    | '/example/preview'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -486,6 +508,8 @@ export interface FileRouteTypes {
     | '/admin_/meet'
     | '/c/$token'
     | '/chain/week'
+    | '/example/impressions'
+    | '/example/preview'
     | '/g/$sessionId'
     | '/ga/$sessionId'
     | '/gi/$token'
@@ -528,6 +552,8 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   AdminMeetRoute: typeof AdminMeetRoute
   CTokenRoute: typeof CTokenRoute
+  ExampleImpressionsRoute: typeof ExampleImpressionsRoute
+  ExamplePreviewRoute: typeof ExamplePreviewRoute
   GSessionIdRoute: typeof GSessionIdRoute
   GaSessionIdRoute: typeof GaSessionIdRoute
   GiTokenRoute: typeof GiTokenRoute
@@ -685,6 +711,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/chain/week'
       preLoaderRoute: typeof ChainWeekRouteImport
       parentRoute: typeof ChainRoute
+    }
+    '/example/impressions': {
+      id: '/example/impressions'
+      path: '/example/impressions'
+      fullPath: '/example/impressions'
+      preLoaderRoute: typeof ExampleImpressionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/example/preview': {
+      id: '/example/preview'
+      path: '/example/preview'
+      fullPath: '/example/preview'
+      preLoaderRoute: typeof ExamplePreviewRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/g/$sessionId': {
       id: '/g/$sessionId'
@@ -865,6 +905,8 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   AdminMeetRoute: AdminMeetRoute,
   CTokenRoute: CTokenRoute,
+  ExampleImpressionsRoute: ExampleImpressionsRoute,
+  ExamplePreviewRoute: ExamplePreviewRoute,
   GSessionIdRoute: GSessionIdRoute,
   GaSessionIdRoute: GaSessionIdRoute,
   GiTokenRoute: GiTokenRoute,
