@@ -27,7 +27,7 @@ export const REPORT_AXES = {
 } as const;
 
 // Some questions phrase their A/B options in the reverse direction from an axis.
-const REVERSED = new Set(["talk_15", "34f13a21-6330-4f1f-ba43-ebe939f86741"]);
+const REVERSED = new Set(["meet_click_03", "talk_15", "34f13a21-6330-4f1f-ba43-ebe939f86741"]);
 
 export type ReportAnswer = {
   questionId: string;
