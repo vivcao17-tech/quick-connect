@@ -84,8 +84,8 @@ function PackReportPage() {
             {hidden.length > 0 && <div className="mt-12 border-t border-border pt-6 space-y-5">
               {hidden.map((axis) => (
                 <div key={axis.key} className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm text-muted-foreground">Answer {2 - axis.count} more about {axis.name} to see this</p>
-                  <Link to="/remote" search={{ pack }} className="text-sm text-primary underline">Answer questions →</Link>
+                  <p className="text-sm text-muted-foreground">Answer 2 more about {axis.name} to see this</p>
+                  <Link to="/remote" search={{ pack }} className="btn-quiet text-sm">Answer questions →</Link>
                 </div>
               ))}
             </div>}
