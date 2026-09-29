@@ -125,3 +125,10 @@
 - [x] Leave room below both pages for a multi-axis chart, not settled yet
 - [x] Verify both pages signed out at phone width
 
+## Personal pack reports
+
+- [x] Add Click, Talk, and Bring Out report entries with a four-answer unlock
+- [x] Tag fitting A/B bank questions with one axis at most; leave others untagged
+- [x] Show only axes with two tagged answers, hidden-axis prompts, and the impression-card entry
+- [x] Check signed-in pack picker and locked report states in the browser
+

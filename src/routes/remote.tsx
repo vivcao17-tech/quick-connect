@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { impressionStem, withName } from "@/components/QuestionText";
+import { PackReportEntry } from "@/components/PackReportEntry";
 import { getGuestToken } from "@/lib/guest";
 import {
   DEFAULT_PACK_LABEL,
@@ -268,11 +269,11 @@ function RemotePage() {
               </button>
             )}
             {pickerPacks.map(({ pack, next }) => (
+              <div key={pack} className="card-soft overflow-hidden">
               <button
-                key={pack}
                 disabled={busy}
                 onClick={() => void choosePack(pack)}
-                className="card-soft px-6 py-5 text-left hover:border-primary disabled:opacity-50"
+                className="w-full px-6 py-5 text-left hover:text-primary disabled:opacity-50"
               >
                 {next && (
                   <p className="mb-1 text-xs tracking-[0.18em] text-primary uppercase">Next up</p>
@@ -289,6 +290,8 @@ function RemotePage() {
                     ) : null;
                   })()}
               </button>
+              {pack !== "clash" && guestToken && <PackReportEntry pack={pack} guestToken={guestToken} profileId={viewer.profileId} />}
+              </div>
             ))}
           </div>
 
