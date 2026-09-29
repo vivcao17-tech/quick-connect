@@ -1122,6 +1122,7 @@ export type Database = {
           pack: string | null
           question_key: string | null
           question_type: string
+          report_axis: string | null
           self_prompt: string | null
           source: string | null
           spice_level: number
@@ -1146,6 +1147,7 @@ export type Database = {
           pack?: string | null
           question_key?: string | null
           question_type?: string
+          report_axis?: string | null
           self_prompt?: string | null
           source?: string | null
           spice_level?: number
@@ -1170,6 +1172,7 @@ export type Database = {
           pack?: string | null
           question_key?: string | null
           question_type?: string
+          report_axis?: string | null
           self_prompt?: string | null
           source?: string | null
           spice_level?: number
