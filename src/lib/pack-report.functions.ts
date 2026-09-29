@@ -37,14 +37,19 @@ export const getOwnPackReport = createServerFn({ method: "POST" })
     const questionIds = [...new Set(allAnswers.map((row) => row.question_id))];
     if (!questionIds.length) return summarizePackAnswers(data.pack, []);
 
-    const { data: questions, error: questionError } = await supabaseAdmin
-      .from("questions")
-      .select("id, question_key, report_axis, pack, question_type")
-      .in("id", questionIds)
-      .eq("pack", data.pack)
-      .in("question_type", ["ab", "ab_reason"]);
-    if (questionError) throw questionError;
-    const bank = new Map((questions ?? []).map((question) => [question.id, question]));
+    type Question = { id: string; question_key: string | null; report_axis: string | null };
+    const questions: Question[] = [];
+    for (let offset = 0; offset < questionIds.length; offset += 200) {
+      const { data: page, error: questionError } = await supabaseAdmin
+        .from("questions")
+        .select("id, question_key, report_axis")
+        .in("id", questionIds.slice(offset, offset + 200))
+        .eq("pack", data.pack)
+        .in("question_type", ["ab", "ab_reason"]);
+      if (questionError) throw questionError;
+      questions.push(...(page ?? []));
+    }
+    const bank = new Map(questions.map((question) => [question.id, question]));
     return summarizePackAnswers(data.pack, allAnswers.flatMap((answer) => {
       const question = bank.get(answer.question_id);
       return question ? [{ questionId: question.id, questionKey: question.question_key, axis: question.report_axis, optionKey: answer.option_key }] : [];
