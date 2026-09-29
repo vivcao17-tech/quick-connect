@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { fillName } from "@/components/QuestionText";
+import { PackReportEntry } from "@/components/PackReportEntry";
 import { getPairPreview } from "@/lib/packs.functions";
 import type { Pack } from "@/lib/packs";
 import { roundsToUnlock } from "@/lib/packs";
@@ -98,6 +99,7 @@ export function PackPreview({
                   ))}
                 </div>
               )}
+              {pack.pack !== "clash" && <div className="-mx-6 -mb-5 mt-5"><PackReportEntry pack={pack.pack} guestToken={guestToken} profileId={profileId} /></div>}
             </section>
           );
         })}
