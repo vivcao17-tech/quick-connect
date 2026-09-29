@@ -47,6 +47,7 @@ import { Route as SentSessionIdRouteImport } from './routes/sent.$sessionId'
 import { Route as AdminSSessionIdRouteImport } from './routes/admin_.s.$sessionId'
 import { Route as ApiPublicEmailDiagnosticRouteImport } from './routes/api/public/email-diagnostic'
 import { Route as ApiPublicUnsubscribeRouteImport } from './routes/api/public/unsubscribe'
+import { Route as PackPackKeyReportRouteImport } from './routes/pack.$packKey.report'
 import { Route as WithParticipantIdIndexRouteImport } from './routes/with.$participantId.index'
 import { Route as WithParticipantIdSessionIdRouteImport } from './routes/with.$participantId.$sessionId'
 import { Route as WithParticipantIdAboutRouteImport } from './routes/with.$participantId.about'
@@ -243,6 +244,11 @@ const ApiPublicUnsubscribeRoute = ApiPublicUnsubscribeRouteImport.update({
   path: '/api/public/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PackPackKeyReportRoute = PackPackKeyReportRouteImport.update({
+  id: '/pack/$packKey/report',
+  path: '/pack/$packKey/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WithParticipantIdIndexRoute = WithParticipantIdIndexRouteImport.update({
   id: '/with/$participantId/',
   path: '/with/$participantId/',
@@ -304,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/admin/s/$sessionId': typeof AdminSSessionIdRoute
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/pack/$packKey/report': typeof PackPackKeyReportRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
@@ -348,6 +355,7 @@ export interface FileRoutesByTo {
   '/admin/s/$sessionId': typeof AdminSSessionIdRoute
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/pack/$packKey/report': typeof PackPackKeyReportRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId': typeof WithParticipantIdIndexRoute
@@ -393,6 +401,7 @@ export interface FileRoutesById {
   '/admin_/s/$sessionId': typeof AdminSSessionIdRoute
   '/api/public/email-diagnostic': typeof ApiPublicEmailDiagnosticRoute
   '/api/public/unsubscribe': typeof ApiPublicUnsubscribeRoute
+  '/pack/$packKey/report': typeof PackPackKeyReportRoute
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
@@ -439,6 +448,7 @@ export interface FileRouteTypes {
     | '/admin/s/$sessionId'
     | '/api/public/email-diagnostic'
     | '/api/public/unsubscribe'
+    | '/pack/$packKey/report'
     | '/with/$participantId/$sessionId'
     | '/with/$participantId/about'
     | '/with/$participantId/'
@@ -483,6 +493,7 @@ export interface FileRouteTypes {
     | '/admin/s/$sessionId'
     | '/api/public/email-diagnostic'
     | '/api/public/unsubscribe'
+    | '/pack/$packKey/report'
     | '/with/$participantId/$sessionId'
     | '/with/$participantId/about'
     | '/with/$participantId'
@@ -527,6 +538,7 @@ export interface FileRouteTypes {
     | '/admin_/s/$sessionId'
     | '/api/public/email-diagnostic'
     | '/api/public/unsubscribe'
+    | '/pack/$packKey/report'
     | '/with/$participantId/$sessionId'
     | '/with/$participantId/about'
     | '/with/$participantId/'
@@ -571,6 +583,7 @@ export interface RootRouteChildren {
   AdminSSessionIdRoute: typeof AdminSSessionIdRoute
   ApiPublicEmailDiagnosticRoute: typeof ApiPublicEmailDiagnosticRoute
   ApiPublicUnsubscribeRoute: typeof ApiPublicUnsubscribeRoute
+  PackPackKeyReportRoute: typeof PackPackKeyReportRoute
   WithParticipantIdSessionIdRoute: typeof WithParticipantIdSessionIdRoute
   WithParticipantIdAboutRoute: typeof WithParticipantIdAboutRoute
   WithParticipantIdIndexRoute: typeof WithParticipantIdIndexRoute
@@ -845,6 +858,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pack/$packKey/report': {
+      id: '/pack/$packKey/report'
+      path: '/pack/$packKey/report'
+      fullPath: '/pack/$packKey/report'
+      preLoaderRoute: typeof PackPackKeyReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/with/$participantId/': {
       id: '/with/$participantId/'
       path: '/with/$participantId'
@@ -924,6 +944,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminSSessionIdRoute: AdminSSessionIdRoute,
   ApiPublicEmailDiagnosticRoute: ApiPublicEmailDiagnosticRoute,
   ApiPublicUnsubscribeRoute: ApiPublicUnsubscribeRoute,
+  PackPackKeyReportRoute: PackPackKeyReportRoute,
   WithParticipantIdSessionIdRoute: WithParticipantIdSessionIdRoute,
   WithParticipantIdAboutRoute: WithParticipantIdAboutRoute,
   WithParticipantIdIndexRoute: WithParticipantIdIndexRoute,
