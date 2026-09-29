@@ -9,7 +9,7 @@ import type { ReportPack } from "@/lib/pack-report";
 export function PackReportEntry({ pack, guestToken, profileId }: {
   pack: ReportPack;
   guestToken: string;
-  profileId?: string;
+  profileId?: string | undefined;
 }) {
   const load = useServerFn(getOwnPackReport);
   const [answered, setAnswered] = useState<number | null>(null);
