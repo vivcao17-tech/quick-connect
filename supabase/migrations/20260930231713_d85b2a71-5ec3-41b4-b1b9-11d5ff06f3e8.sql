@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS impression_self_revisions_card_created_idx ON public.impression_self_revisions(card_id,created_at DESC);
