@@ -1,5 +1,16 @@
 # Roadmap
 
+## Narrow visible product to Impression Cards
+
+- [ ] Keep old routes/code intact while hiding non-impression navigation and entry points
+- [ ] Show one impression entry on You and existing conversations only on People
+- [ ] Show full guest results immediately and subject results as list or grid
+- [ ] Add fixed reply prompts, tracked taps, and question option tags
+- [ ] Add admin-editable global Monday weekly impression questions and forwarding link
+- [ ] Make self answers and guesses append-only with latest-row reads
+- [ ] Replace the asymmetric starter question without changing old answered rows
+- [ ] Verify signed-in and guest flows end to end
+
 ## Speed up profile wall
 
 - [x] Trace browser and database round trips before changing the wall
