@@ -1,0 +1,12 @@
+CREATE TABLE public.impression_self_revisions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), card_id uuid NOT NULL REFERENCES public.impression_cards(id), question_key text NOT NULL, option_key text NOT NULL CHECK (option_key IN ('a','b')), created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+GRANT ALL ON public.impression_self_revisions TO service_role;
+ALTER TABLE public.impression_self_revisions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "No direct revision access" ON public.impression_self_revisions AS RESTRICTIVE FOR ALL TO public USING (false) WITH CHECK (false);
+CREATE INDEX impression_self_revisions_latest_idx ON public.impression_self_revisions(card_id,question_key,created_at DESC,id DESC);
+CREATE TRIGGER impression_self_revisions_updated BEFORE UPDATE ON public.impression_self_revisions FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TABLE public.impression_reply_taps (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), card_id uuid NOT NULL REFERENCES public.impression_cards(id), guesser_session_id text NOT NULL, question_key text NOT NULL, line_key text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+GRANT ALL ON public.impression_reply_taps TO service_role;
+ALTER TABLE public.impression_reply_taps ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "No direct reply tap access" ON public.impression_reply_taps AS RESTRICTIVE FOR ALL TO public USING (false) WITH CHECK (false);
+CREATE INDEX impression_reply_taps_card_idx ON public.impression_reply_taps(card_id,created_at);
+CREATE TRIGGER impression_reply_taps_updated BEFORE UPDATE ON public.impression_reply_taps FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
