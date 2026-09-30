@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS impression_cards_week_profile_idx ON public.impression_cards (subject_profile_id, week_start) WHERE week_start IS NOT NULL;
