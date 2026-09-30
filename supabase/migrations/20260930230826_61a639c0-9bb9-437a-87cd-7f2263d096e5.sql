@@ -1,0 +1,12 @@
+ALTER TABLE public.questions ADD COLUMN tag_a text, ADD COLUMN tag_b text;
+UPDATE public.questions SET tag_a = CASE question_key WHEN 'know_wrong' THEN 'Says it' WHEN 'know_better_at' THEN 'Starting' WHEN 'know_privately' THEN 'Chaotic' WHEN 'know_host' THEN 'Host' WHEN 'bring_i1' THEN 'Start plans' WHEN 'bring_i2' THEN 'Fix it' WHEN 'bring_i3' THEN 'Serious' ELSE tag_a END, tag_b = CASE question_key WHEN 'know_wrong' THEN 'Later' WHEN 'know_better_at' THEN 'Finishing' WHEN 'know_privately' THEN 'Organized' WHEN 'know_host' THEN 'Invited' WHEN 'bring_i1' THEN 'Make it happen' WHEN 'bring_i2' THEN 'Comfort' WHEN 'bring_i3' THEN 'Silly' ELSE tag_b END WHERE question_key IN ('know_wrong','know_better_at','know_privately','know_host','bring_i1','bring_i2','bring_i3');
+ALTER TABLE public.impression_guesses DROP CONSTRAINT impression_guesses_card_id_guesser_session_id_question_key_key;
+CREATE INDEX impression_guesses_latest_idx ON public.impression_guesses (card_id, guesser_session_id, question_key, created_at DESC, id DESC);
+ALTER TABLE public.impression_cards ADD COLUMN week_start date;
+CREATE UNIQUE INDEX impression_cards_week_owner_idx ON public.impression_cards (subject_guest_token, week_start) WHERE week_start IS NOT NULL;
+CREATE TABLE public.weekly_impression_config (week_start date PRIMARY KEY, question_keys text[] NOT NULL CHECK (cardinality(question_keys) = 3), created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+GRANT ALL ON public.weekly_impression_config TO service_role;
+ALTER TABLE public.weekly_impression_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "No direct weekly config access" ON public.weekly_impression_config AS RESTRICTIVE FOR ALL TO public USING (false) WITH CHECK (false);
+CREATE TRIGGER weekly_impression_config_updated BEFORE UPDATE ON public.weekly_impression_config FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+INSERT INTO public.weekly_impression_config (week_start,question_keys) VALUES ('2026-09-28',ARRAY['bring_i1','bring_i2','bring_i3']),('2026-10-05',ARRAY['know_wrong','know_better_at','know_host']);
