@@ -594,6 +594,79 @@ export type Database = {
           },
         ]
       }
+      impression_reply_taps: {
+        Row: {
+          card_id: string
+          created_at: string
+          guesser_session_id: string
+          id: string
+          line_key: string
+          question_key: string
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          guesser_session_id: string
+          id?: string
+          line_key: string
+          question_key: string
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          guesser_session_id?: string
+          id?: string
+          line_key?: string
+          question_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impression_reply_taps_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "impression_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      impression_self_revisions: {
+        Row: {
+          card_id: string
+          created_at: string
+          id: string
+          option_key: string
+          question_key: string
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          id?: string
+          option_key: string
+          question_key: string
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          id?: string
+          option_key?: string
+          question_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impression_self_revisions_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "impression_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invites: {
         Row: {
           child_session_id: string | null
