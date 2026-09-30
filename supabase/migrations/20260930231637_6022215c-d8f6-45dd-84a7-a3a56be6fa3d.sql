@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS impression_guesses_card_created_idx ON public.impression_guesses(card_id,created_at DESC);
