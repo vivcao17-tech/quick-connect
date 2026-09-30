@@ -508,6 +508,7 @@ export type Database = {
           subject_name: string
           subject_profile_id: string | null
           token: string
+          week_start: string | null
         }
         Insert: {
           created_at?: string
@@ -520,6 +521,7 @@ export type Database = {
           subject_name: string
           subject_profile_id?: string | null
           token: string
+          week_start?: string | null
         }
         Update: {
           created_at?: string
@@ -532,6 +534,7 @@ export type Database = {
           subject_name?: string
           subject_profile_id?: string | null
           token?: string
+          week_start?: string | null
         }
         Relationships: [
           {
@@ -1128,6 +1131,8 @@ export type Database = {
           spice_level: number
           stem_other: string | null
           stem_self: string | null
+          tag_a: string | null
+          tag_b: string | null
           text: string
           topic_id: string | null
         }
@@ -1153,6 +1158,8 @@ export type Database = {
           spice_level?: number
           stem_other?: string | null
           stem_self?: string | null
+          tag_a?: string | null
+          tag_b?: string | null
           text: string
           topic_id?: string | null
         }
@@ -1178,6 +1185,8 @@ export type Database = {
           spice_level?: number
           stem_other?: string | null
           stem_self?: string | null
+          tag_a?: string | null
+          tag_b?: string | null
           text?: string
           topic_id?: string | null
         }
@@ -1603,6 +1612,27 @@ export type Database = {
           label?: string
           slug?: string
           sort_order?: number
+        }
+        Relationships: []
+      }
+      weekly_impression_config: {
+        Row: {
+          created_at: string
+          question_keys: string[]
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          question_keys: string[]
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          question_keys?: string[]
+          updated_at?: string
+          week_start?: string
         }
         Relationships: []
       }

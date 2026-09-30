@@ -1,23 +1,21 @@
-# Simplify signed-out entry and add Meet sign-in path
+# Narrow NoSure to Impression Cards
 
-## What will change
+## Visible experience
+- Keep You and People in the bottom bar. Make the signed-out home and You page lead into the five-question impression card; keep the example impression page. Hide all 1:1, meetup, weekly-chain, pack-picker, report, and preview-example entry points from navigation without deleting their pages or underlying code.
+- Make People a list of existing 1:1 conversations only. Remove guesser-only entries from its read path and clean up test-only guesser records if any exist.
 
-- Reduce the signed-out home to the NoSure mark, tagline, primary Start action, the new outlined Meet action, sign-in link, and legal/contact links.
-- Keep Start account-free. The Meet action will send signed-out visitors to sign-in with `/meet` remembered, while signed-in visitors go directly to Meet.
-- Make Google the primary sign-in button and keep email/password as the secondary option.
-- Move the four-letter room-code field from the signed-out home to the sign-in screen.
-- Default ordinary sign-in to `/people`; preserve explicit safe destinations such as `/meet` through both Google and email sign-in.
-- Keep the existing guest-to-account linking behavior unchanged.
+## Complete the card flow
+- Give friends their per-question right/wrong results immediately after guessing, without signing in. Offer sign-in to make their own card, not to see results.
+- On You, show the share link and share/copy controls. With guesses, show results directly: a per-question view for one or two friends and a compact tappable tag grid for three or more. Add the most-missed question and one-tap prepared follow-up text for wrong guesses, counting taps without auto-sending.
+- Replace the unbalanced apology question for new cards without rewriting answered questions. Preserve old cards' original five questions.
 
-## Verification
-
-- Check the signed-out home contains only the requested items and both actions go to the correct places.
-- Check the sign-in page shows Google first, email second, and the room-code field.
-- Check an existing signed-in session reaches Meet directly and signed-out Meet intent survives sign-in.
-- Check desktop and mobile layouts and confirm the relevant pages render without errors.
+## Weekly and data integrity
+- Add a globally scheduled Monday question set editable in admin. Show the weekly question and a forwardable guess link on You, with an optional one-tap third question.
+- Store repeated guesses and changed self-answers as timestamped new rows; read the newest. Keep past records intact.
 
 ## Technical details
+- Reuse existing card/session/question structures and guest-token identity. Keep impression data behind server-side access checks, with no direct public table read.
+- Store short option tags on question records, and store weekly configuration and tracked prompt taps in protected tables/functions. Existing routes remain registered and reachable by direct URL.
+- Verify the signed-in owner and no-session guest journeys, then check the app for errors.
 
-- Reuse the current managed Google sign-in helper and enable the Google provider in Lovable Cloud.
-- Keep redirect destinations same-origin and store the intended route separately during the provider handoff.
-- Remove signed-out home data requests that only powered the destinations being removed.
+No matching, compatibility, ranking, AI descriptions, free-text guessing, or radar charts.
