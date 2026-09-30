@@ -43,7 +43,7 @@ function Home() {
     if (viewer.profileId) {
       const stored = typeof window !== "undefined" ? window.sessionStorage.getItem("nosure.after_signin") : null;
       if (stored) window.sessionStorage.removeItem("nosure.after_signin");
-      const destination = stored?.startsWith("/") && !stored.startsWith("//") ? stored : "/people";
+      const destination = stored?.startsWith("/") && !stored.startsWith("//") ? stored : "/me";
       void navigate({ to: destination, replace: true });
       return;
     }
@@ -65,30 +65,16 @@ function Home() {
 
         <div className="mt-12">
           <Button
-            variant="outline"
-            className="mb-4 h-auto w-full rounded-full py-4 text-base"
+            className="h-auto w-full rounded-full py-5 text-xl"
             onClick={() => void navigate({ to: "/know" })}
           >
             See how your friends read you
           </Button>
-
-          <Button
-            className="h-auto w-full rounded-full py-5 text-xl"
-            onClick={() => void navigate({ to: "/start" })}
-          >
-            Start
-          </Button>
           <p className="mt-3 text-sm text-muted-foreground">
-            Three questions with someone you know. 30 seconds, no account.
+            Answer five questions about yourself. Send the link. See who reads you right.
           </p>
         </div>
-
-        <div className="mt-8">
-          <Button asChild variant="outline" className="h-auto w-full rounded-full py-4 text-base"><Link to="/auth" search={{ redirect: "/meet" }}>Meet people you’d get along with</Link></Button>
-          <p className="mt-3 text-sm text-muted-foreground">Answer a few questions. We’ll match you with a few people at Berkeley. Friendship only.</p>
-        </div>
-
-        <p className="mt-auto pt-16 text-center text-sm text-muted-foreground">Already have an account? <Link to="/auth" search={{ redirect: "/people" }} className="underline underline-offset-4">Sign in</Link></p>
+        <p className="mt-auto pt-16 text-center text-sm text-muted-foreground">Already have an account? <Link to="/auth" search={{ redirect: "/me" }} className="underline underline-offset-4">Sign in</Link></p>
 
         <footer className="mt-16 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
           <Link to="/terms" className="underline underline-offset-4">
