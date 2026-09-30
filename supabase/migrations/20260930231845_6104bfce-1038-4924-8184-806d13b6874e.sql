@@ -1,0 +1,1 @@
+CREATE INDEX weekly_impression_config_updated_idx ON public.weekly_impression_config(updated_at DESC);

@@ -1,39 +1,19 @@
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarDays, MapPin, UserRound, UsersRound } from "lucide-react";
+import { UserRound, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { getChainWeek } from "@/lib/chain.functions";
 import { getMyImpressions } from "@/lib/know.functions";
 import { useViewer } from "@/lib/viewer";
 
 const tabs = [
-  { label: "People", to: "/people" as const, icon: UsersRound },
-  { label: "This week", to: "/chain" as const, icon: CalendarDays },
   { label: "You", to: "/me" as const, icon: UserRound },
-  { label: "Meet", to: "/meet" as const, icon: MapPin },
+  { label: "People", to: "/people" as const, icon: UsersRound },
 ];
 
 /** deferChecks: hold the weekly-dot lookup until the page's own data has drawn. */
 export function AppTabs({ deferChecks = false }: { deferChecks?: boolean } = {}) {
   const viewer = useViewer();
-  const loadWeek = useServerFn(getChainWeek);
-  const [weekNeedsAnswer, setWeekNeedsAnswer] = useState(false);
-
-  const refreshWeek = useCallback(() => {
-    if (deferChecks || !viewer.ready || !viewer.profileId || !viewer.guestToken) return;
-    void loadWeek({ data: { guestToken: viewer.guestToken, profileId: viewer.profileId } })
-      .then((result) => setWeekNeedsAnswer(Boolean(result.week?.open && !result.mine)))
-      .catch(() => setWeekNeedsAnswer(false));
-  }, [deferChecks, loadWeek, viewer.guestToken, viewer.profileId, viewer.ready]);
-
-  useEffect(refreshWeek, [refreshWeek]);
-
-  useEffect(() => {
-    const answered = () => setWeekNeedsAnswer(false);
-    window.addEventListener("nosure:chain-answered", answered);
-    return () => window.removeEventListener("nosure:chain-answered", answered);
-  }, []);
 
   const loadImpressions = useServerFn(getMyImpressions);
   const [newGuesses, setNewGuesses] = useState(0);
@@ -54,7 +34,7 @@ export function AppTabs({ deferChecks = false }: { deferChecks?: boolean } = {})
       aria-label="Main tabs"
       className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm"
     >
-      <div className="mx-auto grid max-w-xl grid-cols-4 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto grid max-w-xl grid-cols-2 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {tabs.map(({ label, to, icon: Icon }) => (
           <Link
             key={to}
@@ -67,12 +47,6 @@ export function AppTabs({ deferChecks = false }: { deferChecks?: boolean } = {})
               <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
               {to === "/me" && newGuesses > 0 && (
                 <span aria-label="New guesses" className="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-primary" />
-              )}
-              {to === "/chain" && weekNeedsAnswer && (
-                <span
-                  aria-label="New weekly question"
-                  className="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-primary"
-                />
               )}
             </span>
             <span>{label}</span>
