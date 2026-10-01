@@ -444,15 +444,17 @@ function EntryCards() {
             <p className="mt-2 text-sm text-muted-foreground">
               Answer five questions about yourself. Send the link. See who reads you right.
             </p>
-            <Link to="/know" className="btn-ink mt-4 inline-block">
-              Start
-            </Link>
-            <Link
-              to="/example/impressions"
-              className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
-            >
-              See an example →
-            </Link>
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <Link to="/know" className="btn-ink inline-block">
+                Start
+              </Link>
+              <Link
+                to="/example/impressions"
+                className="inline-block text-xs text-muted-foreground underline underline-offset-4"
+              >
+                See an example →
+              </Link>
+            </div>
           </>
         ) : (
           <>
