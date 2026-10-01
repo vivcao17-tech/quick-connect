@@ -75,10 +75,14 @@ export const createWeeklyImpression = createServerFn({ method: "POST" })
       if (qError) throw qError;
       const ordered = [...(sqs ?? [])].sort((a, b) => a.order_index - b.order_index);
       if (ordered.length !== selected.length) throw new Error("Couldn't save the questions");
-      const { error: aError } = await db.from("answers").insert(data.answers.map((a, i) => ({
-        session_question_id: ordered[i].id, participant_id: participant.id, question_id: selected[i].id,
-        option_key: a.option, visibility: "session", answer_role: "about_self",
-      })));
+      const answerRows = data.answers.map((a, i) => {
+        const sq = ordered[i];
+        const q = selected[i];
+        if (!sq || !q) throw new Error("Couldn't save the questions");
+        return { session_question_id: sq.id, participant_id: participant.id, question_id: q.id,
+          option_key: a.option, visibility: "session", answer_role: "about_self" };
+      });
+      const { error: aError } = await db.from("answers").insert(answerRows);
       if (aError) throw aError;
       const token = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
       const { error: cError } = await db.from("impression_cards").insert({
