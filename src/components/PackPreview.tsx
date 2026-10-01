@@ -105,7 +105,7 @@ export function PackPreview({
         })}
       </div>
 
-      <PackBridge pack={data.next} name={name} />
+      <div className="hidden"><PackBridge pack={data.next} name={name} /></div>
     </div>
   );
 }

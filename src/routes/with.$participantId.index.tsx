@@ -381,7 +381,7 @@ function ConversationPage() {
             <Link
               to="/remote"
               search={{ person: participantId }}
-              className="rounded-xl px-4 py-3 text-left hover:bg-secondary"
+              className="hidden rounded-xl px-4 py-3 text-left hover:bg-secondary"
             >
               <span className="block text-base">Ask three</span>
               <span className="block text-sm text-muted-foreground">

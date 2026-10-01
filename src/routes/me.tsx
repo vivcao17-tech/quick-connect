@@ -196,7 +196,7 @@ function MyProfile() {
       <EntryCards />
 
 
-      {shareUrl && (
+      {false && shareUrl && (
         <div className="card-soft mt-8 px-6 py-5">
           <p className="text-base break-all">{shareUrl}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -275,6 +275,7 @@ function MyProfile() {
         </div>
       ))}
 
+      <div className="hidden">
       <h2 className="mt-16 text-3xl">In your own words</h2>
       {detailsLoaded ? (
         <p className="mt-3 text-base text-muted-foreground">
@@ -352,6 +353,7 @@ function MyProfile() {
         Home
       </Link>
 
+      </div>
       <footer className="mt-16 flex flex-col gap-4 border-t border-border pt-8 text-sm text-muted-foreground">
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <Link to="/terms" className="underline underline-offset-4">

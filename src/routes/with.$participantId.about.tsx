@@ -404,7 +404,7 @@ function WithPersonPage() {
           </div>
         </Fold>
 
-        {sets.length > 0 && (
+        {false && sets.length > 0 && (
           <div className="mt-8">
             <h2 className="text-2xl leading-tight">Send {name} a set you've already answered</h2>
             <p className="mt-2 text-muted-foreground">
