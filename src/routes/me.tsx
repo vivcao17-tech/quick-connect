@@ -7,6 +7,7 @@ import { readLocalSession } from "@/lib/auth-session";
 import { AppTabs } from "@/components/AppTabs";
 import { ImpressionResults } from "@/components/ImpressionResults";
 import { getMyImpressions } from "@/lib/know.functions";
+import { getWeeklyImpression } from "@/lib/weekly.functions";
 import { readLocalViewer } from "@/lib/viewer";
 import {
   getMyProfile,
@@ -410,20 +411,25 @@ function MyProfile() {
 /** The impression card is the one visible starting point on You. */
 function EntryCards() {
   const load = useServerFn(getMyImpressions);
+  const loadWeekly = useServerFn(getWeeklyImpression);
   const [card, setCard] = useState<Awaited<ReturnType<typeof getMyImpressions>> | undefined>(undefined);
+  const [weekly, setWeekly] = useState<Awaited<ReturnType<typeof getWeeklyImpression>> | undefined>(undefined);
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
     setCanShare(typeof navigator.share === "function");
     void readLocalViewer()
-      .then((v) => load({ data: { ...v, markSeen: true } }))
-      .then((r) => {
-        setCard(r);
-        window.dispatchEvent(new Event("nosure:impressions-seen"));
+      .then(async (v) => {
+        const [r, w] = await Promise.allSettled([
+          load({ data: { ...v, markSeen: true } }), loadWeekly({ data: v }),
+        ]);
+        setCard(r.status === "fulfilled" ? r.value : null);
+        setWeekly(w.status === "fulfilled" ? w.value : null);
+        if (r.status === "fulfilled") window.dispatchEvent(new Event("nosure:impressions-seen"));
       })
       .catch(() => setCard(undefined));
-  }, [load]);
+  }, [load, loadWeekly]);
 
   const guessUrl = card ? `https://nosure.app/guess/${card.token}` : "";
 
@@ -484,6 +490,18 @@ function EntryCards() {
           </>
         )}
       </div>
+
+      {weekly && (
+        <div className="mt-8 border-t border-border pt-6">
+          <h2 className="text-xl">This week's question</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{weekly.questions[0]?.text}…</p>
+          {weekly.token ? (
+            <Link to="/weekly-impression" className="mt-4 inline-block text-sm underline underline-offset-4">Send this week's link</Link>
+          ) : (
+            <Link to="/weekly-impression" className="btn-quiet mt-4 inline-block">Answer and send</Link>
+          )}
+        </div>
+      )}
 
     </div>
   );

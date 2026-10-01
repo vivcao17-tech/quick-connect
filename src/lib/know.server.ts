@@ -54,6 +54,21 @@ export async function subjectAnswers(admin: Admin, participantId: string) {
   return new Map((data ?? []).map((row) => [row.question_id, row.option_key as string]));
 }
 
+/** New self-answers are revisions; the original session answers remain untouched. */
+export async function latestSelfAnswers(admin: Admin, cardId: string, participantId: string, questions: KnowQuestion[]) {
+  const original = await subjectAnswers(admin, participantId);
+  const { data, error } = await admin.from("impression_self_revisions")
+    .select("question_key, option_key, created_at, id")
+    .eq("card_id", cardId).order("created_at", { ascending: true }).order("id", { ascending: true });
+  if (error) throw error;
+  const byKey = new Map(questions.map(q => [q.key, q.id]));
+  for (const row of data ?? []) {
+    const id = byKey.get(row.question_key);
+    if (id) original.set(id, row.option_key);
+  }
+  return original;
+}
+
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] || "your friend";
 }

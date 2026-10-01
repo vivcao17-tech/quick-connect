@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { exportCsv } from "@/lib/admin-csv";
 import { getAdminImpressions, rotateGuestToken } from "@/lib/admin.functions";
+import { getWeeklyConfig, saveWeeklyConfig } from "@/lib/weekly.functions";
 import { getGuestToken } from "@/lib/guest";
 import {
   addTestIdentityFn,
@@ -1262,7 +1263,13 @@ function NotificationsTab({ range }: { range: Range }) {
 
 function ImpressionsTab({ includeTest }: { includeTest: boolean }) {
   const load = useServerFn(getAdminImpressions);
+  const loadWeekly = useServerFn(getWeeklyConfig);
+  const saveWeekly = useServerFn(saveWeeklyConfig);
   const [data, setData] = useState<Awaited<ReturnType<typeof getAdminImpressions>> | null>(null);
+  const [weekly, setWeekly] = useState<Awaited<ReturnType<typeof getWeeklyConfig>> | null>(null);
+  const [week, setWeek] = useState(isoDay(0));
+  const [keys, setKeys] = useState(["", "", ""]);
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     void load({ data: { includeTest } })
@@ -1270,10 +1277,32 @@ function ImpressionsTab({ includeTest }: { includeTest: boolean }) {
       .catch(() => setData(null));
   }, [load, includeTest]);
 
+  useEffect(() => {
+    void loadWeekly().then(setWeekly).catch(() => setWeekly(null));
+  }, [loadWeekly]);
+
   if (!data) return <p className="mt-8 text-muted-foreground">Loading…</p>;
 
   return (
     <div className="mt-8">
+      <section className="border-b border-border pb-8">
+        <h2 className="text-2xl">Weekly questions</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Choose three questions for a Monday. Everyone gets the first two; the third is optional.</p>
+        {weekly && <div className="mt-4 space-y-2 text-sm">{weekly.weeks.map(row => (
+          <button key={row.week_start} type="button" className="block text-left underline underline-offset-4" onClick={() => { setWeek(row.week_start); setKeys(row.question_keys); }}>
+            {row.week_start}: {row.question_keys.join(" · ")}
+          </button>
+        ))}</div>}
+        <div className="mt-5 grid gap-3 sm:grid-cols-4">
+          <input aria-label="Monday date" type="date" value={week} onChange={e => setWeek(e.target.value)} className="border border-border bg-card px-3 py-2" />
+          {keys.map((key, i) => <select key={i} aria-label={`Question ${i + 1}`} value={key} onChange={e => setKeys(keys.map((old, n) => n === i ? e.target.value : old))} className="min-w-0 border border-border bg-card px-3 py-2">
+            <option value="">Question {i + 1}</option>
+            {weekly?.questions.map(q => <option key={q.question_key} value={q.question_key ?? ""}>{q.stem_self ?? q.text}</option>)}
+          </select>)}
+        </div>
+        <button type="button" className="btn-quiet mt-4" onClick={() => void saveWeekly({ data: { week, keys } }).then(() => { setNote("Saved"); return loadWeekly().then(setWeekly); }).catch(e => setNote(e instanceof Error ? e.message : "Couldn't save"))}>Save weekly questions</button>
+        {note && <p role="status" className="mt-2 text-sm">{note}</p>}
+      </section>
       <div className="grid gap-4 sm:grid-cols-4">
         <Stat label="Share pages opened" value={String(data.share.views)} />
         <Stat label="Tapped the invite" value={String(data.share.ctaTaps)} />

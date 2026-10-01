@@ -16,6 +16,7 @@ async function findMyCard(db: Admin, guestToken: string, profileId?: string) {
       .from("impression_cards")
       .select("*")
       .eq("subject_profile_id", profileId)
+      .is("week_start", null)
       .order("created_at", { ascending: false })
       .limit(1);
     if (data?.[0]) return data[0];
@@ -24,6 +25,7 @@ async function findMyCard(db: Admin, guestToken: string, profileId?: string) {
     .from("impression_cards")
     .select("*")
     .eq("subject_guest_token", guestToken)
+    .is("week_start", null)
     .order("created_at", { ascending: false })
     .limit(1);
   const card = data?.[0] ?? null;
@@ -44,9 +46,9 @@ type GuessRow = {
 async function guessesFor(db: Admin, cardId: string): Promise<GuessRow[]> {
   const { data } = await db
     .from("impression_guesses")
-    .select("guesser_session_id, guesser_display_name, question_key, guessed_option, created_at")
+    .select("guesser_session_id, guesser_display_name, question_key, guessed_option, created_at, id")
     .eq("card_id", cardId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true }).order("id", { ascending: true });
   return (data ?? []) as GuessRow[];
 }
 
@@ -193,17 +195,17 @@ export const getGuessCard = createServerFn({ method: "GET" })
 async function scoreFor(db: Admin, token: string, guesserSessionId: string) {
   const { data: card } = await db.from("impression_cards").select("*").eq("token", token).maybeSingle();
   if (!card) return null;
-  const { subjectAnswers } = await import("@/lib/know.server");
-  const [questions, actual, { data: mine }] = await Promise.all([
+  const { latestSelfAnswers } = await import("@/lib/know.server");
+  const [questions, { data: mine }] = await Promise.all([
     cardQuestions(db, card.session_id),
-    subjectAnswers(db, card.participant_id),
     db
       .from("impression_guesses")
-      .select("question_key, guessed_option, created_at")
+      .select("question_key, guessed_option, created_at, id")
       .eq("card_id", card.id)
       .eq("guesser_session_id", guesserSessionId)
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: true }).order("id", { ascending: true }),
   ]);
+  const actual = await latestSelfAnswers(db, card.id, card.participant_id, questions);
   const guessed = new Map((mine ?? []).map((g) => [g.question_key, g.guessed_option]));
   if (guessed.size < questions.length) return { card, complete: false as const };
   const rows = questions.map((q) => {
@@ -221,7 +223,7 @@ export const submitGuesses = createServerFn({ method: "POST" })
       .extend({
         token: z.string().min(6).max(40),
         name: z.string().trim().min(1).max(40),
-        guesses: z.array(z.object({ key: z.string(), option: choice })).length(5),
+        guesses: z.array(z.object({ key: z.string(), option: choice })).min(2).max(5),
       })
       .parse(input),
   )
@@ -283,10 +285,21 @@ export const getGuessResult = createServerFn({ method: "POST" })
 
 /** Subject's aggregate view. Marks new guesses as seen. */
 export const getMyImpressions = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => identity.extend({ markSeen: z.boolean().default(false) }).parse(input))
+  .inputValidator((input: unknown) => identity.extend({ markSeen: z.boolean().default(false), week: z.string().regex(/^\d{4}-\d\d-\d\d$/).optional() }).parse(input))
   .handler(async ({ data }) => {
     const db = await admin();
-    const card = await findMyCard(db, data.guestToken, data.profileId);
+    const card = data.week
+      ? await (async () => {
+          if (data.profileId) {
+            const { data: byProfile } = await db.from("impression_cards").select("*")
+              .eq("subject_profile_id", data.profileId).eq("week_start", data.week).order("created_at", { ascending: false }).limit(1);
+            if (byProfile?.[0]) return byProfile[0];
+          }
+          const { data: byGuest } = await db.from("impression_cards").select("*")
+            .eq("subject_guest_token", data.guestToken).eq("week_start", data.week).order("created_at", { ascending: false }).limit(1);
+          return byGuest?.[0] ?? null;
+        })()
+      : await findMyCard(db, data.guestToken, data.profileId);
     if (!card) return null;
     const guesses = await guessesFor(db, card.id);
     const people = new Map<string, { name: string; at: string; guesses: Map<string, string> }>();
@@ -302,8 +315,9 @@ export const getMyImpressions = createServerFn({ method: "POST" })
     const summary = { token: card.token, guessCount: people.size, newCount };
     if (!data.markSeen) return { ...summary, questions: null, guessers: null };
 
-    const { loadKnowQuestions, subjectAnswers } = await import("@/lib/know.server");
-    const [questions, actual] = await Promise.all([cardQuestions(db, card.session_id), subjectAnswers(db, card.participant_id)]);
+    const { latestSelfAnswers } = await import("@/lib/know.server");
+    const questions = await cardQuestions(db, card.session_id);
+    const actual = await latestSelfAnswers(db, card.id, card.participant_id, questions);
     const qs = questions.map((q) => {
       let a = 0;
       let b = 0;
