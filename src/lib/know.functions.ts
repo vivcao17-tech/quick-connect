@@ -331,7 +331,7 @@ export const getMyImpressions = createServerFn({ method: "POST" })
       const self = actual.get(q.id) ?? null;
       const total = a + b;
       const wrong = self === "a" ? b : self === "b" ? a : 0;
-      return { key: q.key, text: q.selfText, optionA: q.optionA, optionB: q.optionB, a, b, self, total, wrong };
+      return { key: q.key, text: q.otherText.replace(/\{name\}/g, card.subject_name.split(/\s+/)[0]), optionA: q.optionA, optionB: q.optionB, a, b, self, total, wrong };
     });
     const guessers = [...people.values()]
       .map((p) => ({
