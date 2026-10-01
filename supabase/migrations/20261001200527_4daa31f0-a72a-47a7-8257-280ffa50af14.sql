@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS impression_cards_profile_created_idx ON public.impression_cards(subject_profile_id,created_at DESC);
