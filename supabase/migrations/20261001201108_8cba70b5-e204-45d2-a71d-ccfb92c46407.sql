@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS weekly_impression_config_week_idx ON public.weekly_impression_config(week_start DESC);
