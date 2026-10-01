@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { AppTabs } from "@/components/AppTabs";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { listPeople } from "@/lib/conversations.functions";
-import { getMyImpressions } from "@/lib/know.functions";
 import { readLocalViewer, useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/people")({
@@ -165,29 +164,3 @@ function PeoplePage() {
   );
 }
 
-function KnowCard() {
-  const load = useServerFn(getMyImpressions);
-  const [card, setCard] = useState<{ token: string; guessCount: number } | null | undefined>(undefined);
-  useEffect(() => {
-    void readLocalViewer()
-      .then((v) => load({ data: { ...v, markSeen: false } }))
-      .then((r) => setCard(r ? { token: r.token, guessCount: r.guessCount } : null))
-      .catch(() => setCard(undefined));
-  }, [load]);
-  if (card === undefined) return null;
-  if (!card) {
-    return (
-      <Link to="/know" className="card-soft mt-8 block px-5 py-4 text-lg hover:border-primary">
-        See how your friends read you
-      </Link>
-    );
-  }
-  return (
-    <Link to="/me/impressions" className="card-soft mt-8 block px-5 py-4 hover:border-primary">
-      <span className="block break-all text-sm text-muted-foreground">nosure.app/guess/{card.token}</span>
-      <span className="mt-1 block text-lg">
-        {card.guessCount} {card.guessCount === 1 ? "person has" : "people have"} guessed
-      </span>
-    </Link>
-  );
-}

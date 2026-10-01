@@ -99,7 +99,7 @@ export function PackPreview({
                   ))}
                 </div>
               )}
-              {false && pack.pack !== "clash" && <div className="-mx-6 -mb-5 mt-5"><PackReportEntry pack={pack.pack} guestToken={guestToken} profileId={profileId} /></div>}
+              {pack.pack !== "clash" && <div className="hidden -mx-6 -mb-5 mt-5"><PackReportEntry pack={pack.pack} guestToken={guestToken} profileId={profileId} /></div>}
             </section>
           );
         })}
