@@ -44,9 +44,9 @@ type GuessRow = {
 async function guessesFor(db: Admin, cardId: string): Promise<GuessRow[]> {
   const { data } = await db
     .from("impression_guesses")
-    .select("guesser_session_id, guesser_display_name, question_key, guessed_option, created_at")
+    .select("guesser_session_id, guesser_display_name, question_key, guessed_option, created_at, id")
     .eq("card_id", cardId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true }).order("id", { ascending: true });
   return (data ?? []) as GuessRow[];
 }
 
@@ -193,10 +193,9 @@ export const getGuessCard = createServerFn({ method: "GET" })
 async function scoreFor(db: Admin, token: string, guesserSessionId: string) {
   const { data: card } = await db.from("impression_cards").select("*").eq("token", token).maybeSingle();
   if (!card) return null;
-  const { subjectAnswers } = await import("@/lib/know.server");
-  const [questions, actual, { data: mine }] = await Promise.all([
+  const { latestSelfAnswers } = await import("@/lib/know.server");
+  const [questions, { data: mine }] = await Promise.all([
     cardQuestions(db, card.session_id),
-    subjectAnswers(db, card.participant_id),
     db
       .from("impression_guesses")
       .select("question_key, guessed_option, created_at, id")
@@ -204,6 +203,7 @@ async function scoreFor(db: Admin, token: string, guesserSessionId: string) {
       .eq("guesser_session_id", guesserSessionId)
       .order("created_at", { ascending: true }).order("id", { ascending: true }),
   ]);
+  const actual = await latestSelfAnswers(db, card.id, card.participant_id, questions);
   const guessed = new Map((mine ?? []).map((g) => [g.question_key, g.guessed_option]));
   if (guessed.size < questions.length) return { card, complete: false as const };
   const rows = questions.map((q) => {
@@ -302,8 +302,9 @@ export const getMyImpressions = createServerFn({ method: "POST" })
     const summary = { token: card.token, guessCount: people.size, newCount };
     if (!data.markSeen) return { ...summary, questions: null, guessers: null };
 
-    const { loadKnowQuestions, subjectAnswers } = await import("@/lib/know.server");
-    const [questions, actual] = await Promise.all([cardQuestions(db, card.session_id), subjectAnswers(db, card.participant_id)]);
+    const { latestSelfAnswers } = await import("@/lib/know.server");
+    const questions = await cardQuestions(db, card.session_id);
+    const actual = await latestSelfAnswers(db, card.id, card.participant_id, questions);
     const qs = questions.map((q) => {
       let a = 0;
       let b = 0;
