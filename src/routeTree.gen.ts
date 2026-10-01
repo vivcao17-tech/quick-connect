@@ -25,6 +25,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as WeeklyImpressionRouteImport } from './routes/weekly-impression'
 import { Route as AdminMeetRouteImport } from './routes/admin_.meet'
 import { Route as CTokenRouteImport } from './routes/c.$token'
 import { Route as ChainWeekRouteImport } from './routes/chain.week'
@@ -131,6 +132,11 @@ const StartRoute = StartRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WeeklyImpressionRoute = WeeklyImpressionRouteImport.update({
+  id: '/weekly-impression',
+  path: '/weekly-impression',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminMeetRoute = AdminMeetRouteImport.update({
@@ -288,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/weekly-impression': typeof WeeklyImpressionRoute
   '/admin/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
@@ -333,6 +340,7 @@ export interface FileRoutesByTo {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/weekly-impression': typeof WeeklyImpressionRoute
   '/admin/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
@@ -379,6 +387,7 @@ export interface FileRoutesById {
   '/remote': typeof RemoteRoute
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
+  '/weekly-impression': typeof WeeklyImpressionRoute
   '/admin_/meet': typeof AdminMeetRoute
   '/c/$token': typeof CTokenRoute
   '/chain/week': typeof ChainWeekRoute
@@ -426,6 +435,7 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/weekly-impression'
     | '/admin/meet'
     | '/c/$token'
     | '/chain/week'
@@ -471,6 +481,7 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/weekly-impression'
     | '/admin/meet'
     | '/c/$token'
     | '/chain/week'
@@ -516,6 +527,7 @@ export interface FileRouteTypes {
     | '/remote'
     | '/start'
     | '/terms'
+    | '/weekly-impression'
     | '/admin_/meet'
     | '/c/$token'
     | '/chain/week'
@@ -562,6 +574,7 @@ export interface RootRouteChildren {
   RemoteRoute: typeof RemoteRoute
   StartRoute: typeof StartRoute
   TermsRoute: typeof TermsRoute
+  WeeklyImpressionRoute: typeof WeeklyImpressionRoute
   AdminMeetRoute: typeof AdminMeetRoute
   CTokenRoute: typeof CTokenRoute
   ExampleImpressionsRoute: typeof ExampleImpressionsRoute
@@ -702,6 +715,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/weekly-impression': {
+      id: '/weekly-impression'
+      path: '/weekly-impression'
+      fullPath: '/weekly-impression'
+      preLoaderRoute: typeof WeeklyImpressionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin_/meet': {
@@ -923,6 +943,7 @@ const rootRouteChildren: RootRouteChildren = {
   RemoteRoute: RemoteRoute,
   StartRoute: StartRoute,
   TermsRoute: TermsRoute,
+  WeeklyImpressionRoute: WeeklyImpressionRoute,
   AdminMeetRoute: AdminMeetRoute,
   CTokenRoute: CTokenRoute,
   ExampleImpressionsRoute: ExampleImpressionsRoute,
