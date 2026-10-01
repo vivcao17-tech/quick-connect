@@ -13,6 +13,14 @@ export const Route = createFileRoute("/with/$participantId/$sessionId")({
     });
   },
   head: () => ({
-    meta: [{ title: "Conversation — NoSure" }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: "Conversation redirect — NoSure" },
+      { name: "description", content: "Continue to your NoSure conversation." },
+      { property: "og:title", content: "Conversation redirect — NoSure" },
+      { property: "og:description", content: "Continue to your NoSure conversation." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
   }),
 });
