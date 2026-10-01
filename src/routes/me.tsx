@@ -66,6 +66,7 @@ function MyProfile() {
 
   const [profile, setProfile] = useState<Loaded | null>(null);
   const [signedOut, setSignedOut] = useState(false);
+  const [ready, setReady] = useState(false);
   const [handle, setHandle] = useState("");
   const [handleNote, setHandleNote] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -100,6 +101,7 @@ function MyProfile() {
       const { accessToken, email: sessionEmail } = await readLocalSession();
       if (!accessToken) {
         setSignedOut(true);
+        setReady(true);
         return;
       }
       setEmail(sessionEmail ?? "");
@@ -119,6 +121,8 @@ function MyProfile() {
       void fillDetails();
     } catch {
       setSignedOut(true);
+    } finally {
+      setReady(true);
     }
   }, [fillDetails, load]);
 
@@ -150,18 +154,12 @@ function MyProfile() {
   if (signedOut) {
     return (
       <Shell>
-        <h1 className="text-4xl leading-tight">Their read on you lives with your account.</h1>
-        <p className="mt-4 text-lg text-muted-foreground">
-          Sign in and it's here, with everything people have read about you.
-        </p>
-        <Link to="/auth" search={{ redirect: "/me" }} className="btn-ink mt-8 self-start">
-          Sign in
-        </Link>
+        <EntryCards />
       </Shell>
     );
   }
 
-  if (!profile) {
+  if (!ready || !profile) {
     return (
       <Shell>
         <p className="text-lg text-muted-foreground">One moment…</p>

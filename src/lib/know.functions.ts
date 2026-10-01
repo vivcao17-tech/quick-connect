@@ -109,7 +109,7 @@ export const createKnowCard = createServerFn({ method: "POST" })
     if (existing) return { token: existing.token };
     const { loadKnowQuestions } = await import("@/lib/know.server");
     const { resolveIsTest } = await import("@/lib/testing.server");
-    const questions = await loadKnowQuestions(db);
+    const questions = card ? await cardQuestions(db, card.session_id) : await loadKnowQuestions(db);
     if (data.answers.some((a, i) => a.key !== questions[i]?.key)) throw new Error("Questions changed. Refresh.");
     const profileId = data.profileId ?? null;
     const isTest = await resolveIsTest(db as never, { guestToken: data.guestToken, profileId });
@@ -266,7 +266,7 @@ export const submitGuesses = createServerFn({ method: "POST" })
     return { score: result.score, total: result.rows.length, rows: canSee ? result.rows : null };
   });
 
-/** Signed-in friend: reveal which guesses were right, and attach their account. */
+/** Return the latest complete guess to this device, including guests. */
 export const getGuessResult = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => identity.extend({ token: z.string().min(6).max(40) }).parse(input))
   .handler(async ({ data }) => {
