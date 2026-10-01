@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { readLocalSession } from "@/lib/auth-session";
 import { AppTabs } from "@/components/AppTabs";
+import { ImpressionResults } from "@/components/ImpressionResults";
 import { getMyImpressions } from "@/lib/know.functions";
 import { readLocalViewer } from "@/lib/viewer";
 import {
@@ -241,7 +242,7 @@ function MyProfile() {
         </a>
       )}
 
-      {sorted.length === 0 ? (
+      {false && (sorted.length === 0 ? (
         <div className="card-soft mt-10 px-6 py-8">
           <p className="text-2xl leading-snug">Send a set to a few people and this fills up.</p>
           <p className="mt-3 text-lg text-muted-foreground">
@@ -272,7 +273,7 @@ function MyProfile() {
             />
           ))}
         </div>
-      )}
+      ))}
 
       <h2 className="mt-16 text-3xl">In your own words</h2>
       {detailsLoaded ? (
