@@ -408,24 +408,28 @@ function MyProfile() {
   );
 }
 
-/** The two things you can start from here. Kept separate on purpose: one is
- * you answering about yourself for friends to guess; the other is a 1:1 round. */
+/** The impression card is the one visible starting point on You. */
 function EntryCards() {
   const load = useServerFn(getMyImpressions);
-  const [card, setCard] = useState<{ token: string; guessCount: number } | null | undefined>(undefined);
+  const [card, setCard] = useState<Awaited<ReturnType<typeof getMyImpressions>> | undefined>(undefined);
   const [copied, setCopied] = useState(false);
+  const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
+    setCanShare(typeof navigator.share === "function");
     void readLocalViewer()
-      .then((v) => load({ data: { ...v, markSeen: false } }))
-      .then((r) => setCard(r ? { token: r.token, guessCount: r.guessCount } : null))
+      .then((v) => load({ data: { ...v, markSeen: true } }))
+      .then((r) => {
+        setCard(r);
+        window.dispatchEvent(new Event("nosure:impressions-seen"));
+      })
       .catch(() => setCard(undefined));
   }, [load]);
 
   const guessUrl = card ? `https://nosure.app/guess/${card.token}` : "";
 
   return (
-    <div className="mt-8 grid gap-4 sm:grid-cols-2">
+    <div className="mt-8">
       <div className="card-soft border-primary px-5 py-5">
         <p className="text-xl leading-snug">See how your friends read you</p>
         {card === undefined ? (
@@ -447,18 +451,21 @@ function EntryCards() {
           </>
         ) : (
           <>
-            <p className="mt-3 break-all text-sm">{`nosure.app/guess/${card.token}`}</p>
+            {card.guessCount === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No one has guessed yet. Send it to 3 people who know you.</p>
+            ) : <ImpressionResults data={card} />}
+            <p className="mt-5 break-all text-sm">{`nosure.app/guess/${card.token}`}</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 className="btn-quiet"
                 onClick={() => {
-                  void navigator.clipboard.writeText(guessUrl);
-                  setCopied(true);
+                  void navigator.clipboard.writeText(guessUrl).then(() => setCopied(true));
                 }}
               >
                 {copied ? "Copied" : "Copy link"}
               </button>
+              {canShare && <button type="button" className="btn-quiet" onClick={() => void navigator.share({ title: "How well do you know me?", url: guessUrl }).catch(() => undefined)}>Share</button>}
               <span className="text-sm text-muted-foreground">
                 {card.guessCount} {card.guessCount === 1 ? "person has" : "people have"} guessed
               </span>
@@ -479,21 +486,6 @@ function EntryCards() {
         )}
       </div>
 
-      <div className="card-soft px-5 py-5">
-        <p className="text-xl leading-snug">Answer questions with someone</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Three questions, both of you answer, then you see where you line up.
-        </p>
-        <Link to="/start" className="btn-quiet mt-4 inline-block">
-          Start
-        </Link>
-        <Link
-          to="/example/preview"
-          className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
-        >
-          See an example →
-        </Link>
-      </div>
     </div>
   );
 }
