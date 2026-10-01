@@ -39,19 +39,22 @@ function ImpressionsPage() {
   }, [load]);
 
   const qs = data?.questions ?? [];
-  const most = [...qs].filter((q) => q.total > 0 && q.wrong > 0).sort((a, b) => b.wrong / b.total - a.wrong / a.total)[0];
+  const most = undefined as (typeof qs)[number] | undefined;
+  const count = data?.guessCount ?? 0;
 
   return (
     <main className="paper min-h-screen bg-background pb-32">
       <section className="mx-auto max-w-xl px-6 py-12">
         <Link to="/me" className="text-sm text-muted-foreground underline underline-offset-4">Back</Link>
-        <h1 className="mt-6 text-5xl leading-none">How people read you</h1>
+        <h1 className="mt-6 text-5xl leading-none">
+          {count > 0 ? `${count} ${count === 1 ? "person has" : "people have"} read you` : "How people read you"}
+        </h1>
 
         {data === undefined && <p className="mt-10 text-muted-foreground">One moment…</p>}
         {data === null && (
           <div className="mt-10">
             <p className="text-lg">You haven't made a card yet.</p>
-            <Link to="/know" className="btn-ink mt-6 inline-block">See how your friends read you</Link>
+            <Link to="/know" className="btn-ink mt-6 inline-block">Make your card</Link>
           </div>
         )}
 
@@ -59,12 +62,6 @@ function ImpressionsPage() {
           <>
             <p className="card-soft mt-8 break-all px-5 py-4 text-sm">nosure.app/guess/{data.token}</p>
             {data.guessCount === 0 && <p className="mt-8 text-muted-foreground">Nobody has guessed yet. Send the link to a few people.</p>}
-            {most && (
-              <p className="mt-8 text-xl">
-                {most.wrong} of {most.total} people got this one wrong.
-                <span className="mt-1 block text-base text-muted-foreground">{most.text}…</span>
-              </p>
-            )}
             <ImpressionResults data={data} />
             {false && <div className="mt-8 flex flex-col gap-4">
               {qs.map((q) => (
