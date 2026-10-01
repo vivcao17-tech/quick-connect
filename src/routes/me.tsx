@@ -228,10 +228,10 @@ function MyProfile() {
         </div>
       )}
 
-      {false && (profile.undisplayedNew ?? 0) > 0 && (
+      {(profile.undisplayedNew ?? 0) > 0 && (
         <a
           href="#new-read"
-          className="mt-6 self-start text-base text-primary underline underline-offset-4"
+          className="hidden mt-6 self-start text-base text-primary underline underline-offset-4"
         >
           {profile.undisplayedNew} new{" "}
           {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"} on your wall yet — see it
