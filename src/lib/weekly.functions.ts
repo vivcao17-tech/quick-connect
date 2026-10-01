@@ -59,7 +59,7 @@ export const createWeeklyImpression = createServerFn({ method: "POST" })
     const selected = set.questions.slice(0, data.answers.length);
     if (data.answers.some((a, i) => a.key !== selected[i]?.question_key)) throw new Error("Questions changed. Refresh.");
     const { resolveIsTest } = await import("@/lib/testing.server");
-    const isTest = await resolveIsTest(db as never, data);
+    const isTest = await resolveIsTest(db as never, { guestToken: data.guestToken, profileId: data.profileId ?? null });
     const { data: session, error: sError } = await db.from("sessions")
       .insert({ kind: "impression_card", status: "ended", ended_at: new Date().toISOString(), is_test: isTest })
       .select("id").single();
@@ -74,8 +74,9 @@ export const createWeeklyImpression = createServerFn({ method: "POST" })
         .select("id, order_index");
       if (qError) throw qError;
       const ordered = [...(sqs ?? [])].sort((a, b) => a.order_index - b.order_index);
+      if (ordered.length !== selected.length) throw new Error("Couldn't save the questions");
       const { error: aError } = await db.from("answers").insert(data.answers.map((a, i) => ({
-        session_question_id: ordered[i]?.id, participant_id: participant.id, question_id: selected[i]?.id,
+        session_question_id: ordered[i].id, participant_id: participant.id, question_id: selected[i].id,
         option_key: a.option, visibility: "session", answer_role: "about_self",
       })));
       if (aError) throw aError;

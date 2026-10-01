@@ -44,7 +44,8 @@ function WeeklyImpressionPage() {
     if (!set || !viewer || !name.trim() || busy) return;
     setBusy(true);
     try {
-      const result = await create({ data: { ...viewer, name: name.trim(), answers: picks.map((option, i) => ({ key: set.questions[i].key, option })) } });
+      const selected = set.questions.slice(0, picks.length);
+      const result = await create({ data: { ...viewer, name: name.trim(), answers: selected.map((q, i) => ({ key: q.key, option: picks[i] })) } });
       localStorage.setItem("beside.name", name.trim());
       setToken(result.token);
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn't save."); }
