@@ -6,7 +6,7 @@
 
 ## Complete the card flow
 - Give friends their per-question right/wrong results immediately after guessing, without signing in. Offer sign-in to make their own card, not to see results.
-- On You, show the share link and share/copy controls. With guesses, show results directly: a per-question view for one or two friends and a compact tappable tag grid for three or more. Add the most-missed question and one-tap prepared follow-up text for wrong guesses, counting taps without auto-sending.
+- On You, show the share link and share/copy controls. With guesses, show results directly: a per-question view for one or two friends and a compact tappable grid for three or more. Add the most-missed question. Do not add authored tags or prepared follow-up text.
 - Replace the unbalanced apology question for new cards without rewriting answered questions. Preserve old cards' original five questions.
 
 ## Weekly and data integrity
@@ -15,7 +15,7 @@
 
 ## Technical details
 - Reuse existing card/session/question structures and guest-token identity. Keep impression data behind server-side access checks, with no direct public table read.
-- Store short option tags on question records, and store weekly configuration and tracked prompt taps in protected tables/functions. Existing routes remain registered and reachable by direct URL.
+- Store weekly configuration behind protected server functions. Existing routes remain registered and reachable by direct URL. Do not use option tags or prompt taps.
 - Verify the signed-in owner and no-session guest journeys, then check the app for errors.
 
-No matching, compatibility, ranking, AI descriptions, free-text guessing, or radar charts.
+No matching, compatibility, ranking, AI descriptions, generated or authored tags, prepared follow-up text, free-text guessing, or radar charts.

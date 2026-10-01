@@ -290,13 +290,15 @@ export const getMyImpressions = createServerFn({ method: "POST" })
     const db = await admin();
     const card = data.week
       ? await (async () => {
+          const week = data.week;
+          if (!week) return null;
           if (data.profileId) {
             const { data: byProfile } = await db.from("impression_cards").select("*")
-              .eq("subject_profile_id", data.profileId).eq("week_start", data.week).order("created_at", { ascending: false }).limit(1);
+              .eq("subject_profile_id", data.profileId).eq("week_start", week).order("created_at", { ascending: false }).limit(1);
             if (byProfile?.[0]) return byProfile[0];
           }
           const { data: byGuest } = await db.from("impression_cards").select("*")
-            .eq("subject_guest_token", data.guestToken).eq("week_start", data.week).order("created_at", { ascending: false }).limit(1);
+            .eq("subject_guest_token", data.guestToken).eq("week_start", week).order("created_at", { ascending: false }).limit(1);
           return byGuest?.[0] ?? null;
         })()
       : await findMyCard(db, data.guestToken, data.profileId);
@@ -329,7 +331,7 @@ export const getMyImpressions = createServerFn({ method: "POST" })
       const self = actual.get(q.id) ?? null;
       const total = a + b;
       const wrong = self === "a" ? b : self === "b" ? a : 0;
-      return { key: q.key, text: q.selfText, optionA: q.optionA, optionB: q.optionB, a, b, self, total, wrong };
+      return { key: q.key, text: q.otherText.replace(/\{name\}/g, card.subject_name.split(/\s+/)[0] ?? card.subject_name), optionA: q.optionA, optionB: q.optionB, a, b, self, total, wrong };
     });
     const guessers = [...people.values()]
       .map((p) => ({

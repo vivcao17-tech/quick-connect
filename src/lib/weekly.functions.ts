@@ -36,7 +36,7 @@ export const getWeeklyImpression = createServerFn({ method: "POST" })
     const set = await weekly(db);
     if (!set) return null;
     const { data: cards } = await db.from("impression_cards").select("token")
-      .eq("week_start", set.week).eq("subject_guest_token", data.guestToken).limit(1);
+      .eq("week_start", set.week).or(`subject_guest_token.eq.${data.guestToken}${data.profileId ? `,subject_profile_id.eq.${data.profileId}` : ""}`).limit(1);
     return {
       week: set.week,
       token: cards?.[0]?.token ?? null,
@@ -54,7 +54,7 @@ export const createWeeklyImpression = createServerFn({ method: "POST" })
     const set = await weekly(db);
     if (!set) throw new Error("No questions this week");
     const { data: cards } = await db.from("impression_cards").select("token")
-      .eq("week_start", set.week).eq("subject_guest_token", data.guestToken).limit(1);
+      .eq("week_start", set.week).or(`subject_guest_token.eq.${data.guestToken}${data.profileId ? `,subject_profile_id.eq.${data.profileId}` : ""}`).limit(1);
     if (cards?.[0]) return { token: cards[0].token };
     const selected = set.questions.slice(0, data.answers.length);
     if (data.answers.some((a, i) => a.key !== selected[i]?.question_key)) throw new Error("Questions changed. Refresh.");
