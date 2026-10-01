@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS impression_cards_guest_created_idx ON public.impression_cards(subject_guest_token,created_at DESC);
