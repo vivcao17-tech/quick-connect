@@ -199,10 +199,10 @@ async function scoreFor(db: Admin, token: string, guesserSessionId: string) {
     subjectAnswers(db, card.participant_id),
     db
       .from("impression_guesses")
-      .select("question_key, guessed_option, created_at")
+      .select("question_key, guessed_option, created_at, id")
       .eq("card_id", card.id)
       .eq("guesser_session_id", guesserSessionId)
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: true }).order("id", { ascending: true }),
   ]);
   const guessed = new Map((mine ?? []).map((g) => [g.question_key, g.guessed_option]));
   if (guessed.size < questions.length) return { card, complete: false as const };
