@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AppTabs } from "@/components/AppTabs";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
-import { listPeople, listPeopleBasic } from "@/lib/conversations.functions";
+import { listPeople } from "@/lib/conversations.functions";
 import { getMyImpressions } from "@/lib/know.functions";
 import { readLocalViewer, useViewer } from "@/lib/viewer";
 
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/people")({
   }),
 });
 
-type Row = Awaited<ReturnType<typeof listPeopleBasic>>["people"][number] & { status?: string };
+type Row = Awaited<ReturnType<typeof listPeople>>["people"][number];
 type People = Row[];
 
 function colorFor(name: string) {
@@ -41,7 +41,6 @@ function colorFor(name: string) {
 function PeoplePage() {
   const [people, setPeople] = useState<People | null>(null);
   const [statuses, setStatuses] = useState<Map<string, string> | null>(null);
-  const loadBasic = useServerFn(listPeopleBasic);
   const loadFull = useServerFn(listPeople);
   const viewer = useViewer();
 
@@ -51,8 +50,7 @@ function PeoplePage() {
     let alive = true;
     void readLocalViewer().then((who) => {
       if (!alive) return;
-      // The full read excludes impression-card-only identities; don't flash
-      // the broad overview's rows while that read is still loading.
+      // Only the full read can exclude impression-card-only identities.
       void loadFull({ data: who })
         .then((result) => {
           if (!alive) return;
@@ -64,7 +62,7 @@ function PeoplePage() {
     return () => {
       alive = false;
     };
-  }, [loadBasic, loadFull]);
+  }, [loadFull]);
 
   const sorted = useMemo(
     () => [...(people ?? [])].sort((a, b) => (a.lastActivity < b.lastActivity ? 1 : -1)),

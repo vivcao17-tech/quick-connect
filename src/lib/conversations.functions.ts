@@ -203,9 +203,7 @@ export const listPeopleBasic = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return {
-      people: (overview?.people ?? []).filter((row) =>
-        details.get(row.personKey)?.sessions.some((session) => session.kind !== "impression_card"),
-      ).map((row) => ({
+      people: (overview?.people ?? []).map((row) => ({
         personKey: row.personKey,
         name: row.name,
         nickname: row.nickname,
@@ -323,7 +321,9 @@ export const listPeople = createServerFn({ method: "POST" })
     });
 
     return {
-      people: (overview?.people ?? []).map((row) => ({
+      people: (overview?.people ?? []).filter((row) =>
+        details.get(row.personKey)?.sessions.some((session) => session.kind !== "impression_card"),
+      ).map((row) => ({
         personKey: row.personKey,
         name: row.name,
         nickname: row.nickname,
