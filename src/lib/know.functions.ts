@@ -290,13 +290,15 @@ export const getMyImpressions = createServerFn({ method: "POST" })
     const db = await admin();
     const card = data.week
       ? await (async () => {
+          const week = data.week;
+          if (!week) return null;
           if (data.profileId) {
             const { data: byProfile } = await db.from("impression_cards").select("*")
-              .eq("subject_profile_id", data.profileId).eq("week_start", data.week).order("created_at", { ascending: false }).limit(1);
+              .eq("subject_profile_id", data.profileId).eq("week_start", week).order("created_at", { ascending: false }).limit(1);
             if (byProfile?.[0]) return byProfile[0];
           }
           const { data: byGuest } = await db.from("impression_cards").select("*")
-            .eq("subject_guest_token", data.guestToken).eq("week_start", data.week).order("created_at", { ascending: false }).limit(1);
+            .eq("subject_guest_token", data.guestToken).eq("week_start", week).order("created_at", { ascending: false }).limit(1);
           return byGuest?.[0] ?? null;
         })()
       : await findMyCard(db, data.guestToken, data.profileId);
