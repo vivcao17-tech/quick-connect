@@ -103,6 +103,7 @@ function GuessPage() {
           {rows.map((r) => (
             <div key={r.text} className="card-soft px-5 py-4">
               <p className="text-lg">{r.text.replace(/\{name\}/g, card.name)}…</p>
+              <p className="mt-2 text-sm text-primary">{r.right ? "You got this one right" : "You got this one wrong"}</p>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground">You guessed</p>
