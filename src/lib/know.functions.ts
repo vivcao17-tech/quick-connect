@@ -331,7 +331,9 @@ export const getMyImpressions = createServerFn({ method: "POST" })
       const self = actual.get(q.id) ?? null;
       const total = a + b;
       const wrong = self === "a" ? b : self === "b" ? a : 0;
-      return { key: q.key, text: q.otherText.replace(/\{name\}/g, card.subject_name.split(/\s+/)[0] ?? card.subject_name), optionA: q.optionA, optionB: q.optionB, a, b, self, total, wrong };
+      const subject = (card.subject_name.split(/\s+/)[0] ?? card.subject_name) as string;
+      const ownerText = q.selfText && !/^and\b/i.test(q.selfText.trim()) ? q.selfText : q.otherText.replace(/\{name\}/g, "you");
+      return { key: q.key, text: q.otherText.replace(/\{name\}/g, subject), ownerText: ownerText.charAt(0).toUpperCase() + ownerText.slice(1), optionA: q.optionA, optionB: q.optionB, a, b, self, total, wrong };
     });
     const guessers = [...people.values()]
       .map((p) => ({

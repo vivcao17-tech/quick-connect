@@ -436,7 +436,11 @@ function EntryCards() {
   return (
     <div className="mt-8">
       <div className="card-soft border-primary px-5 py-5">
-        <p className="text-xl leading-snug">See how your friends read you</p>
+        <p className="text-xl leading-snug">
+          {card && card.guessCount > 0
+            ? `${card.guessCount} ${card.guessCount === 1 ? "person has" : "people have"} read you`
+            : "See how your friends read you"}
+        </p>
         {card === undefined ? (
           <span aria-hidden="true" className="mt-3 block h-10 animate-pulse rounded bg-muted" />
         ) : card === null ? (
@@ -493,10 +497,10 @@ function EntryCards() {
         )}
       </div>
 
-      {weekly && (
+      {weekly && weekly.questions[0]?.text?.trim() && (
         <div className="mt-8 border-t border-border pt-6">
           <h2 className="text-xl">This week's question</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{weekly.questions[0]?.text}…</p>
+          <p className="mt-2 text-sm text-muted-foreground">{weekly.questions[0]?.text}</p>
           {weekly.token ? (
             <Link to="/weekly-impression" className="mt-4 inline-block text-sm underline underline-offset-4">Send this week's link</Link>
           ) : (
