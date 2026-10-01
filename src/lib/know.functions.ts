@@ -156,14 +156,16 @@ export const getGuessCard = createServerFn({ method: "GET" })
     const { loadKnowQuestions, firstName } = await import("@/lib/know.server");
     const name = firstName(card.subject_name);
     const questions = await loadKnowQuestions(db);
+    const { data: assigned } = await db.from("session_questions").select("question_id, order_index, snapshot").eq("session_id", (await db.from("impression_cards").select("session_id").eq("id", card.id).single()).data?.session_id ?? "").order("order_index");
+    const byKey = new Map(questions.map((q) => [q.id, q]));
+    const shown = assigned?.length ? assigned.map((row) => {
+      const q = byKey.get(row.question_id);
+      const snapshot = row.snapshot as { text?: string; options?: { label: string }[] } | null;
+      return { key: q?.key ?? row.question_id, text: q?.otherText ?? snapshot?.text ?? "Your friend", optionA: q?.optionA ?? snapshot?.options?.[0]?.label ?? "A", optionB: q?.optionB ?? snapshot?.options?.[1]?.label ?? "B" };
+    }) : questions.map((q) => ({ key: q.key, text: q.otherText, optionA: q.optionA, optionB: q.optionB }));
     return {
       name,
-      questions: questions.map((q) => ({
-        key: q.key,
-        text: q.otherText.replace(/\{name\}/g, name),
-        optionA: q.optionA,
-        optionB: q.optionB,
-      })),
+      questions: shown.map((q) => ({ ...q, text: q.text.replace(/\{name\}/g, name) })),
     };
   });
 

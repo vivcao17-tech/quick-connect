@@ -7,11 +7,11 @@ export const STARTER_QUESTION_KEYS = [
   "know_wrong",
   "know_better_at",
   "know_privately",
-  "know_apologize",
+  "know_plans",
   "know_host",
 ] as const;
 
-/** Friends must sign in before seeing which guesses were right. */
+/** Friends can see which guesses were right immediately. */
 export const REQUIRE_AUTH_FOR_GUESS_RESULT = false;
 
 export type KnowQuestion = {
