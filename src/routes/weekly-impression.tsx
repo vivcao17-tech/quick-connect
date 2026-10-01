@@ -72,7 +72,7 @@ function WeeklyImpressionPage() {
         <h2 className="mt-3 text-2xl">{question.text}…</h2>
         <div className="mt-5 grid gap-3">{(["a", "b"] as const).map(k => <Button key={k} variant="outline" disabled={!name.trim() || busy} className="h-auto justify-start whitespace-normal py-4 text-left" onClick={() => {
           const picks = [...answers, k]; setAnswers(picks);
-          if (picks.length === (third ? 3 : 2)) void submit(picks);
+          if (picks.length === 3) void submit(picks);
         }}>{k === "a" ? question.optionA : question.optionB}</Button>)}</div>
       </div> : answers.length === 2 && !third && !busy ? <div className="mt-7">
         <Button onClick={() => void submit(answers)}>Send two questions</Button>

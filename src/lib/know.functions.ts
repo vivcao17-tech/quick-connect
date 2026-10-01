@@ -16,6 +16,7 @@ async function findMyCard(db: Admin, guestToken: string, profileId?: string) {
       .from("impression_cards")
       .select("*")
       .eq("subject_profile_id", profileId)
+      .is("week_start", null)
       .order("created_at", { ascending: false })
       .limit(1);
     if (data?.[0]) return data[0];
@@ -24,6 +25,7 @@ async function findMyCard(db: Admin, guestToken: string, profileId?: string) {
     .from("impression_cards")
     .select("*")
     .eq("subject_guest_token", guestToken)
+    .is("week_start", null)
     .order("created_at", { ascending: false })
     .limit(1);
   const card = data?.[0] ?? null;
@@ -221,7 +223,7 @@ export const submitGuesses = createServerFn({ method: "POST" })
       .extend({
         token: z.string().min(6).max(40),
         name: z.string().trim().min(1).max(40),
-        guesses: z.array(z.object({ key: z.string(), option: choice })).length(5),
+        guesses: z.array(z.object({ key: z.string(), option: choice })).min(2).max(5),
       })
       .parse(input),
   )
