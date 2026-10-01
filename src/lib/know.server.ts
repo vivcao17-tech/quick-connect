@@ -12,7 +12,7 @@ export const STARTER_QUESTION_KEYS = [
 ] as const;
 
 /** Friends must sign in before seeing which guesses were right. */
-export const REQUIRE_AUTH_FOR_GUESS_RESULT = true;
+export const REQUIRE_AUTH_FOR_GUESS_RESULT = false;
 
 export type KnowQuestion = {
   id: string;
@@ -48,8 +48,9 @@ export async function loadKnowQuestions(admin: Admin): Promise<KnowQuestion[]> {
 export async function subjectAnswers(admin: Admin, participantId: string) {
   const { data } = await admin
     .from("answers")
-    .select("question_id, option_key")
-    .eq("participant_id", participantId);
+    .select("question_id, option_key, created_at")
+    .eq("participant_id", participantId)
+    .order("created_at", { ascending: true });
   return new Map((data ?? []).map((row) => [row.question_id, row.option_key as string]));
 }
 

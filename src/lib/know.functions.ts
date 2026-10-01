@@ -45,7 +45,8 @@ async function guessesFor(db: Admin, cardId: string): Promise<GuessRow[]> {
   const { data } = await db
     .from("impression_guesses")
     .select("guesser_session_id, guesser_display_name, question_key, guessed_option, created_at")
-    .eq("card_id", cardId);
+    .eq("card_id", cardId)
+    .order("created_at", { ascending: true });
   return (data ?? []) as GuessRow[];
 }
 
@@ -175,9 +176,10 @@ async function scoreFor(db: Admin, token: string, guesserSessionId: string) {
     subjectAnswers(db, card.participant_id),
     db
       .from("impression_guesses")
-      .select("question_key, guessed_option")
+      .select("question_key, guessed_option, created_at")
       .eq("card_id", card.id)
-      .eq("guesser_session_id", guesserSessionId),
+      .eq("guesser_session_id", guesserSessionId)
+      .order("created_at", { ascending: true }),
   ]);
   const guessed = new Map((mine ?? []).map((g) => [g.question_key, g.guessed_option]));
   if (guessed.size < questions.length) return { card, complete: false as const };
@@ -217,7 +219,7 @@ export const submitGuesses = createServerFn({ method: "POST" })
       .eq("guesser_session_id", data.guestToken)
       .limit(1);
     const firstTime = (before ?? []).length === 0;
-    if (firstTime) {
+    {
       const { error } = await db.from("impression_guesses").insert(
         data.guesses.map((g) => ({
           card_id: card.id,
@@ -228,7 +230,7 @@ export const submitGuesses = createServerFn({ method: "POST" })
           guessed_option: g.option,
         })),
       );
-      if (error && !String(error.message).includes("duplicate")) throw error;
+      if (error) throw error;
     }
     const result = await scoreFor(db, data.token, data.guestToken);
     if (!result || !result.complete) throw new Error("Couldn't save your guesses.");
@@ -238,9 +240,6 @@ export const submitGuesses = createServerFn({ method: "POST" })
       if (profile?.email) await sendGuessEmail(db, profile.email, firstName(data.name), result.score);
     }
     const canSee = !REQUIRE_AUTH_FOR_GUESS_RESULT || Boolean(data.profileId);
-    if (canSee && data.profileId) {
-      await db.from("impression_guesses").update({ guesser_profile_id: data.profileId }).eq("card_id", card.id).eq("guesser_session_id", data.guestToken);
-    }
     return { score: result.score, total: result.rows.length, rows: canSee ? result.rows : null };
   });
 
@@ -255,9 +254,6 @@ export const getGuessResult = createServerFn({ method: "POST" })
     if (!result.complete) return { status: "not_guessed" as const };
     if (REQUIRE_AUTH_FOR_GUESS_RESULT && !data.profileId) {
       return { status: "locked" as const, score: result.score, total: result.rows.length };
-    }
-    if (data.profileId) {
-      await db.from("impression_guesses").update({ guesser_profile_id: data.profileId }).eq("card_id", result.card.id).eq("guesser_session_id", data.guestToken);
     }
     return { status: "done" as const, score: result.score, total: result.rows.length, rows: result.rows };
   });
@@ -274,6 +270,8 @@ export const getMyImpressions = createServerFn({ method: "POST" })
     for (const g of guesses) {
       const p = people.get(g.guesser_session_id) ?? { name: g.guesser_display_name, at: g.created_at, guesses: new Map() };
       p.guesses.set(g.question_key, g.guessed_option);
+      p.at = g.created_at;
+      p.name = g.guesser_display_name;
       people.set(g.guesser_session_id, p);
     }
     const seen = card.seen_at ? new Date(card.seen_at).getTime() : 0;
@@ -301,6 +299,7 @@ export const getMyImpressions = createServerFn({ method: "POST" })
         name: p.name,
         at: p.at,
         score: questions.filter((q) => p.guesses.get(q.key) === actual.get(q.id)).length,
+        picks: Object.fromEntries(p.guesses),
       }))
       .sort((x, y) => new Date(y.at).getTime() - new Date(x.at).getTime());
     await db.from("impression_cards").update({ seen_at: new Date().toISOString() }).eq("id", card.id);

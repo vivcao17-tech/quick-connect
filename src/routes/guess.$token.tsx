@@ -116,9 +116,13 @@ function GuessPage() {
             </div>
           ))}
         </div>
-        <Button asChild className="mt-10 h-auto w-full rounded-full py-4 text-lg">
-          <Link to="/know">Now see how people read you</Link>
-        </Button>
+        <div className="mt-10 border-t border-border pt-8">
+          <h2 className="text-2xl">Do your friends actually know you?</h2>
+          <p className="mt-3 text-muted-foreground">Answer five questions. Send your link. See who reads you right.</p>
+          <Button asChild className="mt-6 h-auto w-full rounded-full py-4 text-lg">
+            <Link to="/auth" search={{ redirect: "/know" }}>Make your card</Link>
+          </Button>
+        </div>
       </Shell>
     );
   }

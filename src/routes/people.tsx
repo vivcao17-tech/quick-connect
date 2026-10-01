@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppTabs } from "@/components/AppTabs";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { listPeople, listPeopleBasic } from "@/lib/conversations.functions";
+import { getMyImpressions } from "@/lib/know.functions";
 import { readLocalViewer, useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/people")({
@@ -50,9 +51,8 @@ function PeoplePage() {
     let alive = true;
     void readLocalViewer().then((who) => {
       if (!alive) return;
-      void loadBasic({ data: who })
-        .then((result) => alive && setPeople((prev) => prev ?? result.people))
-        .catch(() => alive && setPeople((prev) => prev ?? []));
+      // The full read excludes impression-card-only identities; don't flash
+      // the broad overview's rows while that read is still loading.
       void loadFull({ data: who })
         .then((result) => {
           if (!alive) return;
