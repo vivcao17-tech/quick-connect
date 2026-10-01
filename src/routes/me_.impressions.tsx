@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { AppTabs } from "@/components/AppTabs";
+import { ImpressionResults } from "@/components/ImpressionResults";
 import { getMyImpressions } from "@/lib/know.functions";
 import { readLocalViewer } from "@/lib/viewer";
 
@@ -64,7 +65,8 @@ function ImpressionsPage() {
                 <span className="mt-1 block text-base text-muted-foreground">{most.text}…</span>
               </p>
             )}
-            <div className="mt-8 flex flex-col gap-4">
+            <ImpressionResults data={data} />
+            {false && <div className="mt-8 flex flex-col gap-4">
               {qs.map((q) => (
                 <div key={q.key} className={`card-soft px-5 py-4 ${most?.key === q.key ? "border-primary" : ""}`}>
                   <p className="text-lg">{q.text}…</p>
@@ -79,7 +81,7 @@ function ImpressionsPage() {
                   ))}
                 </div>
               ))}
-            </div>
+            </div>}
             {(data.guessers ?? []).length > 0 && (
               <div className="mt-10">
                 <h2 className="text-2xl">Who guessed</h2>

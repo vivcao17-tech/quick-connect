@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AppTabs } from "@/components/AppTabs";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
-import { listPeople, listPeopleBasic } from "@/lib/conversations.functions";
+import { listPeople } from "@/lib/conversations.functions";
 import { readLocalViewer, useViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/people")({
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/people")({
   }),
 });
 
-type Row = Awaited<ReturnType<typeof listPeopleBasic>>["people"][number] & { status?: string };
+type Row = Awaited<ReturnType<typeof listPeople>>["people"][number];
 type People = Row[];
 
 function colorFor(name: string) {
@@ -40,7 +40,6 @@ function colorFor(name: string) {
 function PeoplePage() {
   const [people, setPeople] = useState<People | null>(null);
   const [statuses, setStatuses] = useState<Map<string, string> | null>(null);
-  const loadBasic = useServerFn(listPeopleBasic);
   const loadFull = useServerFn(listPeople);
   const viewer = useViewer();
 
@@ -50,9 +49,7 @@ function PeoplePage() {
     let alive = true;
     void readLocalViewer().then((who) => {
       if (!alive) return;
-      void loadBasic({ data: who })
-        .then((result) => alive && setPeople((prev) => prev ?? result.people))
-        .catch(() => alive && setPeople((prev) => prev ?? []));
+      // Only the full read can exclude impression-card-only identities.
       void loadFull({ data: who })
         .then((result) => {
           if (!alive) return;
@@ -64,7 +61,7 @@ function PeoplePage() {
     return () => {
       alive = false;
     };
-  }, [loadBasic, loadFull]);
+  }, [loadFull]);
 
   const sorted = useMemo(
     () => [...(people ?? [])].sort((a, b) => (a.lastActivity < b.lastActivity ? 1 : -1)),
@@ -167,29 +164,3 @@ function PeoplePage() {
   );
 }
 
-function KnowCard() {
-  const load = useServerFn(getMyImpressions);
-  const [card, setCard] = useState<{ token: string; guessCount: number } | null | undefined>(undefined);
-  useEffect(() => {
-    void readLocalViewer()
-      .then((v) => load({ data: { ...v, markSeen: false } }))
-      .then((r) => setCard(r ? { token: r.token, guessCount: r.guessCount } : null))
-      .catch(() => setCard(undefined));
-  }, [load]);
-  if (card === undefined) return null;
-  if (!card) {
-    return (
-      <Link to="/know" className="card-soft mt-8 block px-5 py-4 text-lg hover:border-primary">
-        See how your friends read you
-      </Link>
-    );
-  }
-  return (
-    <Link to="/me/impressions" className="card-soft mt-8 block px-5 py-4 hover:border-primary">
-      <span className="block break-all text-sm text-muted-foreground">nosure.app/guess/{card.token}</span>
-      <span className="mt-1 block text-lg">
-        {card.guessCount} {card.guessCount === 1 ? "person has" : "people have"} guessed
-      </span>
-    </Link>
-  );
-}

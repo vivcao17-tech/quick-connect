@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS impression_cards_session_idx ON public.impression_cards(session_id);

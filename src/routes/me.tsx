@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { readLocalSession } from "@/lib/auth-session";
 import { AppTabs } from "@/components/AppTabs";
+import { ImpressionResults } from "@/components/ImpressionResults";
 import { getMyImpressions } from "@/lib/know.functions";
 import { readLocalViewer } from "@/lib/viewer";
 import {
@@ -65,6 +66,7 @@ function MyProfile() {
 
   const [profile, setProfile] = useState<Loaded | null>(null);
   const [signedOut, setSignedOut] = useState(false);
+  const [ready, setReady] = useState(false);
   const [handle, setHandle] = useState("");
   const [handleNote, setHandleNote] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -99,6 +101,7 @@ function MyProfile() {
       const { accessToken, email: sessionEmail } = await readLocalSession();
       if (!accessToken) {
         setSignedOut(true);
+        setReady(true);
         return;
       }
       setEmail(sessionEmail ?? "");
@@ -118,6 +121,8 @@ function MyProfile() {
       void fillDetails();
     } catch {
       setSignedOut(true);
+    } finally {
+      setReady(true);
     }
   }, [fillDetails, load]);
 
@@ -149,18 +154,12 @@ function MyProfile() {
   if (signedOut) {
     return (
       <Shell>
-        <h1 className="text-4xl leading-tight">Their read on you lives with your account.</h1>
-        <p className="mt-4 text-lg text-muted-foreground">
-          Sign in and it's here, with everything people have read about you.
-        </p>
-        <Link to="/auth" search={{ redirect: "/me" }} className="btn-ink mt-8 self-start">
-          Sign in
-        </Link>
+        <EntryCards />
       </Shell>
     );
   }
 
-  if (!profile) {
+  if (!ready || !profile) {
     return (
       <Shell>
         <p className="text-lg text-muted-foreground">One moment…</p>
@@ -188,14 +187,13 @@ function MyProfile() {
 
   return (
     <Shell>
-      <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">Their read on you</p>
-      <h1 className="mt-6 text-5xl leading-[1.05]">{profile.displayName}</h1>
-      <p className="mt-3 text-sm text-muted-foreground">From the last 90 days.</p>
+      <p className="text-sm tracking-[0.28em] text-muted-foreground uppercase">no<span className="text-primary">/</span>sure</p>
+      <h1 className="mt-6 text-5xl leading-[1.05]">You</h1>
 
       <EntryCards />
 
 
-      {shareUrl && (
+      {false && shareUrl && (
         <div className="card-soft mt-8 px-6 py-5">
           <p className="text-base break-all">{shareUrl}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -233,7 +231,7 @@ function MyProfile() {
       {(profile.undisplayedNew ?? 0) > 0 && (
         <a
           href="#new-read"
-          className="mt-6 self-start text-base text-primary underline underline-offset-4"
+          className="hidden mt-6 self-start text-base text-primary underline underline-offset-4"
         >
           {profile.undisplayedNew} new{" "}
           {profile.undisplayedNew === 1 ? "read isn't" : "reads aren't"} on your wall yet — see it
@@ -241,7 +239,7 @@ function MyProfile() {
         </a>
       )}
 
-      {sorted.length === 0 ? (
+      {false && (sorted.length === 0 ? (
         <div className="card-soft mt-10 px-6 py-8">
           <p className="text-2xl leading-snug">Send a set to a few people and this fills up.</p>
           <p className="mt-3 text-lg text-muted-foreground">
@@ -272,8 +270,9 @@ function MyProfile() {
             />
           ))}
         </div>
-      )}
+      ))}
 
+      <div className="hidden">
       <h2 className="mt-16 text-3xl">In your own words</h2>
       {detailsLoaded ? (
         <p className="mt-3 text-base text-muted-foreground">
@@ -351,6 +350,7 @@ function MyProfile() {
         Home
       </Link>
 
+      </div>
       <footer className="mt-16 flex flex-col gap-4 border-t border-border pt-8 text-sm text-muted-foreground">
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <Link to="/terms" className="underline underline-offset-4">
@@ -407,24 +407,28 @@ function MyProfile() {
   );
 }
 
-/** The two things you can start from here. Kept separate on purpose: one is
- * you answering about yourself for friends to guess; the other is a 1:1 round. */
+/** The impression card is the one visible starting point on You. */
 function EntryCards() {
   const load = useServerFn(getMyImpressions);
-  const [card, setCard] = useState<{ token: string; guessCount: number } | null | undefined>(undefined);
+  const [card, setCard] = useState<Awaited<ReturnType<typeof getMyImpressions>> | undefined>(undefined);
   const [copied, setCopied] = useState(false);
+  const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
+    setCanShare(typeof navigator.share === "function");
     void readLocalViewer()
-      .then((v) => load({ data: { ...v, markSeen: false } }))
-      .then((r) => setCard(r ? { token: r.token, guessCount: r.guessCount } : null))
+      .then((v) => load({ data: { ...v, markSeen: true } }))
+      .then((r) => {
+        setCard(r);
+        window.dispatchEvent(new Event("nosure:impressions-seen"));
+      })
       .catch(() => setCard(undefined));
   }, [load]);
 
   const guessUrl = card ? `https://nosure.app/guess/${card.token}` : "";
 
   return (
-    <div className="mt-8 grid gap-4 sm:grid-cols-2">
+    <div className="mt-8">
       <div className="card-soft border-primary px-5 py-5">
         <p className="text-xl leading-snug">See how your friends read you</p>
         {card === undefined ? (
@@ -446,18 +450,21 @@ function EntryCards() {
           </>
         ) : (
           <>
-            <p className="mt-3 break-all text-sm">{`nosure.app/guess/${card.token}`}</p>
+            {card.guessCount === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No one has guessed yet. Send it to 3 people who know you.</p>
+            ) : <ImpressionResults data={card} />}
+            <p className="mt-5 break-all text-sm">{`nosure.app/guess/${card.token}`}</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 className="btn-quiet"
                 onClick={() => {
-                  void navigator.clipboard.writeText(guessUrl);
-                  setCopied(true);
+                  void navigator.clipboard.writeText(guessUrl).then(() => setCopied(true));
                 }}
               >
                 {copied ? "Copied" : "Copy link"}
               </button>
+              {canShare && <button type="button" className="btn-quiet" onClick={() => void navigator.share({ title: "How well do you know me?", url: guessUrl }).catch(() => undefined)}>Share</button>}
               <span className="text-sm text-muted-foreground">
                 {card.guessCount} {card.guessCount === 1 ? "person has" : "people have"} guessed
               </span>
@@ -478,21 +485,6 @@ function EntryCards() {
         )}
       </div>
 
-      <div className="card-soft px-5 py-5">
-        <p className="text-xl leading-snug">Answer questions with someone</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Three questions, both of you answer, then you see where you line up.
-        </p>
-        <Link to="/start" className="btn-quiet mt-4 inline-block">
-          Start
-        </Link>
-        <Link
-          to="/example/preview"
-          className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
-        >
-          See an example →
-        </Link>
-      </div>
     </div>
   );
 }

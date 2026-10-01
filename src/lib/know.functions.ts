@@ -45,8 +45,37 @@ async function guessesFor(db: Admin, cardId: string): Promise<GuessRow[]> {
   const { data } = await db
     .from("impression_guesses")
     .select("guesser_session_id, guesser_display_name, question_key, guessed_option, created_at")
-    .eq("card_id", cardId);
+    .eq("card_id", cardId)
+    .order("created_at", { ascending: true });
   return (data ?? []) as GuessRow[];
+}
+
+/** Resolve the questions attached to this card, not the latest starter set. */
+async function cardQuestions(db: Admin, sessionId: string) {
+  const { data: assigned, error } = await db.from("session_questions")
+    .select("question_id, order_index, snapshot")
+    .eq("session_id", sessionId)
+    .order("order_index");
+  if (error) throw error;
+  const ids = (assigned ?? []).map((row) => row.question_id);
+  if (!ids.length) return [];
+  const { data: rows, error: questionError } = await db.from("questions")
+    .select("id, question_key, stem_self, stem_other, text, option_a, option_b")
+    .in("id", ids);
+  if (questionError) throw questionError;
+  const byId = new Map((rows ?? []).map((row) => [row.id, row]));
+  return (assigned ?? []).map((row) => {
+    const question = byId.get(row.question_id);
+    if (!question) throw new Error("Card question is missing");
+    return {
+      id: row.question_id,
+      key: question.question_key ?? row.question_id,
+      selfText: question.stem_self ?? question.text,
+      otherText: question.stem_other ?? question.text,
+      optionA: question.option_a,
+      optionB: question.option_b,
+    };
+  });
 }
 
 /** Subject's self-facing questions. Contains no one's answers. */
@@ -148,36 +177,32 @@ export const getGuessCard = createServerFn({ method: "GET" })
     const db = await admin();
     const { data: card } = await db
       .from("impression_cards")
-      .select("id, subject_name")
+      .select("id, session_id, subject_name")
       .eq("token", data.token)
       .maybeSingle();
     if (!card) return null;
-    const { loadKnowQuestions, firstName } = await import("@/lib/know.server");
+    const { firstName } = await import("@/lib/know.server");
     const name = firstName(card.subject_name);
-    const questions = await loadKnowQuestions(db);
+    const questions = await cardQuestions(db, card.session_id);
     return {
       name,
-      questions: questions.map((q) => ({
-        key: q.key,
-        text: q.otherText.replace(/\{name\}/g, name),
-        optionA: q.optionA,
-        optionB: q.optionB,
-      })),
+      questions: questions.map((q) => ({ key: q.key, text: q.otherText.replace(/\{name\}/g, name), optionA: q.optionA, optionB: q.optionB })),
     };
   });
 
 async function scoreFor(db: Admin, token: string, guesserSessionId: string) {
   const { data: card } = await db.from("impression_cards").select("*").eq("token", token).maybeSingle();
   if (!card) return null;
-  const { loadKnowQuestions, subjectAnswers } = await import("@/lib/know.server");
+  const { subjectAnswers } = await import("@/lib/know.server");
   const [questions, actual, { data: mine }] = await Promise.all([
-    loadKnowQuestions(db),
+    cardQuestions(db, card.session_id),
     subjectAnswers(db, card.participant_id),
     db
       .from("impression_guesses")
-      .select("question_key, guessed_option")
+      .select("question_key, guessed_option, created_at")
       .eq("card_id", card.id)
-      .eq("guesser_session_id", guesserSessionId),
+      .eq("guesser_session_id", guesserSessionId)
+      .order("created_at", { ascending: true }),
   ]);
   const guessed = new Map((mine ?? []).map((g) => [g.question_key, g.guessed_option]));
   if (guessed.size < questions.length) return { card, complete: false as const };
@@ -202,14 +227,14 @@ export const submitGuesses = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const db = await admin();
-    const { STARTER_QUESTION_KEYS, REQUIRE_AUTH_FOR_GUESS_RESULT, sendGuessEmail, firstName } = await import("@/lib/know.server");
+    const { REQUIRE_AUTH_FOR_GUESS_RESULT, sendGuessEmail, firstName } = await import("@/lib/know.server");
     const { data: card } = await db.from("impression_cards").select("*").eq("token", data.token).maybeSingle();
     if (!card) throw new Error("This link doesn't work anymore.");
     if (card.subject_guest_token === data.guestToken || (data.profileId && card.subject_profile_id === data.profileId)) {
       throw new Error("This is your own card. Send it to friends.");
     }
-    const keys = new Set<string>(STARTER_QUESTION_KEYS);
-    if (data.guesses.some((g) => !keys.has(g.key))) throw new Error("Questions changed. Refresh.");
+    const questions = await cardQuestions(db, card.session_id);
+    if (data.guesses.length !== questions.length || data.guesses.some((g, i) => g.key !== questions[i]?.key)) throw new Error("Questions changed. Refresh.");
     const { data: before } = await db
       .from("impression_guesses")
       .select("id")
@@ -217,7 +242,7 @@ export const submitGuesses = createServerFn({ method: "POST" })
       .eq("guesser_session_id", data.guestToken)
       .limit(1);
     const firstTime = (before ?? []).length === 0;
-    if (firstTime) {
+    {
       const { error } = await db.from("impression_guesses").insert(
         data.guesses.map((g) => ({
           card_id: card.id,
@@ -228,7 +253,7 @@ export const submitGuesses = createServerFn({ method: "POST" })
           guessed_option: g.option,
         })),
       );
-      if (error && !String(error.message).includes("duplicate")) throw error;
+      if (error) throw error;
     }
     const result = await scoreFor(db, data.token, data.guestToken);
     if (!result || !result.complete) throw new Error("Couldn't save your guesses.");
@@ -238,13 +263,10 @@ export const submitGuesses = createServerFn({ method: "POST" })
       if (profile?.email) await sendGuessEmail(db, profile.email, firstName(data.name), result.score);
     }
     const canSee = !REQUIRE_AUTH_FOR_GUESS_RESULT || Boolean(data.profileId);
-    if (canSee && data.profileId) {
-      await db.from("impression_guesses").update({ guesser_profile_id: data.profileId }).eq("card_id", card.id).eq("guesser_session_id", data.guestToken);
-    }
     return { score: result.score, total: result.rows.length, rows: canSee ? result.rows : null };
   });
 
-/** Signed-in friend: reveal which guesses were right, and attach their account. */
+/** Return the latest complete guess to this device, including guests. */
 export const getGuessResult = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => identity.extend({ token: z.string().min(6).max(40) }).parse(input))
   .handler(async ({ data }) => {
@@ -255,9 +277,6 @@ export const getGuessResult = createServerFn({ method: "POST" })
     if (!result.complete) return { status: "not_guessed" as const };
     if (REQUIRE_AUTH_FOR_GUESS_RESULT && !data.profileId) {
       return { status: "locked" as const, score: result.score, total: result.rows.length };
-    }
-    if (data.profileId) {
-      await db.from("impression_guesses").update({ guesser_profile_id: data.profileId }).eq("card_id", result.card.id).eq("guesser_session_id", data.guestToken);
     }
     return { status: "done" as const, score: result.score, total: result.rows.length, rows: result.rows };
   });
@@ -274,6 +293,8 @@ export const getMyImpressions = createServerFn({ method: "POST" })
     for (const g of guesses) {
       const p = people.get(g.guesser_session_id) ?? { name: g.guesser_display_name, at: g.created_at, guesses: new Map() };
       p.guesses.set(g.question_key, g.guessed_option);
+      p.at = g.created_at;
+      p.name = g.guesser_display_name;
       people.set(g.guesser_session_id, p);
     }
     const seen = card.seen_at ? new Date(card.seen_at).getTime() : 0;
@@ -282,7 +303,7 @@ export const getMyImpressions = createServerFn({ method: "POST" })
     if (!data.markSeen) return { ...summary, questions: null, guessers: null };
 
     const { loadKnowQuestions, subjectAnswers } = await import("@/lib/know.server");
-    const [questions, actual] = await Promise.all([loadKnowQuestions(db), subjectAnswers(db, card.participant_id)]);
+    const [questions, actual] = await Promise.all([cardQuestions(db, card.session_id), subjectAnswers(db, card.participant_id)]);
     const qs = questions.map((q) => {
       let a = 0;
       let b = 0;
@@ -301,6 +322,7 @@ export const getMyImpressions = createServerFn({ method: "POST" })
         name: p.name,
         at: p.at,
         score: questions.filter((q) => p.guesses.get(q.key) === actual.get(q.id)).length,
+        picks: Object.fromEntries(p.guesses),
       }))
       .sort((x, y) => new Date(y.at).getTime() - new Date(x.at).getTime());
     await db.from("impression_cards").update({ seen_at: new Date().toISOString() }).eq("id", card.id);
