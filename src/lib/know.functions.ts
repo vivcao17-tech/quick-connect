@@ -50,6 +50,34 @@ async function guessesFor(db: Admin, cardId: string): Promise<GuessRow[]> {
   return (data ?? []) as GuessRow[];
 }
 
+/** Resolve the questions attached to this card, not the latest starter set. */
+async function cardQuestions(db: Admin, sessionId: string) {
+  const { data: assigned, error } = await db.from("session_questions")
+    .select("question_id, order_index, snapshot")
+    .eq("session_id", sessionId)
+    .order("order_index");
+  if (error) throw error;
+  const ids = (assigned ?? []).map((row) => row.question_id);
+  if (!ids.length) return [];
+  const { data: rows, error: questionError } = await db.from("questions")
+    .select("id, question_key, stem_self, stem_other, text, option_a, option_b")
+    .in("id", ids);
+  if (questionError) throw questionError;
+  const byId = new Map((rows ?? []).map((row) => [row.id, row]));
+  return (assigned ?? []).map((row) => {
+    const question = byId.get(row.question_id);
+    if (!question) throw new Error("Card question is missing");
+    return {
+      id: row.question_id,
+      key: question.question_key ?? row.question_id,
+      selfText: question.stem_self ?? question.text,
+      otherText: question.stem_other ?? question.text,
+      optionA: question.option_a,
+      optionB: question.option_b,
+    };
+  });
+}
+
 /** Subject's self-facing questions. Contains no one's answers. */
 export const getKnowStart = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => identity.parse(input))
@@ -149,32 +177,25 @@ export const getGuessCard = createServerFn({ method: "GET" })
     const db = await admin();
     const { data: card } = await db
       .from("impression_cards")
-      .select("id, subject_name")
+      .select("id, session_id, subject_name")
       .eq("token", data.token)
       .maybeSingle();
     if (!card) return null;
-    const { loadKnowQuestions, firstName } = await import("@/lib/know.server");
+    const { firstName } = await import("@/lib/know.server");
     const name = firstName(card.subject_name);
-    const questions = await loadKnowQuestions(db);
-    const { data: assigned } = await db.from("session_questions").select("question_id, order_index, snapshot").eq("session_id", (await db.from("impression_cards").select("session_id").eq("id", card.id).single()).data?.session_id ?? "").order("order_index");
-    const byKey = new Map(questions.map((q) => [q.id, q]));
-    const shown = assigned?.length ? assigned.map((row) => {
-      const q = byKey.get(row.question_id);
-      const snapshot = row.snapshot as { text?: string; options?: { label: string }[] } | null;
-      return { key: q?.key ?? row.question_id, text: q?.otherText ?? snapshot?.text ?? "Your friend", optionA: q?.optionA ?? snapshot?.options?.[0]?.label ?? "A", optionB: q?.optionB ?? snapshot?.options?.[1]?.label ?? "B" };
-    }) : questions.map((q) => ({ key: q.key, text: q.otherText, optionA: q.optionA, optionB: q.optionB }));
+    const questions = await cardQuestions(db, card.session_id);
     return {
       name,
-      questions: shown.map((q) => ({ ...q, text: q.text.replace(/\{name\}/g, name) })),
+      questions: questions.map((q) => ({ key: q.key, text: q.otherText.replace(/\{name\}/g, name), optionA: q.optionA, optionB: q.optionB })),
     };
   });
 
 async function scoreFor(db: Admin, token: string, guesserSessionId: string) {
   const { data: card } = await db.from("impression_cards").select("*").eq("token", token).maybeSingle();
   if (!card) return null;
-  const { loadKnowQuestions, subjectAnswers } = await import("@/lib/know.server");
+  const { subjectAnswers } = await import("@/lib/know.server");
   const [questions, actual, { data: mine }] = await Promise.all([
-    loadKnowQuestions(db),
+    cardQuestions(db, card.session_id),
     subjectAnswers(db, card.participant_id),
     db
       .from("impression_guesses")
@@ -206,14 +227,14 @@ export const submitGuesses = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const db = await admin();
-    const { STARTER_QUESTION_KEYS, REQUIRE_AUTH_FOR_GUESS_RESULT, sendGuessEmail, firstName } = await import("@/lib/know.server");
+    const { REQUIRE_AUTH_FOR_GUESS_RESULT, sendGuessEmail, firstName } = await import("@/lib/know.server");
     const { data: card } = await db.from("impression_cards").select("*").eq("token", data.token).maybeSingle();
     if (!card) throw new Error("This link doesn't work anymore.");
     if (card.subject_guest_token === data.guestToken || (data.profileId && card.subject_profile_id === data.profileId)) {
       throw new Error("This is your own card. Send it to friends.");
     }
-    const keys = new Set<string>(STARTER_QUESTION_KEYS);
-    if (data.guesses.some((g) => !keys.has(g.key))) throw new Error("Questions changed. Refresh.");
+    const questions = await cardQuestions(db, card.session_id);
+    if (data.guesses.length !== questions.length || data.guesses.some((g, i) => g.key !== questions[i]?.key)) throw new Error("Questions changed. Refresh.");
     const { data: before } = await db
       .from("impression_guesses")
       .select("id")
@@ -282,7 +303,7 @@ export const getMyImpressions = createServerFn({ method: "POST" })
     if (!data.markSeen) return { ...summary, questions: null, guessers: null };
 
     const { loadKnowQuestions, subjectAnswers } = await import("@/lib/know.server");
-    const [questions, actual] = await Promise.all([loadKnowQuestions(db), subjectAnswers(db, card.participant_id)]);
+    const [questions, actual] = await Promise.all([cardQuestions(db, card.session_id), subjectAnswers(db, card.participant_id)]);
     const qs = questions.map((q) => {
       let a = 0;
       let b = 0;
