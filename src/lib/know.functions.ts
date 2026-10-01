@@ -285,10 +285,21 @@ export const getGuessResult = createServerFn({ method: "POST" })
 
 /** Subject's aggregate view. Marks new guesses as seen. */
 export const getMyImpressions = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => identity.extend({ markSeen: z.boolean().default(false) }).parse(input))
+  .inputValidator((input: unknown) => identity.extend({ markSeen: z.boolean().default(false), week: z.string().regex(/^\d{4}-\d\d-\d\d$/).optional() }).parse(input))
   .handler(async ({ data }) => {
     const db = await admin();
-    const card = await findMyCard(db, data.guestToken, data.profileId);
+    const card = data.week
+      ? await (async () => {
+          if (data.profileId) {
+            const { data: byProfile } = await db.from("impression_cards").select("*")
+              .eq("subject_profile_id", data.profileId).eq("week_start", data.week).order("created_at", { ascending: false }).limit(1);
+            if (byProfile?.[0]) return byProfile[0];
+          }
+          const { data: byGuest } = await db.from("impression_cards").select("*")
+            .eq("subject_guest_token", data.guestToken).eq("week_start", data.week).order("created_at", { ascending: false }).limit(1);
+          return byGuest?.[0] ?? null;
+        })()
+      : await findMyCard(db, data.guestToken, data.profileId);
     if (!card) return null;
     const guesses = await guessesFor(db, card.id);
     const people = new Map<string, { name: string; at: string; guesses: Map<string, string> }>();

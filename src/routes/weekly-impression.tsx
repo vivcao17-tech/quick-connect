@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ImpressionResults } from "@/components/ImpressionResults";
+import { getMyImpressions } from "@/lib/know.functions";
 import { createWeeklyImpression, getWeeklyImpression } from "@/lib/weekly.functions";
 import { readLocalViewer } from "@/lib/viewer";
 
@@ -21,6 +23,7 @@ type Set = NonNullable<Awaited<ReturnType<typeof getWeeklyImpression>>>;
 
 function WeeklyImpressionPage() {
   const get = useServerFn(getWeeklyImpression);
+  const loadResults = useServerFn(getMyImpressions);
   const create = useServerFn(createWeeklyImpression);
   const [set, setSet] = useState<Set | null | undefined>(undefined);
   const [viewer, setViewer] = useState<{ guestToken: string; profileId?: string } | null>(null);
@@ -28,6 +31,7 @@ function WeeklyImpressionPage() {
   const [answers, setAnswers] = useState<("a" | "b")[]>([]);
   const [third, setThird] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [results, setResults] = useState<Awaited<ReturnType<typeof getMyImpressions>> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -35,10 +39,13 @@ function WeeklyImpressionPage() {
     setName(localStorage.getItem("beside.name") ?? "");
     void readLocalViewer().then(async v => {
       setViewer(v);
-      try { const result = await get({ data: v }); setSet(result); setToken(result?.token ?? null); }
+      try {
+        const result = await get({ data: v }); setSet(result); setToken(result?.token ?? null);
+        if (result?.token) setResults(await loadResults({ data: { ...v, week: result.week, markSeen: true } }));
+      }
       catch { setError("Couldn't load this week's questions."); setSet(null); }
     });
-  }, [get]);
+  }, [get, loadResults]);
 
   async function submit(picks: ("a" | "b")[]) {
     if (!set || !viewer || !name.trim() || busy) return;
@@ -48,6 +55,7 @@ function WeeklyImpressionPage() {
       const result = await create({ data: { ...viewer, name: name.trim(), answers: selected.map((q, i) => ({ key: q.key, option: picks[i] })) } });
       localStorage.setItem("beside.name", name.trim());
       setToken(result.token);
+      setResults(await loadResults({ data: { ...viewer, week: set.week, markSeen: true } }));
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn't save."); }
     finally { setBusy(false); }
   }
@@ -63,6 +71,7 @@ function WeeklyImpressionPage() {
       <p className="text-lg">Send this link to a friend.</p>
       <p className="mt-4 break-all text-sm">{url}</p>
       <Button variant="outline" className="mt-5" onClick={() => void navigator.clipboard.writeText(url).then(() => setCopied(true))}>{copied ? "Copied" : "Copy link"}</Button>
+      {results && <ImpressionResults data={results} />}
     </div>}
     {set && !token && <div className="mt-7">
       <label className="block text-sm text-muted-foreground" htmlFor="weekly-name">Your first name</label>
