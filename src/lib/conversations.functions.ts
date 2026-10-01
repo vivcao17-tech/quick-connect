@@ -322,7 +322,7 @@ export const listPeople = createServerFn({ method: "POST" })
 
     return {
       people: (overview?.people ?? []).filter((row) =>
-        details.get(row.personKey)?.sessions.some((session) => session.kind !== "impression_card"),
+        details.get(row.personKey)?.sessions.some((session) => session.kind === "remote" || session.kind === "irl_pair"),
       ).map((row) => ({
         personKey: row.personKey,
         name: row.name,
