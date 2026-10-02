@@ -73,6 +73,12 @@ function Home() {
           <p className="mt-3 text-sm text-muted-foreground">
             Answer five questions about yourself. Send the link. See who reads you right.
           </p>
+          <Link
+            to="/example/impressions"
+            className="mt-6 inline-block text-lg font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+          >
+            See an example →
+          </Link>
         </div>
         <p className="mt-auto pt-16 text-center text-sm text-muted-foreground">Already have an account? <Link to="/auth" search={{ redirect: "/me" }} className="underline underline-offset-4">Sign in</Link></p>
 

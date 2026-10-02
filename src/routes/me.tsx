@@ -448,17 +448,17 @@ function EntryCards() {
             <p className="mt-2 text-sm text-muted-foreground">
               Answer five questions about yourself. Send the link. See who reads you right.
             </p>
-            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <div className="mt-4">
               <Link to="/know" className="btn-ink inline-block">
                 Start
               </Link>
-              <Link
-                to="/example/impressions"
-                className="inline-block text-xs text-muted-foreground underline underline-offset-4"
-              >
-                See an example →
-              </Link>
             </div>
+            <Link
+              to="/example/impressions"
+              className="mt-6 block w-fit border-t border-border pt-4 text-lg font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+            >
+              See an example →
+            </Link>
           </>
         ) : (
           <>
@@ -487,15 +487,17 @@ function EntryCards() {
             >
               See who's guessed
             </Link>
-            <Link
-              to="/example/impressions"
-              className="mt-3 inline-block text-xs text-muted-foreground underline underline-offset-4"
-            >
-              See an example →
-            </Link>
           </>
         )}
       </div>
+      {card !== null && (
+        <Link
+          to="/example/impressions"
+          className="mt-6 block w-fit text-lg font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+        >
+          See an example →
+        </Link>
+      )}
 
       {weekly && weekly.questions[0]?.text?.trim() && (
         <div className="mt-8 border-t border-border pt-6">
