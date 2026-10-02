@@ -137,17 +137,20 @@ export const searchCardIdentities = createServerFn({ method: "GET" })
     assertAdmin(context.claims);
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
     const digits = data.query.replace(/-/g, "").toLowerCase();
-    const uuid = (hex: string) => `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
-    const lower = uuid(digits.padEnd(32, "0").slice(0, 32));
-    const upper = uuid(digits.padEnd(32, "f").slice(0, 32));
-    const [{ data: guests, error: guestError }, { data: users, error: userError }] = await Promise.all([
-      db.from("card_events").select("id, guest_token, user_id, created_at").like("guest_token", `${data.query}%`).order("created_at", { ascending: false }).limit(100),
-      db.from("card_events").select("id, guest_token, user_id, created_at").gte("user_id", lower).lte("user_id", upper).order("created_at", { ascending: false }).limit(100),
-    ]);
-    if (guestError || userError) throw guestError ?? userError;
+    // UUID columns cannot be searched with LIKE in PostgREST. Scan distinct IDs
+    // in bounded pages so fragments anywhere in either identifier work.
+    const { data: guests, error: guestError } = await db.from("card_events").select("id, guest_token, user_id, created_at").like("guest_token", `%${data.query}%`).order("created_at", { ascending: false }).limit(100);
+    if (guestError) throw guestError;
     const unique = new Map<string, { id: string; kind: "guest" | "user"; identifier: string }>();
     for (const row of guests ?? []) if (row.guest_token && !unique.has(`guest:${row.guest_token}`)) unique.set(`guest:${row.guest_token}`, { id: row.id, kind: "guest", identifier: row.guest_token });
-    for (const row of users ?? []) if (row.user_id && !unique.has(`user:${row.user_id}`)) unique.set(`user:${row.user_id}`, { id: row.id, kind: "user", identifier: row.user_id });
+    let offset = 0;
+    while (unique.size < 30) {
+      const { data: users, error: userError } = await db.from("card_events").select("id, user_id").not("user_id", "is", null).order("id").range(offset, offset + 999);
+      if (userError) throw userError;
+      for (const row of users ?? []) if (row.user_id?.replace(/-/g, "").includes(digits) && !unique.has(`user:${row.user_id}`)) unique.set(`user:${row.user_id}`, { id: row.id, kind: "user", identifier: row.user_id });
+      if (!users || users.length < 1000) break;
+      offset += 1000;
+    }
     return [...unique.values()].slice(0, 30);
   });
 
@@ -163,10 +166,15 @@ export const getCardIdentityEvents = createServerFn({ method: "GET" })
     if (anchorError) throw anchorError;
     const identifier = data.kind === "guest" ? anchor?.guest_token : anchor?.user_id;
     if (!identifier) return null;
-    const { data: events, error } = await db.from("card_events").select("id, event, created_at, card_id, guest_token, user_id, meta")
-      .eq(data.kind === "guest" ? "guest_token" : "user_id", identifier).order("created_at", { ascending: false }).order("id", { ascending: false }).range(0, 9999);
-    if (error) throw error;
-    const cardIds = [...new Set((events ?? []).map((row) => row.card_id).filter((id): id is string => Boolean(id)))];
+    const events: { id: string; event: string; created_at: string; card_id: string | null; meta: unknown }[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data: page, error } = await db.from("card_events").select("id, event, created_at, card_id, meta")
+        .eq(data.kind === "guest" ? "guest_token" : "user_id", identifier).order("created_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + 999);
+      if (error) throw error;
+      events.push(...(page ?? []));
+      if (!page || page.length < 1000) break;
+    }
+    const cardIds = [...new Set(events.map((row) => row.card_id).filter((id): id is string => Boolean(id)))];
     const { data: cards, error: cardsError } = cardIds.length
       ? await db.from("impression_cards").select("id, subject_name, token").in("id", cardIds)
       : { data: [], error: null };
@@ -178,6 +186,6 @@ export const getCardIdentityEvents = createServerFn({ method: "GET" })
       kind: data.kind,
       identifier,
       name: data.kind === "guest" ? names?.data?.[0]?.guesser_display_name ?? null : profile?.data?.display_name ?? null,
-      events: (events ?? []).map((row) => ({ id: row.id, event: row.event, at: row.created_at, card: row.card_id ? cardMap.get(row.card_id) ?? row.card_id : null, meta: row.meta })),
+       events: events.map((row) => ({ id: row.id, event: row.event, at: row.created_at, card: row.card_id ? cardMap.get(row.card_id) ?? row.card_id : null, meta: row.meta })),
     };
   });
