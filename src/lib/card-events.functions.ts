@@ -166,12 +166,12 @@ export const getCardIdentityEvents = createServerFn({ method: "GET" })
     if (anchorError) throw anchorError;
     const identifier = data.kind === "guest" ? anchor?.guest_token : anchor?.user_id;
     if (!identifier) return null;
-    const events: { id: string; event: string; created_at: string; card_id: string | null; meta: unknown }[] = [];
+    const events: { id: string; event: string; created_at: string; card_id: string | null; meta: Record<string, string | number | boolean | null> | null }[] = [];
     for (let offset = 0; ; offset += 1000) {
       const { data: page, error } = await db.from("card_events").select("id, event, created_at, card_id, meta")
         .eq(data.kind === "guest" ? "guest_token" : "user_id", identifier).order("created_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + 999);
       if (error) throw error;
-      events.push(...(page ?? []));
+      events.push(...(page ?? []).map((row) => ({ ...row, meta: row.meta && typeof row.meta === "object" && !Array.isArray(row.meta) ? Object.fromEntries(Object.entries(row.meta).filter(([key, value]) => key !== "ip" && key !== "ip_address" && (value === null || ["string", "number", "boolean"].includes(typeof value)))) as Record<string, string | number | boolean | null> : null })));
       if (!page || page.length < 1000) break;
     }
     const cardIds = [...new Set(events.map((row) => row.card_id).filter((id): id is string => Boolean(id)))];
