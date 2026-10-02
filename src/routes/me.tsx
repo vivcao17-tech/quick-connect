@@ -7,6 +7,7 @@ import { readLocalSession } from "@/lib/auth-session";
 import { AppTabs } from "@/components/AppTabs";
 import { ImpressionResults } from "@/components/ImpressionResults";
 import { getMyImpressions } from "@/lib/know.functions";
+import { logClientCardEvent } from "@/lib/card-events.functions";
 import { getWeeklyImpression } from "@/lib/weekly.functions";
 import { readLocalViewer } from "@/lib/viewer";
 import {
@@ -411,6 +412,7 @@ function MyProfile() {
 /** The impression card is the one visible starting point on You. */
 function EntryCards() {
   const load = useServerFn(getMyImpressions);
+  const logEvent = useServerFn(logClientCardEvent);
   const loadWeekly = useServerFn(getWeeklyImpression);
   const [card, setCard] = useState<Awaited<ReturnType<typeof getMyImpressions>> | undefined>(undefined);
   const [weekly, setWeekly] = useState<Awaited<ReturnType<typeof getWeeklyImpression>> | undefined>(undefined);
@@ -425,11 +427,12 @@ function EntryCards() {
           load({ data: { ...v, markSeen: true } }), loadWeekly({ data: v }),
         ]);
         setCard(r.status === "fulfilled" ? r.value : null);
+        if (r.status === "fulfilled" && r.value?.guessCount) void logEvent({ data: { event: "results_viewed", token: r.value.token, ...v } }).catch(() => undefined);
         setWeekly(w.status === "fulfilled" ? w.value : null);
         if (r.status === "fulfilled") window.dispatchEvent(new Event("nosure:impressions-seen"));
       })
       .catch(() => setCard(undefined));
-  }, [load, loadWeekly]);
+  }, [load, loadWeekly, logEvent]);
 
   const guessUrl = card ? `https://nosure.app/guess/${card.token}` : "";
 

@@ -1,6 +1,9 @@
 import { useState } from "react";
 
 import { lovable } from "@/integrations/lovable/index";
+import { useServerFn } from "@tanstack/react-start";
+import { logClientCardEvent } from "@/lib/card-events.functions";
+import { readLocalViewer } from "@/lib/viewer";
 
 /**
  * Google is the primary way in. It never appears before or during answering —
@@ -18,6 +21,7 @@ export function GoogleSignIn({
   onError?: (message: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const logEvent = useServerFn(logClientCardEvent);
 
   async function signIn() {
     setBusy(true);
@@ -35,6 +39,7 @@ export function GoogleSignIn({
         return;
       }
       if (result.redirected) return;
+      void readLocalViewer().then((viewer) => logEvent({ data: { event: "sign_in_completed", ...viewer } })).catch(() => undefined);
       if (redirectPath) window.location.assign(redirectPath);
       else window.location.reload();
     } catch {
