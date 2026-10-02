@@ -129,9 +129,13 @@ export const searchCardIdentities = createServerFn({ method: "GET" })
     const { assertAdmin } = await import("@/lib/admin.server");
     assertAdmin(context.claims);
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const digits = data.query.replace(/-/g, "").toLowerCase();
+    const uuid = (hex: string) => `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+    const lower = uuid(digits.padEnd(32, "0").slice(0, 32));
+    const upper = uuid(digits.padEnd(32, "f").slice(0, 32));
     const [{ data: guests, error: guestError }, { data: users, error: userError }] = await Promise.all([
       db.from("card_events").select("id, guest_token, user_id, created_at").like("guest_token", `${data.query}%`).order("created_at", { ascending: false }).limit(100),
-      db.from("card_events").select("id, guest_token, user_id, created_at").like("user_id", `${data.query}%`).order("created_at", { ascending: false }).limit(100),
+      db.from("card_events").select("id, guest_token, user_id, created_at").gte("user_id", lower).lte("user_id", upper).order("created_at", { ascending: false }).limit(100),
     ]);
     if (guestError || userError) throw guestError ?? userError;
     const unique = new Map<string, { id: string; kind: "guest" | "user"; identifier: string }>();
