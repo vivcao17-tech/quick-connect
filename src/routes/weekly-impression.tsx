@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ImpressionResults } from "@/components/ImpressionResults";
 import { getMyImpressions } from "@/lib/know.functions";
 import { createWeeklyImpression, getWeeklyImpression } from "@/lib/weekly.functions";
+import { logClientCardEvent } from "@/lib/card-events.functions";
 import { readLocalViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/weekly-impression")({
@@ -25,6 +26,7 @@ function WeeklyImpressionPage() {
   const get = useServerFn(getWeeklyImpression);
   const loadResults = useServerFn(getMyImpressions);
   const create = useServerFn(createWeeklyImpression);
+  const logEvent = useServerFn(logClientCardEvent);
   const [set, setSet] = useState<Set | null | undefined>(undefined);
   const [viewer, setViewer] = useState<{ guestToken: string; profileId?: string } | null>(null);
   const [name, setName] = useState("");
@@ -70,7 +72,7 @@ function WeeklyImpressionPage() {
     {set && token && <div className="mt-8">
       <p className="text-lg">Send this link to a friend.</p>
       <p className="mt-4 break-all text-sm">{url}</p>
-      <Button variant="outline" className="mt-5" onClick={() => void navigator.clipboard.writeText(url).then(() => setCopied(true))}>{copied ? "Copied" : "Copy link"}</Button>
+      <Button variant="outline" className="mt-5" onClick={() => { void logEvent({ data: { event: "share_link_copied", token: token ?? undefined, guestToken: viewer?.guestToken, profileId: viewer?.profileId, meta: { method: "copy", page: "weekly" } } }).catch(() => undefined); void navigator.clipboard.writeText(url).then(() => setCopied(true)); }}>{copied ? "Copied" : "Copy link"}</Button>
       {results && <ImpressionResults data={results} />}
     </div>}
     {set && !token && <div className="mt-7">
