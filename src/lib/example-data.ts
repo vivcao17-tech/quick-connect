@@ -7,10 +7,13 @@ export type ExampleImpression = {
   text: string;
   optionA: string;
   optionB: string;
-  /** The subject's own answer. */
-  self: "a" | "b";
-  guessesA: number;
-  guessesB: number;
+  tagA: string;
+  tagB: string;
+};
+
+export type ExampleGuesser = {
+  name: string;
+  picks: Record<string, "a" | "b">;
 };
 
 export type ExamplePreviewRow = {
@@ -26,51 +29,53 @@ export const exampleImpressions = {
   subjectName: "Sam",
   questions: [
     {
-      key: "gone-wrong",
-      text: "When something goes wrong, Sam…",
-      optionA: "Fixes it quietly",
-      optionB: "Talks it out first",
-      self: "a",
-      guessesA: 3,
-      guessesB: 2,
+      key: "know_wrong",
+      text: "When something goes wrong, Sam",
+      optionA: "Says it right away",
+      optionB: "Handles it and mentions it later",
+      tagA: "Says it",
+      tagB: "Later",
     },
     {
-      key: "called",
-      text: "Sam would rather be called…",
-      optionA: "Kind",
-      optionB: "Interesting",
-      self: "b",
-      guessesA: 4,
-      guessesB: 1,
-    },
-    {
-      key: "start-finish",
-      text: "Sam is better at…",
+      key: "know_better_at",
+      text: "Sam is better at",
       optionA: "Starting things",
       optionB: "Finishing things",
-      self: "a",
-      guessesA: 2,
-      guessesB: 2,
+      tagA: "Starting",
+      tagB: "Finishing",
     },
     {
-      key: "chaotic-organized",
-      text: "Privately, Sam is more…",
-      optionA: "Chaotic",
-      optionB: "Organized",
-      self: "b",
-      guessesA: 1,
-      guessesB: 4,
+      key: "know_privately",
+      text: "Privately, Sam is more",
+      optionA: "Chaotic than expected",
+      optionB: "Organized than expected",
+      tagA: "Chaotic",
+      tagB: "Organized",
     },
     {
-      key: "host-invited",
-      text: "Sam would rather…",
+      key: "bring_i1",
+      text: "In your friend group, does Sam…",
+      optionA: "start plans",
+      optionB: "make them happen",
+      tagA: "Start plans",
+      tagB: "Make it happen",
+    },
+    {
+      key: "know_host",
+      text: "Sam would rather",
       optionA: "Host",
       optionB: "Be invited",
-      self: "b",
-      guessesA: 2,
-      guessesB: 3,
+      tagA: "Host",
+      tagB: "Invited",
     },
   ] satisfies ExampleImpression[],
+  guessers: [
+    { name: "Jordan", picks: { know_wrong: "a", know_better_at: "a", know_privately: "b", bring_i1: "a", know_host: "a" } },
+    { name: "Ari", picks: { know_wrong: "b", know_better_at: "b", know_privately: "a", bring_i1: "b", know_host: "b" } },
+    { name: "Taylor", picks: { know_wrong: "a", know_better_at: "b", know_privately: "b", bring_i1: "a", know_host: "b" } },
+    { name: "Morgan", picks: { know_wrong: "b", know_better_at: "a", know_privately: "a", bring_i1: "b", know_host: "a" } },
+    { name: "Casey", picks: { know_wrong: "a", know_better_at: "b", know_privately: "b", bring_i1: "b", know_host: "a" } },
+  ] satisfies ExampleGuesser[],
 };
 
 export const examplePreview = {
