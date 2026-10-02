@@ -27,6 +27,7 @@ type Q = { key: string; text: string; optionA: string; optionB: string };
 function KnowPage() {
   const load = useServerFn(getKnowStart);
   const create = useServerFn(createKnowCard);
+  const logEvent = useServerFn(logClientCardEvent);
   const [viewer, setViewer] = useState<{ guestToken: string; profileId?: string } | null>(null);
   const [questions, setQuestions] = useState<Q[] | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -35,6 +36,13 @@ function KnowPage() {
   const [answers, setAnswers] = useState<("a" | "b")[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [linkLogged, setLinkLogged] = useState(false);
+
+  useEffect(() => {
+    if (!token || !viewer || linkLogged) return;
+    setLinkLogged(true);
+    void logEvent({ data: { event: "card_link_shown", token, ...viewer } }).catch(() => undefined);
+  }, [token, viewer, linkLogged, logEvent]);
 
   useEffect(() => {
     setName(window.localStorage.getItem("beside.name") ?? "");
@@ -54,6 +62,7 @@ function KnowPage() {
     if (!questions || !viewer || busy) return;
     const next = [...answers, option];
     setAnswers(next);
+    void logEvent({ data: { event: "know_question_answered", ...viewer, meta: { question_index: next.length } } }).catch(() => undefined);
     if (next.length < questions.length) return;
     setBusy(true);
     try {
@@ -90,6 +99,7 @@ function KnowPage() {
               if (!name.trim()) return;
               window.localStorage.setItem("beside.name", name.trim());
               setNamed(true);
+              if (viewer) void logEvent({ data: { event: "know_started", ...viewer } }).catch(() => undefined);
             }}
           >
             <h1 className="text-4xl leading-tight">See how your friends read you</h1>

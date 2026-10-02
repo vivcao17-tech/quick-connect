@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useServerFn } from "@tanstack/react-start";
+import { logClientCardEvent } from "@/lib/card-events.functions";
 import { trackVisit } from "@/lib/track";
 import { useViewer } from "@/lib/viewer";
 
@@ -36,6 +38,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   const navigate = useNavigate();
   const viewer = useViewer();
+  const logEvent = useServerFn(logClientCardEvent);
 
   // Return visits: the gap since this browser last opened the app.
   useEffect(() => {
@@ -48,7 +51,8 @@ function Home() {
       return;
     }
     trackVisit("home", viewer.profileId ? { profileId: viewer.profileId } : {});
-  }, [navigate, viewer.ready, viewer.profileId]);
+    void logEvent({ data: { event: "home_viewed", guestToken: viewer.guestToken } }).catch(() => undefined);
+  }, [navigate, viewer.ready, viewer.profileId, viewer.guestToken, logEvent]);
 
   return (
     <main className="paper min-h-screen bg-background">

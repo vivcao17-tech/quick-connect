@@ -44,7 +44,7 @@ export function ImpressionResults({ data }: { data: Result }) {
         <Button type="button" role="tab" aria-selected={selectedView === "question"} variant="ghost" onClick={() => setView("question")} className={`rounded-none border-b-2 px-4 ${selectedView === "question" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>By question</Button>
       </div>
       {selectedView === "person" ? (
-        <PersonImpressionView questions={questions.map((q) => ({ ...q, text: q.ownerText ?? q.text }))} guessers={guessers} onFollowup={sendFollowup} />
+        <PersonImpressionView questions={questions.map((q) => ({ ...q, text: q.ownerText ?? q.text }))} guessers={guessers} onFollowup={sendFollowup} onTagExpanded={(key) => { void readLocalViewer().then((viewer) => logEvent({ data: { event: "tag_expanded", token: data.token, ...viewer, meta: { question_key: key } } })).catch(() => undefined); }} />
       ) : <>
       {allWrong.length > 0 && (
         <section>

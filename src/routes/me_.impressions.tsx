@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AppTabs } from "@/components/AppTabs";
 import { ImpressionResults } from "@/components/ImpressionResults";
 import { getMyImpressions } from "@/lib/know.functions";
+import { logClientCardEvent } from "@/lib/card-events.functions";
 import { readLocalViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/me_/impressions")({
@@ -26,17 +27,19 @@ type Data = Awaited<ReturnType<typeof getMyImpressions>>;
 
 function ImpressionsPage() {
   const load = useServerFn(getMyImpressions);
+  const logEvent = useServerFn(logClientCardEvent);
   const [data, setData] = useState<Data | undefined>(undefined);
 
   useEffect(() => {
     void readLocalViewer()
-      .then((v) => load({ data: { ...v, markSeen: true } }))
-      .then((r) => {
+      .then(async (v) => ({ r: await load({ data: { ...v, markSeen: true } }), v }))
+      .then(({ r, v }) => {
         setData(r);
+        if (r) void logEvent({ data: { event: "results_viewed", token: r.token, ...v } }).catch(() => undefined);
         window.dispatchEvent(new Event("nosure:impressions-seen"));
       })
       .catch(() => setData(null));
-  }, [load]);
+  }, [load, logEvent]);
 
   const qs = data?.questions ?? [];
   const most = undefined as (typeof qs)[number] | undefined;

@@ -20,10 +20,12 @@ export function PersonImpressionView({
   questions,
   guessers,
   onFollowup,
+  onTagExpanded,
 }: {
   questions: PersonQuestion[];
   guessers: PersonGuesser[];
   onFollowup?: (name: string) => void;
+  onTagExpanded?: (key: string) => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copiedFor, setCopiedFor] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function PersonImpressionView({
                 index={rowIndex}
                 people={people}
                 expanded={expanded === question.key}
-                onToggle={() => setExpanded((value) => value === question.key ? null : question.key)}
+                 onToggle={() => { if (expanded !== question.key) onTagExpanded?.(question.key); setExpanded((value) => value === question.key ? null : question.key); }}
               />
             ))}
           </tbody>
