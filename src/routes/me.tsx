@@ -427,7 +427,10 @@ function EntryCards() {
           load({ data: { ...v, markSeen: true } }), loadWeekly({ data: v }),
         ]);
         setCard(r.status === "fulfilled" ? r.value : null);
-        if (r.status === "fulfilled" && r.value?.guessCount) void logEvent({ data: { event: "results_viewed", token: r.value.token, ...v } }).catch(() => undefined);
+        if (r.status === "fulfilled" && r.value) {
+          void logEvent({ data: { event: "card_link_shown", token: r.value.token, ...v } }).catch(() => undefined);
+          if (r.value.guessCount) void logEvent({ data: { event: "results_viewed", token: r.value.token, ...v } }).catch(() => undefined);
+        }
         setWeekly(w.status === "fulfilled" ? w.value : null);
         if (r.status === "fulfilled") window.dispatchEvent(new Event("nosure:impressions-seen"));
       })

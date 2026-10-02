@@ -139,7 +139,7 @@ export const searchCardIdentities = createServerFn({ method: "GET" })
     const digits = data.query.replace(/-/g, "").toLowerCase();
     // UUID columns cannot be searched with LIKE in PostgREST. Scan distinct IDs
     // in bounded pages so fragments anywhere in either identifier work.
-    const { data: guests, error: guestError } = await db.from("card_events").select("id, guest_token, user_id, created_at").like("guest_token", `%${data.query}%`).order("created_at", { ascending: false }).limit(100);
+    const { data: guests, error: guestError } = await db.from("card_events").select("id, guest_token").like("guest_token", `%${data.query}%`).order("created_at", { ascending: false }).limit(100);
     if (guestError) throw guestError;
     const unique = new Map<string, { id: string; kind: "guest" | "user"; identifier: string }>();
     for (const row of guests ?? []) if (row.guest_token && !unique.has(`guest:${row.guest_token}`)) unique.set(`guest:${row.guest_token}`, { id: row.id, kind: "guest", identifier: row.guest_token });
@@ -147,7 +147,7 @@ export const searchCardIdentities = createServerFn({ method: "GET" })
     while (unique.size < 30) {
       const { data: users, error: userError } = await db.from("card_events").select("id, user_id").not("user_id", "is", null).order("id").range(offset, offset + 999);
       if (userError) throw userError;
-      for (const row of users ?? []) if (row.user_id?.replace(/-/g, "").includes(digits) && !unique.has(`user:${row.user_id}`)) unique.set(`user:${row.user_id}`, { id: row.id, kind: "user", identifier: row.user_id });
+      for (const row of users ?? []) if (row.user_id && (row.user_id.toLowerCase().includes(data.query.toLowerCase()) || row.user_id.replace(/-/g, "").includes(digits)) && !unique.has(`user:${row.user_id}`)) unique.set(`user:${row.user_id}`, { id: row.id, kind: "user", identifier: row.user_id });
       if (!users || users.length < 1000) break;
       offset += 1000;
     }

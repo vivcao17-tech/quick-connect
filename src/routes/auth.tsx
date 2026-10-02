@@ -64,7 +64,10 @@ function AuthPage() {
       });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN") {
-        void logEvent({ data: { event: "sign_in_completed", guestToken: getGuestToken(), profileId: session?.user.id } }).catch(() => undefined);
+        if (window.sessionStorage.getItem("nosure.signin_pending")) {
+          window.sessionStorage.removeItem("nosure.signin_pending");
+          void logEvent({ data: { event: "sign_in_completed", guestToken: getGuestToken(), profileId: session?.user.id } }).catch(() => undefined);
+        }
         void navigate({ to: redirect, replace: true });
       }
     });
@@ -80,6 +83,7 @@ function AuthPage() {
     setMessage(null);
     try {
       if (mode === "signin") {
+        window.sessionStorage.setItem("nosure.signin_pending", "1");
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         void navigate({ to: redirect, replace: true });
@@ -93,6 +97,7 @@ function AuthPage() {
         setMessage("Check your email to confirm your account, then come back and sign in.");
       }
     } catch (error) {
+      window.sessionStorage.removeItem("nosure.signin_pending");
       setMessage(error instanceof Error ? error.message : "Something went wrong.");
     } finally {
       setBusy(false);
