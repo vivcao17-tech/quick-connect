@@ -52,6 +52,7 @@ import { Route as PackPackKeyReportRouteImport } from './routes/pack.$packKey.re
 import { Route as WithParticipantIdIndexRouteImport } from './routes/with.$participantId.index'
 import { Route as WithParticipantIdSessionIdRouteImport } from './routes/with.$participantId.$sessionId'
 import { Route as WithParticipantIdAboutRouteImport } from './routes/with.$participantId.about'
+import { Route as AdminActivityKindEventIdRouteImport } from './routes/admin_.activity.$kind.$eventId'
 import { Route as ApiPublicOgKindKeyRouteImport } from './routes/api/public/og.$kind.$key'
 
 const IndexRoute = IndexRouteImport.update({
@@ -271,6 +272,12 @@ const WithParticipantIdAboutRoute = WithParticipantIdAboutRouteImport.update({
   path: '/with/$participantId/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminActivityKindEventIdRoute =
+  AdminActivityKindEventIdRouteImport.update({
+    id: '/admin_/activity/$kind/$eventId',
+    path: '/admin/activity/$kind/$eventId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOgKindKeyRoute = ApiPublicOgKindKeyRouteImport.update({
   id: '/api/public/og/$kind/$key',
   path: '/api/public/og/$kind/$key',
@@ -321,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
+  '/admin/activity/$kind/$eventId': typeof AdminActivityKindEventIdRoute
   '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
 export interface FileRoutesByTo {
@@ -367,6 +375,7 @@ export interface FileRoutesByTo {
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId': typeof WithParticipantIdIndexRoute
+  '/admin/activity/$kind/$eventId': typeof AdminActivityKindEventIdRoute
   '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
 export interface FileRoutesById {
@@ -414,6 +423,7 @@ export interface FileRoutesById {
   '/with/$participantId/$sessionId': typeof WithParticipantIdSessionIdRoute
   '/with/$participantId/about': typeof WithParticipantIdAboutRoute
   '/with/$participantId/': typeof WithParticipantIdIndexRoute
+  '/admin_/activity/$kind/$eventId': typeof AdminActivityKindEventIdRoute
   '/api/public/og/$kind/$key': typeof ApiPublicOgKindKeyRoute
 }
 export interface FileRouteTypes {
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/with/$participantId/$sessionId'
     | '/with/$participantId/about'
     | '/with/$participantId/'
+    | '/admin/activity/$kind/$eventId'
     | '/api/public/og/$kind/$key'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -508,6 +519,7 @@ export interface FileRouteTypes {
     | '/with/$participantId/$sessionId'
     | '/with/$participantId/about'
     | '/with/$participantId'
+    | '/admin/activity/$kind/$eventId'
     | '/api/public/og/$kind/$key'
   id:
     | '__root__'
@@ -554,6 +566,7 @@ export interface FileRouteTypes {
     | '/with/$participantId/$sessionId'
     | '/with/$participantId/about'
     | '/with/$participantId/'
+    | '/admin_/activity/$kind/$eventId'
     | '/api/public/og/$kind/$key'
   fileRoutesById: FileRoutesById
 }
@@ -600,6 +613,7 @@ export interface RootRouteChildren {
   WithParticipantIdSessionIdRoute: typeof WithParticipantIdSessionIdRoute
   WithParticipantIdAboutRoute: typeof WithParticipantIdAboutRoute
   WithParticipantIdIndexRoute: typeof WithParticipantIdIndexRoute
+  AdminActivityKindEventIdRoute: typeof AdminActivityKindEventIdRoute
   ApiPublicOgKindKeyRoute: typeof ApiPublicOgKindKeyRoute
 }
 
@@ -906,6 +920,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WithParticipantIdAboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin_/activity/$kind/$eventId': {
+      id: '/admin_/activity/$kind/$eventId'
+      path: '/admin/activity/$kind/$eventId'
+      fullPath: '/admin/activity/$kind/$eventId'
+      preLoaderRoute: typeof AdminActivityKindEventIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/og/$kind/$key': {
       id: '/api/public/og/$kind/$key'
       path: '/api/public/og/$kind/$key'
@@ -969,6 +990,7 @@ const rootRouteChildren: RootRouteChildren = {
   WithParticipantIdSessionIdRoute: WithParticipantIdSessionIdRoute,
   WithParticipantIdAboutRoute: WithParticipantIdAboutRoute,
   WithParticipantIdIndexRoute: WithParticipantIdIndexRoute,
+  AdminActivityKindEventIdRoute: AdminActivityKindEventIdRoute,
   ApiPublicOgKindKeyRoute: ApiPublicOgKindKeyRoute,
 }
 export const routeTree = rootRouteImport
