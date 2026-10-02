@@ -6,7 +6,7 @@
 - [x] Compare the five most recent guessers on aligned question rows, with question expansion and a view toggle
 - [x] Prepare follow-up messages on tap without sending automatically and log the tap
 - [x] Show five contrasting fictional guessers on the example page from one data file
-- [ ] Verify owner and example views on desktop and mobile
+- [x] Verify owner and You views with a signed-in card and the example at desktop and phone widths
 
 ## Narrow visible product to Impression Cards
 
