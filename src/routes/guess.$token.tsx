@@ -13,19 +13,30 @@ export const Route = createFileRoute("/guess/$token")({
   component: GuessPage,
   errorComponent: () => <Shell><p className="mt-10">Couldn't open this link. Refresh to try again.</p></Shell>,
   notFoundComponent: () => <Shell><p className="mt-10">This link doesn't work.</p></Shell>,
-  head: ({ loaderData }) => {
-    const title = loaderData ? `How well do you know ${loaderData.name}? — NoSure` : "How well do you know me? — NoSure";
-    const desc = "Five guesses. See how many you get right.";
+  head: ({ params, loaderData }) => {
+    const title = loaderData ? `How well do you know ${loaderData.name}?` : "How well do you know me?";
+    const desc = "Guess five things about them — then see how you come off to your own friends.";
+    const url = `https://nosure.app/guess/${encodeURIComponent(params.token)}`;
+    const image = "https://nosure.app/guess-share.jpg";
     return {
       meta: [
-        { title },
+        { title: `${title} — NoSure` },
         { name: "description", content: desc },
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "website" },
+        { property: "og:url", content: url },
+        { property: "og:image", content: image },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:type", content: "image/jpeg" },
         { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: desc },
+        { name: "twitter:image", content: image },
         { name: "robots", content: "noindex" },
       ],
+      links: [{ rel: "canonical", href: url }],
     };
   },
 });

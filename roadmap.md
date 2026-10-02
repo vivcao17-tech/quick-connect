@@ -1,5 +1,12 @@
 # Roadmap
 
+## Guess-link preview and example entry points
+
+- [ ] Serve a static 1200×630 guess share image and server-rendered card metadata
+- [ ] Give the You-page example link its own prominent row
+- [ ] Add the example link below the signed-out home action
+- [ ] Verify the rendered share tags, image, and both entry points
+
 ## Per-person impression results
 
 - [x] Read authored question tags alongside owner results without changing the question bank

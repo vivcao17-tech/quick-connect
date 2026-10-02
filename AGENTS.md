@@ -16,6 +16,7 @@
 
 ## Impression cards
 
+- Keep guess-link share metadata in the route's server-rendered head and its static share image in public assets, so messaging crawlers can preview without running JavaScript.
 - Keep the weekly impression set in `weekly_impression_config` and resolve card questions from each card's assigned session questions, so schedule changes never rewrite an answered card.
 - Serve card creation, guesses, and owner reads through server functions; never expose guest identifiers or guesses through direct public table access.
 - Keep retired product pages available by direct URL while removing only their navigation entries, so historical links remain usable.
