@@ -93,6 +93,7 @@ function GuessPage() {
     if (!card || !viewer || busy) return;
     const next = [...guesses, option];
     setGuesses(next);
+    void logEvent({ data: { event: "guess_question_answered", token, ...viewer, meta: { question_index: next.length } } }).catch(() => undefined);
     if (next.length < card.questions.length) return;
     setBusy(true);
     try {

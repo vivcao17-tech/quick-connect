@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
 
 import { PersonImpressionView } from "@/components/PersonImpressionView";
 import { exampleImpressions } from "@/lib/example-data";
+import { logClientCardEvent } from "@/lib/card-events.functions";
+import { readLocalViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/example/impressions")({
   head: () => ({
@@ -23,6 +27,10 @@ export const Route = createFileRoute("/example/impressions")({
 
 function ExampleImpressions() {
   const { subjectName, questions, guessers } = exampleImpressions;
+  const logEvent = useServerFn(logClientCardEvent);
+  useEffect(() => {
+    void readLocalViewer().then((viewer) => logEvent({ data: { event: "example_viewed", ...viewer } })).catch(() => undefined);
+  }, [logEvent]);
 
   return (
     <main className="paper min-h-screen bg-background pb-32">

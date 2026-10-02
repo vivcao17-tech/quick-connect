@@ -347,8 +347,8 @@ export const getMyImpressions = createServerFn({ method: "POST" })
       return { key: q.key, text: q.otherText.replace(/\{name\}/g, subject), ownerText: ownerText.charAt(0).toUpperCase() + ownerText.slice(1), optionA: q.optionA, optionB: q.optionB, tagA: q.tagA, tagB: q.tagB, a, b, self, total, wrong };
     });
     const guessers = [...people.values()]
-      .map((p) => ({
-        name: p.name,
+       .map((p) => ({
+         name: p.name,
         at: p.at,
         score: questions.filter((q) => p.guesses.get(q.key) === actual.get(q.id)).length,
         picks: Object.fromEntries(p.guesses),

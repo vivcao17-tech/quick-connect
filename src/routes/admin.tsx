@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { exportCsv } from "@/lib/admin-csv";
 import { getAdminImpressions, rotateGuestToken } from "@/lib/admin.functions";
-import { getCardEvents } from "@/lib/card-events.functions";
+import { getCardEvents, searchCardIdentities } from "@/lib/card-events.functions";
 import { getWeeklyConfig, saveWeeklyConfig } from "@/lib/weekly.functions";
 import { getGuestToken } from "@/lib/guest";
 import {
@@ -608,6 +608,8 @@ function CohortsTab({ includeTest }: { includeTest: boolean }) {
 function PeopleTab({ includeTest }: { includeTest: boolean }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const findIdentity = useServerFn(searchCardIdentities);
+  const [activityLink, setActivityLink] = useState<{ kind: "guest" | "user"; id: string } | null>(null);
   const loadPeople = useServerFn(getPeople);
   const loadTimeline = useServerFn(getPersonTimeline);
 
@@ -624,6 +626,14 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
   });
 
   const t = timeline.data;
+  useEffect(() => {
+    setActivityLink(null);
+    if (!selected || !/^[a-f0-9-]{36}$/i.test(selected)) return;
+    void findIdentity({ data: { query: selected } }).then((matches) => {
+      const match = matches.find((entry) => entry.identifier === selected);
+      if (match) setActivityLink({ kind: match.kind, id: match.id });
+    }).catch(() => undefined);
+  }, [selected, findIdentity]);
 
   return (
     <div className="grid gap-8 md:grid-cols-[260px_1fr]">
@@ -643,7 +653,7 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
                 selected === person.personKey ? "text-primary" : ""
               }`}
             >
-              <span>{person.name || "Someone"}</span>
+              <span>{person.name || "Someone"}{person.identity === "guest" ? ` (${person.personKey.slice(0, 4)})` : ""}</span>
               <span className="block text-xs text-muted-foreground">
                 {person.identity} · {person.sessions} sessions · last{" "}
                 {new Date(person.lastSeen).toLocaleDateString()}
@@ -662,7 +672,7 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
           <>
             <div className="card-soft px-5 py-4">
               <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-2xl">{t.summary.name || "Someone"}</h2>
+                <h2 className="text-2xl">{t.summary.name || "Someone"}{t.summary.identity === "guest" ? ` (${t.personKey.slice(0, 4)})` : ""}</h2>
                 <span className="text-xs text-muted-foreground">{t.personKey}</span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -688,6 +698,7 @@ function PeopleTab({ includeTest }: { includeTest: boolean }) {
                 {t.summary.everInitiated ? "has started a session" : "only ever received"}
               </p>
               <RotateTokenButton personKey={t.personKey} />
+              {activityLink && <Link to="/admin/activity/$kind/$eventId" params={{ kind: activityLink.kind, eventId: activityLink.id }} className="mt-3 block w-fit text-sm text-primary underline">View activity events →</Link>}
               <div className="mt-3">
                 <ExportButton
                   onClick={() =>
@@ -1508,12 +1519,27 @@ function RotateTokenButton({ personKey }: { personKey: string }) {
 
 function CardEventsTab() {
   const load = useServerFn(getCardEvents);
+  const search = useServerFn(searchCardIdentities);
+  const [searchText, setSearchText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const matches = useQuery({ queryKey: ["admin-identity-search", searchQuery], queryFn: () => search({ data: { query: searchQuery } }), enabled: searchQuery.length >= 4, retry: false });
   const query = useQuery({ queryKey: ["admin-card-events"], queryFn: () => load(), retry: false });
   if (query.isLoading) return <p className="text-muted-foreground">Loading…</p>;
   if (query.isError || !query.data) return <p className="text-muted-foreground">Couldn't load events.</p>;
   const { funnel, counts, recent } = query.data;
   return (
     <div className="space-y-10">
+      <section>
+        <h2 className="text-2xl">Find a person</h2>
+        <form onSubmit={(e) => { e.preventDefault(); setSearchQuery(searchText.trim()); }} className="mt-3 flex flex-wrap gap-2">
+          <input aria-label="Guest token or user ID" placeholder="Guest token or user ID" value={searchText} onChange={(e) => setSearchText(e.target.value)} className="min-w-0 flex-1 border border-border bg-background px-3 py-2 text-sm" />
+          <button type="submit" className="btn-ink" disabled={searchText.trim().length < 4}>Search</button>
+        </form>
+        {matches.isLoading && <p className="mt-3 text-sm text-muted-foreground">Searching…</p>}
+        {matches.isError && <p className="mt-3 text-sm text-muted-foreground">Couldn't search. Use a hexadecimal token or ID prefix.</p>}
+        {matches.data?.map((match) => <Link key={`${match.kind}-${match.identifier}`} to="/admin/activity/$kind/$eventId" params={{ kind: match.kind, eventId: match.id }} className="block break-all border-b border-border py-2 text-sm text-primary underline">{match.kind}: {match.identifier}</Link>)}
+        {matches.data?.length === 0 && <p className="mt-3 text-sm text-muted-foreground">No recorded identity found.</p>}
+      </section>
       <section>
         <h2 className="text-2xl">Card funnel</h2>
         <p className="mt-1 text-sm text-muted-foreground">Counted per guess session (one person on one card), from logged events. A reveal is one completed guess session.</p>
@@ -1548,8 +1574,8 @@ function CardEventsTab() {
                   <td className="whitespace-nowrap py-2 pr-4">{new Date(r.at).toLocaleString()}</td>
                   <td className="py-2 pr-4 font-mono">{r.event}</td>
                   <td className="py-2 pr-4">{r.card ?? "—"}</td>
-                  <td className="py-2 pr-4 font-mono">{r.guest ?? "—"}</td>
-                  <td className="py-2 pr-4 font-mono">{r.user ?? "—"}</td>
+                  <td className="py-2 pr-4">{r.guest ? <Link className="text-primary underline" to="/admin/activity/$kind/$eventId" params={{ kind: "guest", eventId: r.identityEventId }}>{r.guestName ? `${r.guestName} (${r.guest.slice(0, 4)})` : `Guest (${r.guest.slice(0, 4)})`}</Link> : "—"}</td>
+                  <td className="py-2 pr-4 font-mono">{r.user ? <Link className="text-primary underline" to="/admin/activity/$kind/$eventId" params={{ kind: "user", eventId: r.identityEventId }}>{r.user}</Link> : "—"}</td>
                   <td className="py-2 font-mono text-xs text-muted-foreground">{r.meta ? JSON.stringify(r.meta) : ""}</td>
                 </tr>
               ))}

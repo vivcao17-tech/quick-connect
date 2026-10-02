@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { logClientCardEvent } from "@/lib/card-events.functions";
+import { getGuestToken } from "@/lib/guest";
 
 function safeRedirect(value: unknown): string {
   if (typeof value !== "string") return "/people";
@@ -30,6 +33,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
+  const logEvent = useServerFn(logClientCardEvent);
   const { redirect } = Route.useSearch();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -58,14 +62,20 @@ function AuthPage() {
       .catch(() => {
         if (alive) setChecking(false);
       });
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") void navigate({ to: redirect, replace: true });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN") {
+        if (window.sessionStorage.getItem("nosure.signin_pending")) {
+          window.sessionStorage.removeItem("nosure.signin_pending");
+          void logEvent({ data: { event: "sign_in_completed", guestToken: getGuestToken(), profileId: session?.user.id } }).catch(() => undefined);
+        }
+        void navigate({ to: redirect, replace: true });
+      }
     });
     return () => {
       alive = false;
       sub.subscription.unsubscribe();
     };
-  }, [navigate, redirect]);
+  }, [navigate, redirect, logEvent]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -73,6 +83,7 @@ function AuthPage() {
     setMessage(null);
     try {
       if (mode === "signin") {
+        window.sessionStorage.setItem("nosure.signin_pending", "1");
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         void navigate({ to: redirect, replace: true });
@@ -86,6 +97,7 @@ function AuthPage() {
         setMessage("Check your email to confirm your account, then come back and sign in.");
       }
     } catch (error) {
+      window.sessionStorage.removeItem("nosure.signin_pending");
       setMessage(error instanceof Error ? error.message : "Something went wrong.");
     } finally {
       setBusy(false);

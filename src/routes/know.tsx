@@ -27,6 +27,7 @@ type Q = { key: string; text: string; optionA: string; optionB: string };
 function KnowPage() {
   const load = useServerFn(getKnowStart);
   const create = useServerFn(createKnowCard);
+  const logEvent = useServerFn(logClientCardEvent);
   const [viewer, setViewer] = useState<{ guestToken: string; profileId?: string } | null>(null);
   const [questions, setQuestions] = useState<Q[] | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -35,11 +36,23 @@ function KnowPage() {
   const [answers, setAnswers] = useState<("a" | "b")[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [linkLogged, setLinkLogged] = useState(false);
+
+  useEffect(() => {
+    if (!token || !viewer || linkLogged) return;
+    setLinkLogged(true);
+    const key = `nosure.card-link-shown.${token}`;
+    if (!window.localStorage.getItem(key)) {
+      window.localStorage.setItem(key, "1");
+      void logEvent({ data: { event: "card_link_shown", token, ...viewer } }).catch(() => undefined);
+    }
+  }, [token, viewer, linkLogged, logEvent]);
 
   useEffect(() => {
     setName(window.localStorage.getItem("beside.name") ?? "");
     void readLocalViewer().then(async (v) => {
       setViewer(v);
+      void logEvent({ data: { event: "know_started", ...v } }).catch(() => undefined);
       try {
         const r = await load({ data: v });
         setQuestions(r.questions);
@@ -48,12 +61,13 @@ function KnowPage() {
         setError("Couldn't load the questions. Refresh to try again.");
       }
     });
-  }, [load]);
+  }, [load, logEvent]);
 
   async function pick(option: "a" | "b") {
     if (!questions || !viewer || busy) return;
     const next = [...answers, option];
     setAnswers(next);
+    void logEvent({ data: { event: "know_question_answered", ...viewer, meta: { question_index: next.length } } }).catch(() => undefined);
     if (next.length < questions.length) return;
     setBusy(true);
     try {
