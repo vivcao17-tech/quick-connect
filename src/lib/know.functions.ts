@@ -62,7 +62,7 @@ async function cardQuestions(db: Admin, sessionId: string) {
   const ids = (assigned ?? []).map((row) => row.question_id);
   if (!ids.length) return [];
   const { data: rows, error: questionError } = await db.from("questions")
-    .select("id, question_key, stem_self, stem_other, text, option_a, option_b")
+    .select("id, question_key, stem_self, stem_other, text, option_a, option_b, tag_a, tag_b")
     .in("id", ids);
   if (questionError) throw questionError;
   const byId = new Map((rows ?? []).map((row) => [row.id, row]));
@@ -76,6 +76,8 @@ async function cardQuestions(db: Admin, sessionId: string) {
       otherText: question.stem_other ?? question.text,
       optionA: question.option_a,
       optionB: question.option_b,
+      tagA: question.tag_a,
+      tagB: question.tag_b,
     };
   });
 }
@@ -342,7 +344,7 @@ export const getMyImpressions = createServerFn({ method: "POST" })
       const wrong = self === "a" ? b : self === "b" ? a : 0;
       const subject = (card.subject_name.split(/\s+/)[0] ?? card.subject_name) as string;
       const ownerText = q.selfText && !/^and\b/i.test(q.selfText.trim()) ? q.selfText : q.otherText.replace(/\{name\}/g, "you");
-      return { key: q.key, text: q.otherText.replace(/\{name\}/g, subject), ownerText: ownerText.charAt(0).toUpperCase() + ownerText.slice(1), optionA: q.optionA, optionB: q.optionB, a, b, self, total, wrong };
+      return { key: q.key, text: q.otherText.replace(/\{name\}/g, subject), ownerText: ownerText.charAt(0).toUpperCase() + ownerText.slice(1), optionA: q.optionA, optionB: q.optionB, tagA: q.tagA, tagB: q.tagB, a, b, self, total, wrong };
     });
     const guessers = [...people.values()]
       .map((p) => ({

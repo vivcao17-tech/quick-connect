@@ -7,10 +7,13 @@ export type ExampleImpression = {
   text: string;
   optionA: string;
   optionB: string;
-  /** The subject's own answer. */
-  self: "a" | "b";
-  guessesA: number;
-  guessesB: number;
+  tagA: string;
+  tagB: string;
+};
+
+export type ExampleGuesser = {
+  name: string;
+  picks: Record<string, "a" | "b">;
 };
 
 export type ExamplePreviewRow = {
@@ -30,47 +33,49 @@ export const exampleImpressions = {
       text: "When something goes wrong, Sam…",
       optionA: "Fixes it quietly",
       optionB: "Talks it out first",
-      self: "a",
-      guessesA: 3,
-      guessesB: 2,
+      tagA: "Quiet fix",
+      tagB: "Talks first",
     },
     {
       key: "called",
       text: "Sam would rather be called…",
       optionA: "Kind",
       optionB: "Interesting",
-      self: "b",
-      guessesA: 4,
-      guessesB: 1,
+      tagA: "Kind",
+      tagB: "Interesting",
     },
     {
       key: "start-finish",
       text: "Sam is better at…",
       optionA: "Starting things",
       optionB: "Finishing things",
-      self: "a",
-      guessesA: 2,
-      guessesB: 2,
+      tagA: "Starting",
+      tagB: "Finishing",
     },
     {
       key: "chaotic-organized",
       text: "Privately, Sam is more…",
       optionA: "Chaotic",
       optionB: "Organized",
-      self: "b",
-      guessesA: 1,
-      guessesB: 4,
+      tagA: "Chaotic",
+      tagB: "Organized",
     },
     {
       key: "host-invited",
       text: "Sam would rather…",
       optionA: "Host",
       optionB: "Be invited",
-      self: "b",
-      guessesA: 2,
-      guessesB: 3,
+      tagA: "Host",
+      tagB: "Invited",
     },
   ] satisfies ExampleImpression[],
+  guessers: [
+    { name: "Jordan", picks: { "gone-wrong": "a", called: "a", "start-finish": "a", "chaotic-organized": "b", "host-invited": "a" } },
+    { name: "Ari", picks: { "gone-wrong": "b", called: "b", "start-finish": "b", "chaotic-organized": "a", "host-invited": "b" } },
+    { name: "Taylor", picks: { "gone-wrong": "a", called: "a", "start-finish": "b", "chaotic-organized": "b", "host-invited": "b" } },
+    { name: "Morgan", picks: { "gone-wrong": "b", called: "a", "start-finish": "a", "chaotic-organized": "a", "host-invited": "a" } },
+    { name: "Casey", picks: { "gone-wrong": "a", called: "b", "start-finish": "b", "chaotic-organized": "b", "host-invited": "a" } },
+  ] satisfies ExampleGuesser[],
 };
 
 export const examplePreview = {
