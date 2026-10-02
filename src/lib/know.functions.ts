@@ -165,6 +165,11 @@ export const createKnowCard = createServerFn({ method: "POST" })
         is_test: isTest,
       });
       if (cErr) throw cErr;
+      void (async () => {
+        const { logCardEvent } = await import("@/lib/card-events.server");
+        const { data: made } = await db.from("impression_cards").select("id").eq("token", token).maybeSingle();
+        await logCardEvent(db, { event: "card_created", card_id: made?.id ?? null, guest_token: data.guestToken, user_id: profileId, meta: { kind: "starter" } });
+      })().catch(() => undefined);
       return { token };
     } catch (error) {
       await db.from("sessions").delete().eq("id", session.id);
@@ -259,6 +264,10 @@ export const submitGuesses = createServerFn({ method: "POST" })
     }
     const result = await scoreFor(db, data.token, data.guestToken);
     if (!result || !result.complete) throw new Error("Couldn't save your guesses.");
+    {
+      const { logCardEvent } = await import("@/lib/card-events.server");
+      void logCardEvent(db, { event: "guess_completed", card_id: card.id, guest_token: data.guestToken, user_id: data.profileId ?? null, meta: { score: result.score, total: result.rows.length, first_time: firstTime } });
+    }
 
     if (firstTime && card.subject_profile_id) {
       const { data: profile } = await db.from("profiles").select("email").eq("id", card.subject_profile_id).maybeSingle();

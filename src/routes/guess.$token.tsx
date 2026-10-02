@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { Button } from "@/components/ui/button";
 import { getGuessCard, getGuessResult, submitGuesses } from "@/lib/know.functions";
+import { logClientCardEvent } from "@/lib/card-events.functions";
 import { readLocalViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/guess/$token")({
@@ -49,6 +50,8 @@ function GuessPage() {
   const { token } = Route.useParams();
   const submit = useServerFn(submitGuesses);
   const result = useServerFn(getGuessResult);
+  const logEvent = useServerFn(logClientCardEvent);
+  const [ctaLogged, setCtaLogged] = useState(false);
   const [viewer, setViewer] = useState<{ guestToken: string; profileId?: string } | null>(null);
   const [name, setName] = useState("");
   const [named, setNamed] = useState(false);
@@ -62,6 +65,7 @@ function GuessPage() {
     setName(window.localStorage.getItem("beside.name") ?? "");
     void readLocalViewer().then(async (v) => {
       setViewer(v);
+      void logEvent({ data: { event: "guess_link_opened", token, ...v } }).catch(() => undefined);
       try {
         const r = await result({ data: { ...v, token } });
         if (r.status === "locked" || r.status === "done") setScore({ score: r.score, total: r.total });
@@ -70,7 +74,7 @@ function GuessPage() {
         // nothing guessed yet
       }
     });
-  }, [result, token]);
+  }, [result, token, logEvent]);
 
   if (!card) return <Shell><p className="mt-10">This link doesn't work.</p></Shell>;
 
@@ -96,6 +100,10 @@ function GuessPage() {
   const current = card.questions[guesses.length];
 
   if (score && rows) {
+    if (!ctaLogged && viewer) {
+      setCtaLogged(true);
+      void logEvent({ data: { event: "own_card_cta_shown", token, ...viewer } }).catch(() => undefined);
+    }
     return (
       <Shell>
         <h1 className="mt-8 text-5xl">{score.score}/{score.total}</h1>
@@ -121,7 +129,7 @@ function GuessPage() {
           <h2 className="text-2xl">Do your friends actually know you?</h2>
           <p className="mt-3 text-muted-foreground">Answer five questions. Send your link. See who reads you right.</p>
           <Button asChild className="mt-6 h-auto w-full rounded-full py-4 text-lg">
-            <Link to="/auth" search={{ redirect: "/know" }}>Make your card</Link>
+            <Link to="/auth" search={{ redirect: "/know" }} onClick={() => { if (viewer) void logEvent({ data: { event: "own_card_cta_clicked", token, ...viewer } }).catch(() => undefined); }}>Make your card</Link>
           </Button>
         </div>
       </Shell>
@@ -154,6 +162,7 @@ function GuessPage() {
             if (!name.trim()) return;
             window.localStorage.setItem("beside.name", name.trim());
             setNamed(true);
+            if (viewer) void logEvent({ data: { event: "guess_started", token, ...viewer } }).catch(() => undefined);
           }}
         >
           <input
