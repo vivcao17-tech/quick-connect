@@ -44,6 +44,10 @@ function Home() {
   useEffect(() => {
     if (!viewer.ready) return;
     if (viewer.profileId) {
+      if (window.sessionStorage.getItem("nosure.signin_pending")) {
+        window.sessionStorage.removeItem("nosure.signin_pending");
+        void logEvent({ data: { event: "sign_in_completed", guestToken: viewer.guestToken, profileId: viewer.profileId } }).catch(() => undefined);
+      }
       const stored = typeof window !== "undefined" ? window.sessionStorage.getItem("nosure.after_signin") : null;
       if (stored) window.sessionStorage.removeItem("nosure.after_signin");
       const destination = stored?.startsWith("/") && !stored.startsWith("//") ? stored : "/me";

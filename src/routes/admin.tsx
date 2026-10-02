@@ -1563,7 +1563,7 @@ function CardEventsTab() {
                   <td className="whitespace-nowrap py-2 pr-4">{new Date(r.at).toLocaleString()}</td>
                   <td className="py-2 pr-4 font-mono">{r.event}</td>
                   <td className="py-2 pr-4">{r.card ?? "—"}</td>
-                  <td className="py-2 pr-4 font-mono">{r.guest ? <Link className="text-primary underline" to="/admin/activity/$kind/$eventId" params={{ kind: "guest", eventId: r.identityEventId }}>{r.guest}</Link> : "—"}</td>
+                  <td className="py-2 pr-4">{r.guest ? <Link className="text-primary underline" to="/admin/activity/$kind/$eventId" params={{ kind: "guest", eventId: r.identityEventId }}>{r.guestName ? `${r.guestName} (${r.guest.slice(0, 4)})` : `Guest (${r.guest.slice(0, 4)})`}</Link> : "—"}</td>
                   <td className="py-2 pr-4 font-mono">{r.user ? <Link className="text-primary underline" to="/admin/activity/$kind/$eventId" params={{ kind: "user", eventId: r.identityEventId }}>{r.user}</Link> : "—"}</td>
                   <td className="py-2 font-mono text-xs text-muted-foreground">{r.meta ? JSON.stringify(r.meta) : ""}</td>
                 </tr>

@@ -103,6 +103,12 @@ export const getCardEvents = createServerFn({ method: "GET" })
       ? await db.from("impression_cards").select("id, token, subject_name").in("id", cardIds)
       : { data: [] as { id: string; token: string; subject_name: string }[] };
     const byId = new Map((cards ?? []).map((c) => [c.id, c]));
+    const guesserTokens = [...new Set((recent ?? []).map((r) => r.guest_token).filter((token): token is string => Boolean(token)))];
+    const { data: guesserNames } = guesserTokens.length
+      ? await db.from("impression_guesses").select("guesser_session_id, guesser_display_name, created_at").in("guesser_session_id", guesserTokens).order("created_at", { ascending: false }).limit(1000)
+      : { data: [] as { guesser_session_id: string; guesser_display_name: string; created_at: string }[] };
+    const namesByToken = new Map<string, string>();
+    for (const guesser of guesserNames ?? []) if (!namesByToken.has(guesser.guesser_session_id)) namesByToken.set(guesser.guesser_session_id, guesser.guesser_display_name);
 
     return {
       funnel,
@@ -113,6 +119,7 @@ export const getCardEvents = createServerFn({ method: "GET" })
         at: r.created_at,
         card: r.card_id ? `${byId.get(r.card_id)?.subject_name ?? "?"} · ${byId.get(r.card_id)?.token ?? r.card_id.slice(0, 8)}` : null,
         guest: r.guest_token ? r.guest_token.slice(0, 8) : null,
+        guestName: r.guest_token ? namesByToken.get(r.guest_token) ?? null : null,
         user: r.user_id ? r.user_id.slice(0, 8) : null,
         identityEventId: r.id,
         identityKind: r.user_id ? "user" as const : r.guest_token ? "guest" as const : null,
