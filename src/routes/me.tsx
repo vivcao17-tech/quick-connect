@@ -428,7 +428,11 @@ function EntryCards() {
         ]);
         setCard(r.status === "fulfilled" ? r.value : null);
         if (r.status === "fulfilled" && r.value) {
-          void logEvent({ data: { event: "card_link_shown", token: r.value.token, ...v } }).catch(() => undefined);
+          const key = `nosure.card-link-shown.${r.value.token}`;
+          if (!window.localStorage.getItem(key)) {
+            window.localStorage.setItem(key, "1");
+            void logEvent({ data: { event: "card_link_shown", token: r.value.token, ...v } }).catch(() => undefined);
+          }
           if (r.value.guessCount) void logEvent({ data: { event: "results_viewed", token: r.value.token, ...v } }).catch(() => undefined);
         }
         setWeekly(w.status === "fulfilled" ? w.value : null);
@@ -477,12 +481,13 @@ function EntryCards() {
                 type="button"
                 className="btn-quiet"
                 onClick={() => {
+                   void readLocalViewer().then((viewer) => logEvent({ data: { event: "share_link_copied", token: card.token, ...viewer, meta: { method: "copy" } } })).catch(() => undefined);
                   void navigator.clipboard.writeText(guessUrl).then(() => setCopied(true));
                 }}
               >
                 {copied ? "Copied" : "Copy link"}
               </button>
-              {canShare && <button type="button" className="btn-quiet" onClick={() => void navigator.share({ title: "How well do you know me?", url: guessUrl }).catch(() => undefined)}>Share</button>}
+              {canShare && <button type="button" className="btn-quiet" onClick={() => { void readLocalViewer().then((viewer) => logEvent({ data: { event: "share_link_copied", token: card.token, ...viewer, meta: { method: "share" } } })).catch(() => undefined); void navigator.share({ title: "How well do you know me?", url: guessUrl }).catch(() => undefined); }}>Share</button>}
               <span className="text-sm text-muted-foreground">
                 {card.guessCount} {card.guessCount === 1 ? "person has" : "people have"} guessed
               </span>

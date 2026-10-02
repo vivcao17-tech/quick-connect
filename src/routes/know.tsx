@@ -41,13 +41,18 @@ function KnowPage() {
   useEffect(() => {
     if (!token || !viewer || linkLogged) return;
     setLinkLogged(true);
-    void logEvent({ data: { event: "card_link_shown", token, ...viewer } }).catch(() => undefined);
+    const key = `nosure.card-link-shown.${token}`;
+    if (!window.localStorage.getItem(key)) {
+      window.localStorage.setItem(key, "1");
+      void logEvent({ data: { event: "card_link_shown", token, ...viewer } }).catch(() => undefined);
+    }
   }, [token, viewer, linkLogged, logEvent]);
 
   useEffect(() => {
     setName(window.localStorage.getItem("beside.name") ?? "");
     void readLocalViewer().then(async (v) => {
       setViewer(v);
+      void logEvent({ data: { event: "know_started", ...v } }).catch(() => undefined);
       try {
         const r = await load({ data: v });
         setQuestions(r.questions);
@@ -56,7 +61,7 @@ function KnowPage() {
         setError("Couldn't load the questions. Refresh to try again.");
       }
     });
-  }, [load]);
+  }, [load, logEvent]);
 
   async function pick(option: "a" | "b") {
     if (!questions || !viewer || busy) return;
@@ -99,7 +104,6 @@ function KnowPage() {
               if (!name.trim()) return;
               window.localStorage.setItem("beside.name", name.trim());
               setNamed(true);
-              if (viewer) void logEvent({ data: { event: "know_started", ...viewer } }).catch(() => undefined);
             }}
           >
             <h1 className="text-4xl leading-tight">See how your friends read you</h1>
