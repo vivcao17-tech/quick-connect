@@ -109,6 +109,10 @@ export const getCardEvents = createServerFn({ method: "GET" })
       : { data: [] as { guesser_session_id: string; guesser_display_name: string; created_at: string }[] };
     const namesByToken = new Map<string, string>();
     for (const guesser of guesserNames ?? []) if (!namesByToken.has(guesser.guesser_session_id)) namesByToken.set(guesser.guesser_session_id, guesser.guesser_display_name);
+    const { data: chainNames } = guesserTokens.length
+      ? await db.from("chain_guesses").select("guesser_key, guesser_name, created_at").in("guesser_key", guesserTokens).order("created_at", { ascending: false }).limit(1000)
+      : { data: [] as { guesser_key: string; guesser_name: string; created_at: string }[] };
+    for (const guesser of chainNames ?? []) if (!namesByToken.has(guesser.guesser_key)) namesByToken.set(guesser.guesser_key, guesser.guesser_name);
 
     return {
       funnel,
@@ -181,11 +185,12 @@ export const getCardIdentityEvents = createServerFn({ method: "GET" })
     if (cardsError) throw cardsError;
     const cardMap = new Map((cards ?? []).map((card) => [card.id, `${card.subject_name} · ${card.token}`]));
     const names = data.kind === "guest" ? await db.from("impression_guesses").select("guesser_display_name").eq("guesser_session_id", identifier).order("created_at", { ascending: false }).limit(1) : null;
+    const chainName = data.kind === "guest" && !names?.data?.length ? await db.from("chain_guesses").select("guesser_name").eq("guesser_key", identifier).order("created_at", { ascending: false }).limit(1) : null;
     const profile = data.kind === "user" ? await db.from("profiles").select("display_name").eq("id", identifier).maybeSingle() : null;
     return {
       kind: data.kind,
       identifier,
-      name: data.kind === "guest" ? names?.data?.[0]?.guesser_display_name ?? null : profile?.data?.display_name ?? null,
+      name: data.kind === "guest" ? names?.data?.[0]?.guesser_display_name ?? chainName?.data?.[0]?.guesser_name ?? null : profile?.data?.display_name ?? null,
        events: events.map((row) => ({ id: row.id, event: row.event, at: row.created_at, card: row.card_id ? cardMap.get(row.card_id) ?? row.card_id : null, meta: row.meta })),
     };
   });
