@@ -2,10 +2,10 @@
 
 ## Admin per-person activity
 
-- [ ] Add token-disambiguated guesser labels and admin identity search/detail navigation without identifiers in URLs
-- [ ] Show all identity events grouped into collapsed 30-minute sessions
-- [ ] Log each requested entry, answer, result, tag, share-display, and sign-in step without IPs
-- [ ] Verify guest journey and admin history in the browser
+- [x] Add token-disambiguated guesser labels and admin identity search/detail navigation without identifiers in URLs
+- [x] Show all identity events grouped into collapsed 30-minute sessions
+- [x] Log each requested entry, answer, result, tag, share-display, and sign-in step without IPs
+- [x] Verify guest journey and admin history in the browser
 
 ## Guess-link preview and example entry points
 
