@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { Button } from "@/components/ui/button";
 import { createKnowCard, getKnowStart } from "@/lib/know.functions";
+import { logClientCardEvent } from "@/lib/card-events.functions";
 import { readLocalViewer } from "@/lib/viewer";
 
 export const Route = createFileRoute("/know")({
@@ -78,7 +79,7 @@ function KnowPage() {
         {error && <p className="mt-6 text-sm text-primary">{error}</p>}
 
         {token ? (
-          <ShareScreen token={token} signedIn={Boolean(viewer?.profileId)} />
+          <ShareScreen token={token} signedIn={Boolean(viewer?.profileId)} viewer={viewer} />
         ) : !questions ? (
           <p className="mt-10 text-muted-foreground">One moment…</p>
         ) : !named ? (
@@ -129,7 +130,9 @@ function KnowPage() {
   );
 }
 
-function ShareScreen({ token, signedIn }: { token: string; signedIn: boolean }) {
+function ShareScreen({ token, signedIn, viewer }: { token: string; signedIn: boolean; viewer: { guestToken: string; profileId?: string } | null }) {
+  const logEvent = useServerFn(logClientCardEvent);
+  const logShare = (method: string) => void logEvent({ data: { event: "share_link_copied", token, guestToken: viewer?.guestToken, profileId: viewer?.profileId, meta: { method, page: "know" } } }).catch(() => undefined);
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const url = `https://nosure.app/guess/${token}`;
@@ -145,6 +148,7 @@ function ShareScreen({ token, signedIn }: { token: string; signedIn: boolean }) 
           variant="outline"
           className="h-auto flex-1 rounded-full py-4"
           onClick={() => {
+            logShare("copy");
             void navigator.clipboard?.writeText(url).then(() => setCopied(true));
           }}
         >
@@ -153,7 +157,7 @@ function ShareScreen({ token, signedIn }: { token: string; signedIn: boolean }) 
         {canShare && (
           <Button
             className="h-auto flex-1 rounded-full py-4"
-            onClick={() => void navigator.share({ title: "How well do you know me?", url }).catch(() => undefined)}
+            onClick={() => { logShare("share"); void navigator.share({ title: "How well do you know me?", url }).catch(() => undefined); }}
           >
             Share
           </Button>

@@ -91,6 +91,11 @@ export const createWeeklyImpression = createServerFn({ method: "POST" })
         is_test: isTest, week_start: set.week,
       });
       if (cError) throw cError;
+      void (async () => {
+        const { logCardEvent } = await import("@/lib/card-events.server");
+        const { data: made } = await db.from("impression_cards").select("id").eq("token", token).maybeSingle();
+        await logCardEvent(db, { event: "card_created", card_id: made?.id ?? null, guest_token: data.guestToken, user_id: data.profileId ?? null, meta: { kind: "weekly", week: set.week } });
+      })().catch(() => undefined);
       return { token };
     } catch (error) {
       await db.from("sessions").delete().eq("id", session.id);

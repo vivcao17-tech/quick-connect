@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { exportCsv } from "@/lib/admin-csv";
 import { getAdminImpressions, rotateGuestToken } from "@/lib/admin.functions";
+import { getCardEvents } from "@/lib/card-events.functions";
 import { getWeeklyConfig, saveWeeklyConfig } from "@/lib/weekly.functions";
 import { getGuestToken } from "@/lib/guest";
 import {
@@ -122,6 +123,7 @@ function ExportButton({ onClick }: { onClick: () => void }) {
 const TABS = [
   ["overview", "Overview"],
   ["funnel", "Funnel"],
+  ["events", "Card events"],
   ["cohorts", "Cohorts"],
   ["people", "People"],
   ["questions", "Questions"],
@@ -245,6 +247,7 @@ function AdminPage() {
             <div className="mt-8">
               {tab === "overview" && <OverviewTab range={range} />}
               {tab === "funnel" && <FunnelTab range={range} />}
+              {tab === "events" && <CardEventsTab />}
               {tab === "cohorts" && <CohortsTab includeTest={includeTest} />}
               {tab === "people" && <PeopleTab includeTest={includeTest} />}
               {tab === "questions" && <QuestionsTab includeTest={includeTest} />}
@@ -1497,6 +1500,64 @@ function RotateTokenButton({ personKey }: { personKey: string }) {
         Rotate guest ID (link leaked)
       </button>
       {state && <p className="mt-2 break-all text-muted-foreground">{state}</p>}
+    </div>
+  );
+}
+
+/* ---------- card events ---------- */
+
+function CardEventsTab() {
+  const load = useServerFn(getCardEvents);
+  const query = useQuery({ queryKey: ["admin-card-events"], queryFn: () => load(), retry: false });
+  if (query.isLoading) return <p className="text-muted-foreground">Loading…</p>;
+  if (query.isError || !query.data) return <p className="text-muted-foreground">Couldn't load events.</p>;
+  const { funnel, counts, recent } = query.data;
+  return (
+    <div className="space-y-10">
+      <section>
+        <h2 className="text-2xl">Card funnel</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Counted per guess session (one person on one card), from logged events. A reveal is one completed guess session.</p>
+        <table className="mt-4 w-full text-sm">
+          <tbody>
+            {funnel.map((r) => (
+              <tr key={r.label} className="border-b border-border">
+                <td className="py-2 pr-4">{r.label}</td>
+                <td className="py-2 text-right tabular-nums">
+                  {r.den < 20
+                    ? `sample too small (${r.num}/${r.den})`
+                    : `${Math.round((r.num / r.den) * 100)}% (${r.num}/${r.den})`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-3 text-xs text-muted-foreground">
+          opened {counts.opened} · started {counts.started} · completed {counts.completed} · CTA shown {counts.ctaShown} · CTA clicked {counts.ctaClicked} · cards created {counts.created} · shared {counts.shared} · follow-ups {counts.followups}
+        </p>
+      </section>
+      <section>
+        <h2 className="text-2xl">Latest 100 events</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-muted-foreground">
+              <tr><th className="py-2 pr-4">Time</th><th className="py-2 pr-4">Event</th><th className="py-2 pr-4">Card</th><th className="py-2 pr-4">Guest</th><th className="py-2 pr-4">User</th><th className="py-2">Details</th></tr>
+            </thead>
+            <tbody>
+              {recent.map((r) => (
+                <tr key={r.id} className="border-t border-border align-top">
+                  <td className="whitespace-nowrap py-2 pr-4">{new Date(r.at).toLocaleString()}</td>
+                  <td className="py-2 pr-4 font-mono">{r.event}</td>
+                  <td className="py-2 pr-4">{r.card ?? "—"}</td>
+                  <td className="py-2 pr-4 font-mono">{r.guest ?? "—"}</td>
+                  <td className="py-2 pr-4 font-mono">{r.user ?? "—"}</td>
+                  <td className="py-2 font-mono text-xs text-muted-foreground">{r.meta ? JSON.stringify(r.meta) : ""}</td>
+                </tr>
+              ))}
+              {!recent.length && <tr><td colSpan={6} className="py-4 text-muted-foreground">No events yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

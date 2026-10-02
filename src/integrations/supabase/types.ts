@@ -95,6 +95,36 @@ export type Database = {
           },
         ]
       }
+      card_events: {
+        Row: {
+          card_id: string | null
+          created_at: string
+          event: string
+          guest_token: string | null
+          id: string
+          meta: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          card_id?: string | null
+          created_at?: string
+          event: string
+          guest_token?: string | null
+          id?: string
+          meta?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          card_id?: string | null
+          created_at?: string
+          event?: string
+          guest_token?: string | null
+          id?: string
+          meta?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       chain_answers: {
         Row: {
           created_at: string
