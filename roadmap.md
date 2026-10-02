@@ -1,5 +1,13 @@
 # Roadmap
 
+## Per-person impression results
+
+- [x] Read authored question tags alongside owner results without changing the question bank
+- [x] Compare the five most recent guessers on aligned question rows, with question expansion and a view toggle
+- [x] Prepare follow-up messages on tap without sending automatically and log the tap
+- [x] Show five contrasting fictional guessers on the example page from one data file
+- [ ] Verify owner and example views on desktop and mobile
+
 ## Narrow visible product to Impression Cards
 
 - [x] Keep old routes/code intact while hiding non-impression navigation and entry points

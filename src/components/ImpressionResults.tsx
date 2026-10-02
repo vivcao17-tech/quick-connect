@@ -1,14 +1,33 @@
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Button } from "@/components/ui/button";
+import { PersonImpressionView } from "@/components/PersonImpressionView";
+import { logClientCardEvent } from "@/lib/card-events.functions";
 import type { getMyImpressions } from "@/lib/know.functions";
+import { readLocalViewer } from "@/lib/viewer";
 
 type Result = NonNullable<Awaited<ReturnType<typeof getMyImpressions>>>;
 
 /** Owner-only view, grouped by what the guesses reveal. */
 export function ImpressionResults({ data }: { data: Result }) {
   const [openRight, setOpenRight] = useState(false);
+  const [view, setView] = useState<"person" | "question" | null>(null);
+  const logEvent = useServerFn(logClientCardEvent);
   const questions = data.questions ?? [];
   const guessers = data.guessers ?? [];
   if (!guessers.length) return null;
+  const selectedView = view ?? (guessers.length >= 3 ? "person" : "question");
+  const sendFollowup = (name: string) => {
+    const message = `Hey ${name.split(/\s+/)[0]}, why did you see me that way?`;
+    void readLocalViewer()
+      .then((viewer) => logEvent({ data: { event: "followup_tapped", token: data.token, ...viewer, meta: { guesser: name } } }))
+      .catch(() => undefined);
+    if (typeof navigator.share === "function") {
+      void navigator.share({ text: message }).catch(() => undefined);
+    } else {
+      void navigator.clipboard.writeText(message).catch(() => undefined);
+    }
+  };
   const label = (q: (typeof questions)[number], key: string | null | undefined) =>
     key === "a" ? q.optionA : key === "b" ? q.optionB : "—";
   const stem = (q: (typeof questions)[number]) => q.ownerText ?? q.text;
@@ -20,6 +39,13 @@ export function ImpressionResults({ data }: { data: Result }) {
 
   return (
     <div className="mt-6 space-y-8">
+      <div role="tablist" aria-label="Results view" className="flex gap-1 border-b border-border">
+        <Button type="button" role="tab" aria-selected={selectedView === "person"} variant="ghost" onClick={() => setView("person")} className={`rounded-none border-b-2 px-4 ${selectedView === "person" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>By person</Button>
+        <Button type="button" role="tab" aria-selected={selectedView === "question"} variant="ghost" onClick={() => setView("question")} className={`rounded-none border-b-2 px-4 ${selectedView === "question" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>By question</Button>
+      </div>
+      {selectedView === "person" ? (
+        <PersonImpressionView questions={questions.map((q) => ({ ...q, text: q.ownerText ?? q.text }))} guessers={guessers} onFollowup={sendFollowup} />
+      ) : <>
       {allWrong.length > 0 && (
         <section>
           <h2 className="text-xl">Everyone got this wrong</h2>
@@ -61,12 +87,12 @@ export function ImpressionResults({ data }: { data: Result }) {
 
       {allRight.length > 0 && (
         <section>
-          <button type="button" onClick={() => setOpenRight((v) => !v)} className="w-full text-left">
+          <Button type="button" variant="ghost" onClick={() => setOpenRight((v) => !v)} className="h-auto w-full flex-col items-start whitespace-normal px-0 text-left">
             <h2 className="text-xl">They all read you right</h2>
             {!openRight && (
               <p className="mt-2 text-sm text-muted-foreground">{allRight.map(stem).join(" · ")}</p>
             )}
-          </button>
+          </Button>
           {openRight && (
             <div className="mt-3 space-y-3">
               {allRight.map((q) => (
@@ -79,6 +105,7 @@ export function ImpressionResults({ data }: { data: Result }) {
           )}
         </section>
       )}
+      </>}
     </div>
   );
 }

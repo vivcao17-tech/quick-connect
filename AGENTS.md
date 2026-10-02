@@ -19,3 +19,4 @@
 - Keep the weekly impression set in `weekly_impression_config` and resolve card questions from each card's assigned session questions, so schedule changes never rewrite an answered card.
 - Serve card creation, guesses, and owner reads through server functions; never expose guest identifiers or guesses through direct public table access.
 - Keep retired product pages available by direct URL while removing only their navigation entries, so historical links remain usable.
+- Resolve per-person impression labels from stored question option tags in owner-only results; a shared comparison view also renders the static example, preventing generated labels and guest-answer exposure.
