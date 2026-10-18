@@ -32,3 +32,12 @@ dist-ssr
 *.sw?
 
 .env
+
+
+.env
+.env.*
+!.env.example
+
+*.pem
+*.key
+secrets.json
