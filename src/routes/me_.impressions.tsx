@@ -63,7 +63,7 @@ function ImpressionsPage() {
 
         {data && (
           <>
-            <p className="card-soft mt-8 break-all px-5 py-4 text-sm">nosure.app/guess/{data.token}</p>
+            <p className="card-soft mt-8 break-all px-5 py-4 text-sm">guess.nosure.app/guess/{data.token}</p>
             {data.guessCount === 0 && <p className="mt-8 text-muted-foreground">Nobody has guessed yet. Send the link to a few people.</p>}
             <ImpressionResults data={data} />
             {false && <div className="mt-8 flex flex-col gap-4">

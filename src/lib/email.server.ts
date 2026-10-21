@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
-const SITE_URL = "https://nosure.app";
+const SITE_URL = "https://guess.nosure.app";
 export const FROM = "NoSure <hello@nosure.app>";
 
 /** Signed so an unsubscribe link can't be forged for someone else's address. */

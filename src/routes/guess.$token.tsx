@@ -16,8 +16,8 @@ export const Route = createFileRoute("/guess/$token")({
   head: ({ params, loaderData }) => {
     const title = loaderData ? `How well do you know ${loaderData.name}?` : "How well do you know me?";
     const desc = "Guess five things about them — then see how you come off to your own friends.";
-    const url = `https://nosure.app/guess/${encodeURIComponent(params.token)}`;
-    const image = "https://nosure.app/guess-share.jpg";
+    const url = `https://guess.nosure.app/guess/${encodeURIComponent(params.token)}`;
+    const image = "https://guess.nosure.app/guess-share.jpg";
     return {
       meta: [
         { title: `${title} — NoSure` },

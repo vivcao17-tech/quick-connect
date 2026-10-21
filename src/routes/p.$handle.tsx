@@ -25,8 +25,8 @@ export const Route = createFileRoute("/p/$handle")({
     const first = name.trim().split(/\s+/)[0] || "Their";
     const title = `${first}'s wall`;
     const description = `See how people guess ${first} — then guess them yourself.`;
-    const url = `https://nosure.app/p/${params.handle}`;
-    const image = `https://nosure.app/api/public/og/wall/${params.handle}`;
+    const url = `https://guess.nosure.app/p/${params.handle}`;
+    const image = `https://guess.nosure.app/api/public/og/wall/${params.handle}`;
     return {
       meta: [
         { title },

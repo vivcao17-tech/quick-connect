@@ -149,7 +149,7 @@ function ShareScreen({ token, signedIn, viewer }: { token: string; signedIn: boo
   const logShare = (method: string) => void logEvent({ data: { event: "share_link_copied", token, guestToken: viewer?.guestToken, profileId: viewer?.profileId, meta: { method, page: "know" } } }).catch(() => undefined);
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
-  const url = `https://nosure.app/guess/${token}`;
+  const url = `https://guess.nosure.app/guess/${token}`;
   useEffect(() => setCanShare(typeof navigator.share === "function"), []);
 
   return (

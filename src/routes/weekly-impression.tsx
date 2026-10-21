@@ -62,7 +62,7 @@ function WeeklyImpressionPage() {
     finally { setBusy(false); }
   }
   const question = set?.questions[answers.length];
-  const url = token ? `https://nosure.app/guess/${token}` : "";
+  const url = token ? `https://guess.nosure.app/guess/${token}` : "";
   return <main className="paper min-h-screen bg-background"><section className="mx-auto max-w-xl px-6 py-16">
     <Link to="/me" className="text-sm text-muted-foreground underline">Back to You</Link>
     <h1 className="mt-8 text-4xl">This week's question</h1>

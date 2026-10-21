@@ -80,7 +80,7 @@ export async function sendGuessEmail(admin: Admin, to: string, guesser: string, 
   const address = to.trim().toLowerCase();
   if (await isOptedOut(admin, address)) return;
   const line = `${guesser} guessed. They got ${score}/5.`;
-  const link = "https://nosure.app/me/impressions";
+  const link = "https://guess.nosure.app/me/impressions";
   const optOut = unsubscribeUrl(address);
   const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   try {
