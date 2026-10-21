@@ -441,7 +441,7 @@ function EntryCards() {
       .catch(() => setCard(undefined));
   }, [load, loadWeekly, logEvent]);
 
-  const guessUrl = card ? `https://nosure.app/guess/${card.token}` : "";
+  const guessUrl = card ? `https://guess.nosure.app/guess/${card.token}` : "";
 
   return (
     <div className="mt-8">
@@ -475,7 +475,7 @@ function EntryCards() {
             {card.guessCount === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">No one has guessed yet. Send it to 3 people who know you.</p>
             ) : <ImpressionResults data={card} />}
-            <p className="mt-5 break-all text-sm">{`nosure.app/guess/${card.token}`}</p>
+            <p className="mt-5 break-all text-sm">{`guess.nosure.app/guess/${card.token}`}</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"

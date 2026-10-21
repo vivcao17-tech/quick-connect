@@ -29,7 +29,7 @@ function ShareMeet() {
   return (
     <p className="mt-8 text-sm text-muted-foreground">
       Know someone who’d wanna come? Send them to{" "}
-      <Link to="/meet" search={{ start: false }} className="text-primary underline underline-offset-4">nosure.app/meet</Link>{" "}
+      <Link to="/meet" search={{ start: false }} className="text-primary underline underline-offset-4">guess.nosure.app/meet</Link>{" "}
       (form submission required for matching purposes)
     </p>
   );

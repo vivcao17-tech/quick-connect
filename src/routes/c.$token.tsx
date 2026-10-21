@@ -21,8 +21,8 @@ export const Route = createFileRoute("/c/$token")({
     const sender = loaderData?.senderName || "A friend";
     const title = `${sender} has one question for you`;
     const description = loaderData?.prompt || "One question. Two ways to answer.";
-    const url = `https://nosure.app/c/${params.token}`;
-    const image = `https://nosure.app/api/public/og/chain/${params.token}`;
+    const url = `https://guess.nosure.app/c/${params.token}`;
+    const image = `https://guess.nosure.app/api/public/og/chain/${params.token}`;
     return {
       meta: [
         { title: `${title} — NoSure` },
